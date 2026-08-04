@@ -361,11 +361,8 @@ h3 {
   background-clip: text;
   -webkit-text-stroke: clamp(1px, 0.01em, 2px) #8f4a00;
   text-shadow:
-    0 0.018em 0 #c87800,
-    0 0.038em 0 #a65a00,
-    0 0.058em 0 #824000,
-    0 0.09em 0 #633000,
-    0 0.15em 0.2em rgba(104, 49, 0, 0.18),
+    0 0.06em 0 #7b3b00,
+    0 0.15em 0.2em rgba(104, 49, 0, 0.22),
     0 0 0.25em rgba(255, 190, 35, 0.36);
   animation: masthead-shine 28s ease-in-out infinite;
 }
