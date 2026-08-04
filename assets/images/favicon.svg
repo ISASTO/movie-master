@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Movie Master star">
+  <defs>
+    <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff2a6"/>
+      <stop offset=".38" stop-color="#ffbd16"/>
+      <stop offset="1" stop-color="#b75c00"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="10" fill="#15110c"/>
+  <path d="m32 6 6.7 17.5L58 24.4 43 36.3 48.1 55 32 44.6 15.9 55 21 36.3 6 24.4l19.3-.9z" fill="url(#g)" stroke="#fff7cc" stroke-width="1.5"/>
+  <path d="M19 38V22h6l7 8.7 7-8.7h6v16h-6V30l-7 8-7-8v8z" fill="#15110c"/>
+</svg>

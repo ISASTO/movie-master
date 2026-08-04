@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://isasto.github.io/movie-master/sitemap.xml
