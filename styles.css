@@ -599,24 +599,18 @@ h3 {
   text-align: center;
 }
 
-.hero-bubble::before,
 .hero-bubble::after {
   content: "";
   position: absolute;
-  left: -55px;
-  bottom: 27px;
-  width: 66px;
-  height: 40px;
+  z-index: 1;
+  left: -17px;
+  bottom: 34px;
+  width: 30px;
+  height: 30px;
   background: var(--white);
-  clip-path: polygon(100% 0, 100% 100%, 0 100%);
-}
-
-.hero-bubble::before {
-  left: -63px;
-  bottom: 22px;
-  width: 72px;
-  height: 50px;
-  background: var(--ink);
+  border-bottom: 4px solid var(--ink);
+  border-left: 4px solid var(--ink);
+  transform: rotate(45deg);
 }
 
 .claim-banner {
@@ -628,18 +622,25 @@ h3 {
   font-size: clamp(1.05rem, 2vw, 1.4rem);
   font-weight: 800;
   text-align: center;
+}
+
+.claim-underlined {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
 }
 
+.claim-ending {
+  white-space: nowrap;
+}
+
 .claim-tm {
   position: relative;
+  display: inline-block;
   top: -0.52em;
   margin-left: 0.22em;
   font-size: 0.38em;
   letter-spacing: 0.03em;
-  text-decoration: none;
 }
 
 .contact-marquee {
@@ -1017,8 +1018,10 @@ h3 {
 }
 
 .offer-section {
+  overflow: hidden;
   background:
     radial-gradient(circle at 15% 14%, rgba(255, 184, 0, 0.16), transparent 24%),
+    radial-gradient(circle at 82% 72%, rgba(109, 54, 142, 0.1), transparent 30%),
     linear-gradient(180deg, var(--paper-light), var(--paper));
 }
 
@@ -1027,7 +1030,7 @@ h3 {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: stretch;
   max-width: 960px;
-  margin: 0 auto 28px;
+  margin: 0 auto;
   border: 3px solid var(--ink);
   background: var(--paper-light);
   box-shadow: 8px 8px 0 rgba(104, 58, 0, 0.2);
@@ -1075,62 +1078,18 @@ h3 {
   font-weight: 800;
 }
 
-.offer-copy {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: clamp(25px, 3.5vw, 42px);
+.process-heading {
+  margin-top: clamp(48px, 7vw, 76px);
+  margin-bottom: 30px;
 }
 
-.offer-copy > p {
-  max-width: 860px;
-  margin-inline: auto;
-  font-size: clamp(1.08rem, 2vw, 1.3rem);
-  text-align: center;
-}
-
-.offer-facts {
-  max-width: 810px;
-  margin: 28px auto 0;
-  padding: 0;
-  display: grid;
-  gap: 16px;
-  list-style: none;
-}
-
-.offer-facts li {
-  position: relative;
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 13px;
-  padding-top: 16px;
-  border-top: 2px solid rgba(21, 17, 12, 0.22);
-}
-
-.offer-facts li::before {
-  content: "★";
-  color: var(--gold-dark);
-  font-size: 1.25rem;
-  line-height: 1.2;
-  text-align: center;
-}
-
-.offer-facts h3 {
-  margin-bottom: 10px;
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.offer-facts p:last-child {
+.process-heading h3 {
   margin-bottom: 0;
-}
-
-.process-section {
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 80% 20%, rgba(109, 54, 142, 0.11), transparent 30%),
-    var(--paper);
+  font-size: clamp(2rem, 4.8vw, 4rem);
+  font-weight: 800;
+  line-height: 1.01;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
 }
 
 .process-film {
@@ -1455,24 +1414,18 @@ h3 {
   line-height: 1.42;
 }
 
-.quote-bubble::before,
 .quote-bubble::after {
   content: "";
   position: absolute;
-  bottom: -26px;
+  z-index: 1;
+  bottom: -15px;
   left: 50%;
-  width: 28px;
-  height: 30px;
-  background: var(--ink);
-  clip-path: polygon(0 0, 100% 0, 72% 100%);
-  transform: translateX(-50%);
-}
-
-.quote-bubble::after {
-  bottom: -19px;
-  width: 21px;
-  height: 23px;
+  width: 27px;
+  height: 27px;
   background: var(--white);
+  border-right: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+  transform: translateX(-50%) rotate(45deg);
 }
 
 .portrait-frame {
@@ -1760,11 +1713,15 @@ h3 {
 
   .masthead {
     font-size: clamp(3.35rem, 14.2vw, 6.4rem);
-    line-height: 0.82;
+    line-height: 0.9;
   }
 
   .masthead-face > span {
     display: block;
+  }
+
+  .masthead-face > span + span {
+    margin-top: 0.14em;
   }
 
   .hero {
@@ -1802,20 +1759,16 @@ h3 {
     margin-inline: 8px;
   }
 
-  .hero-bubble::before,
   .hero-bubble::after {
     left: 50%;
-    bottom: -42px;
-    width: 48px;
-    height: 48px;
-    clip-path: polygon(0 0, 100% 0, 50% 100%);
-    transform: translateX(-50%);
-  }
-
-  .hero-bubble::before {
-    bottom: -49px;
-    width: 57px;
-    height: 54px;
+    top: -18px;
+    bottom: auto;
+    width: 34px;
+    height: 34px;
+    border: 0;
+    border-top: 4px solid var(--ink);
+    border-left: 4px solid var(--ink);
+    transform: translateX(-50%) rotate(45deg);
   }
 
   .claim-banner {
@@ -1881,7 +1834,7 @@ h3 {
   }
 
   .masthead-stage {
-    min-height: 205px;
+    min-height: 225px;
     padding: 24px 0 10px;
   }
 
@@ -1948,6 +1901,7 @@ h3 {
   }
 
   .section-heading h2,
+  .process-heading h3,
   .outlined-panel h2,
   .finale h2 {
     font-size: clamp(1.85rem, 9vw, 3rem);
@@ -1975,10 +1929,6 @@ h3 {
     width: 43px;
     height: 43px;
     margin: -3px auto;
-  }
-
-  .offer-copy {
-    padding: 26px 18px;
   }
 
   .process-film {
