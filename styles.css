@@ -346,25 +346,10 @@ h3 {
   z-index: 1;
   display: block;
   white-space: nowrap;
-  color: transparent;
-  background:
-    linear-gradient(
-      108deg,
-      transparent 0% 42%,
-      rgba(255, 255, 226, 0.96) 48%,
-      transparent 54% 100%
-    ) 185% 0 / 270% 100%,
-    linear-gradient(
-      180deg,
-      #fff4a6 0%,
-      #ffd94d 24%,
-      #ffbc13 58%,
-      #e99400 100%
-    ) 0 0 / 100% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: #ffc21c;
   -webkit-text-stroke: clamp(1px, 0.014em, 2px) #a55300;
   text-shadow:
+    -0.016em -0.018em 0 #fff0a0,
     0.055em 0.065em 0 #a64e00,
     0 0.14em 0.17em rgba(113, 55, 0, 0.28),
     0 0 0.2em rgba(255, 185, 23, 0.2);
@@ -385,12 +370,11 @@ h3 {
 
 @keyframes masthead-shine {
   0%,
-  62% {
-    background-position: 185% 0, 0 0;
-  }
-  90%,
   100% {
-    background-position: -85% 0, 0 0;
+    filter: brightness(1) saturate(1);
+  }
+  48% {
+    filter: brightness(1.09) saturate(1.04);
   }
 }
 
