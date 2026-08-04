@@ -1681,8 +1681,17 @@ h3 {
 }
 
 .footer-inner a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 4px;
   color: var(--gold-bright);
   font-weight: 700;
+}
+
+.footer-inner a:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 3px;
 }
 
 .reveal-on-scroll {
