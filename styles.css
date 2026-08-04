@@ -300,13 +300,13 @@ h3 {
   overflow: hidden;
   display: grid;
   place-items: center;
-  border-bottom: 3px solid var(--gold-dark);
+  border-bottom: 3px solid #a85a00;
   background:
-    radial-gradient(ellipse at 50% 50%, rgba(120, 73, 28, 0.68) 0%, rgba(42, 24, 14, 0.82) 49%, transparent 76%),
-    linear-gradient(180deg, #24170f 0%, #0e0a07 58%, #1c1009 100%);
+    radial-gradient(ellipse at 50% 52%, rgba(255, 191, 38, 0.28) 0%, rgba(255, 213, 113, 0.14) 42%, transparent 73%),
+    linear-gradient(180deg, #f3e8d1 0%, #dfcca8 100%);
   box-shadow:
-    inset 0 -12px 28px rgba(0, 0, 0, 0.42),
-    0 10px 24px rgba(45, 23, 5, 0.32);
+    inset 0 -10px 24px rgba(128, 69, 7, 0.09),
+    0 8px 20px rgba(78, 40, 4, 0.2);
 }
 
 .masthead-rays {
@@ -317,9 +317,9 @@ h3 {
   pointer-events: none;
   background: repeating-conic-gradient(
     from -7deg at 50% 50%,
-    rgba(255, 200, 74, 0.38) 0deg 2.5deg,
+    rgba(203, 112, 0, 0.3) 0deg 2.5deg,
     transparent 2.5deg 14deg,
-    rgba(255, 224, 143, 0.16) 14deg 16deg,
+    rgba(255, 183, 24, 0.2) 14deg 16deg,
     transparent 16deg 29deg
   );
   mask-image: radial-gradient(ellipse at center, black 0%, rgba(0, 0, 0, 0.74) 29%, transparent 69%);
@@ -351,23 +351,23 @@ h3 {
     linear-gradient(
       108deg,
       transparent 0% 42%,
-      rgba(255, 255, 225, 0.9) 48%,
+      rgba(255, 255, 226, 0.96) 48%,
       transparent 54% 100%
     ) 185% 0 / 270% 100%,
     linear-gradient(
       180deg,
-      #fff1a8 0%,
-      #f6c43f 30%,
-      #d98a00 57%,
-      #8b4100 100%
+      #fff4a6 0%,
+      #ffd94d 24%,
+      #ffbc13 58%,
+      #e99400 100%
     ) 0 0 / 100% 100%;
   -webkit-background-clip: text;
   background-clip: text;
-  -webkit-text-stroke: clamp(1px, 0.014em, 2px) #713000;
+  -webkit-text-stroke: clamp(1px, 0.014em, 2px) #a55300;
   text-shadow:
-    0.055em 0.065em 0 #592600,
-    0 0.14em 0.17em rgba(0, 0, 0, 0.48),
-    0 0 0.2em rgba(239, 166, 31, 0.18);
+    0.055em 0.065em 0 #a64e00,
+    0 0.14em 0.17em rgba(113, 55, 0, 0.28),
+    0 0 0.2em rgba(255, 185, 23, 0.2);
   animation: masthead-shine 38s ease-in-out infinite;
 }
 
