@@ -86,6 +86,8 @@
 
     const counter = output.closest(".visitor-counter");
     const epoch = Date.parse("2026-08-03T00:00:00-05:00");
+    const visitorsPerSecond = 3;
+    const tickLength = 1000 / visitorsPerSecond;
     let priorFormatted = "";
 
     const formatCount = (value) =>
@@ -95,7 +97,7 @@
 
     const render = () => {
       const elapsed = Math.max(0, Date.now() - epoch);
-      const count = Math.floor(elapsed / 100);
+      const count = Math.floor(elapsed / tickLength);
       const formatted = formatCount(count);
 
       if (formatted !== priorFormatted) {
@@ -125,7 +127,7 @@
         priorFormatted = formatted;
       }
 
-      const delay = 100 - (Date.now() - epoch) % 100;
+      const delay = Math.max(16, tickLength - (Date.now() - epoch) % tickLength);
       window.setTimeout(render, delay);
     };
 
