@@ -386,14 +386,14 @@ h3 {
   color: #e7a000;
   background: linear-gradient(
     180deg,
-    #ffd85a 0%,
-    #d48a00 19%,
-    #f4b000 34%,
-    #ffe788 45%,
-    #fff2b4 49%,
-    #dfa000 57%,
-    #bd6e00 77%,
-    #e9a000 100%
+    #f4b20a 0%,
+    #c87500 20%,
+    #e99d00 36%,
+    #ffd45c 45%,
+    #fff0a0 49%,
+    #d88d00 55%,
+    #ab5400 78%,
+    #dd8c00 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -410,45 +410,46 @@ h3 {
 .masthead-sparkle {
   position: absolute;
   z-index: 4;
-  color: #fff7b8;
-  font-size: clamp(1rem, 1.6vw, 1.7rem);
+  color: #fff8c7;
+  font-size: clamp(1.15rem, 1.9vw, 2rem);
   line-height: 1;
-  opacity: 0.28;
+  opacity: 0.4;
   pointer-events: none;
+  -webkit-text-stroke: 0.7px #8d4500;
   text-shadow:
-    0 0 1px #7c3d00,
-    0 0 6px #fff,
-    0 0 16px rgba(255, 174, 0, 0.95),
-    0 0 28px rgba(255, 198, 53, 0.5);
+    0 0 2px #fff,
+    0 0 8px #fff4b0,
+    0 0 16px rgba(255, 174, 0, 0.98),
+    0 0 27px rgba(197, 91, 0, 0.66);
   animation: masthead-sparkle 18s ease-in-out infinite;
 }
 
 .sparkle-one {
-  top: 25%;
-  left: 26%;
+  top: 39%;
+  left: 22%;
 }
 
 .sparkle-two {
-  top: 52%;
-  right: 10%;
+  top: 45%;
+  right: 16%;
   animation-delay: -3.6s;
 }
 
 .sparkle-three {
   right: 48%;
-  bottom: 17%;
+  bottom: 29%;
   animation-delay: -7.2s;
 }
 
 .sparkle-four {
-  top: 20%;
-  right: 34%;
+  top: 34%;
+  right: 35%;
   animation-delay: -10.8s;
 }
 
 .sparkle-five {
-  bottom: 21%;
-  left: 12%;
+  bottom: 34%;
+  left: 13%;
   animation-delay: -14.4s;
 }
 
