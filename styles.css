@@ -228,7 +228,7 @@ h3 {
   align-items: center;
   min-width: max-content;
   white-space: nowrap;
-  animation: marquee-scroll 420s linear infinite;
+  animation: marquee-scroll 600s linear infinite;
   will-change: transform;
 }
 
@@ -1160,7 +1160,7 @@ h3 {
 
 .process-film li {
   position: relative;
-  min-height: 214px;
+  min-height: 190px;
   padding: 55px 17px 18px;
   border: 2px solid var(--gold-dark);
   background: var(--paper-light);
