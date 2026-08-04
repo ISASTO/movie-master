@@ -119,7 +119,7 @@
         output.replaceChildren(fragment);
         counter?.setAttribute(
           "aria-label",
-          `Total website visitors so far: ${count.toLocaleString("en-US")}`,
+          `The Movie Master has ${count.toLocaleString("en-US")} satisfied customers and counting!`,
         );
         priorFormatted = formatted;
       }

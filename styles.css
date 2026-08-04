@@ -300,7 +300,6 @@ h3 {
   overflow: hidden;
   display: grid;
   place-items: center;
-  border-bottom: 3px solid #a85a00;
   background:
     radial-gradient(ellipse at 50% 52%, rgba(255, 191, 38, 0.28) 0%, rgba(255, 213, 113, 0.14) 42%, transparent 73%),
     linear-gradient(180deg, #f3e8d1 0%, #dfcca8 100%);
@@ -341,12 +340,62 @@ h3 {
   text-transform: uppercase;
 }
 
+.masthead-genres {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+}
+
+.masthead-genre {
+  position: absolute;
+  color: rgba(116, 59, 0, 0.82);
+  font-size: clamp(0.58rem, 0.78vw, 0.78rem);
+  font-weight: 800;
+  letter-spacing: 0.19em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255, 245, 191, 0.78);
+}
+
+.genre-drama {
+  top: 12px;
+  left: 18px;
+}
+
+.genre-science-fiction {
+  top: 12px;
+  right: 18px;
+}
+
+.genre-disaster {
+  bottom: 11px;
+  left: 18px;
+}
+
+.genre-suspense {
+  right: 18px;
+  bottom: 11px;
+}
+
 .masthead-face {
   position: relative;
   z-index: 1;
   display: block;
   white-space: nowrap;
   color: #ffc21c;
+  background: linear-gradient(
+    180deg,
+    #fff2a2 0%,
+    #ffd945 25%,
+    #ffbc0b 64%,
+    #e99400 100%
+  );
+  background-size: 100% 145%;
+  background-position: 50% 22%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   -webkit-text-stroke: clamp(1px, 0.014em, 2px) #a55300;
   text-shadow:
     -0.016em -0.018em 0 #fff0a0,
@@ -354,6 +403,37 @@ h3 {
     0 0.14em 0.17em rgba(113, 55, 0, 0.28),
     0 0 0.2em rgba(255, 185, 23, 0.2);
   animation: masthead-shine 38s ease-in-out infinite;
+}
+
+.masthead-sparkle {
+  position: absolute;
+  z-index: 4;
+  color: #fff8bd;
+  font-size: clamp(0.72rem, 1.15vw, 1.2rem);
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  text-shadow:
+    0 0 5px #fff,
+    0 0 13px rgba(255, 183, 0, 0.88);
+  animation: masthead-sparkle 16s ease-in-out infinite;
+}
+
+.sparkle-one {
+  top: 33%;
+  left: 21%;
+}
+
+.sparkle-two {
+  top: 27%;
+  right: 17%;
+  animation-delay: -5.3s;
+}
+
+.sparkle-three {
+  right: 45%;
+  bottom: 24%;
+  animation-delay: -10.6s;
 }
 
 .master-glint {
@@ -372,9 +452,28 @@ h3 {
   0%,
   100% {
     filter: brightness(1) saturate(1);
+    background-position: 50% 22%;
   }
   48% {
-    filter: brightness(1.09) saturate(1.04);
+    filter: brightness(1.06) saturate(1.03);
+    background-position: 50% 74%;
+  }
+}
+
+@keyframes masthead-sparkle {
+  0%,
+  76%,
+  100% {
+    opacity: 0;
+    transform: scale(0.35) rotate(0deg);
+  }
+  82% {
+    opacity: 0.92;
+    transform: scale(1.05) rotate(45deg);
+  }
+  88% {
+    opacity: 0.42;
+    transform: scale(0.72) rotate(90deg);
   }
 }
 
@@ -1553,7 +1652,7 @@ h3 {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 10px 14px;
   margin-top: 58px;
   padding: 21px;
   border: 3px solid var(--gold-dark);
@@ -1566,7 +1665,6 @@ h3 {
 .counter-label {
   font-size: clamp(0.88rem, 2vw, 1.08rem);
   font-weight: 700;
-  text-transform: uppercase;
 }
 
 .counter-digits {
@@ -1836,6 +1934,31 @@ h3 {
   .masthead-stage {
     min-height: 225px;
     padding: 24px 0 10px;
+  }
+
+  .masthead-genre {
+    font-size: 0.53rem;
+    letter-spacing: 0.12em;
+  }
+
+  .genre-drama,
+  .genre-science-fiction {
+    top: 10px;
+  }
+
+  .genre-disaster,
+  .genre-suspense {
+    bottom: 9px;
+  }
+
+  .genre-drama,
+  .genre-disaster {
+    left: 10px;
+  }
+
+  .genre-science-fiction,
+  .genre-suspense {
+    right: 10px;
   }
 
   .masthead {

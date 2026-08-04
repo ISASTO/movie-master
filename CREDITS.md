@@ -11,7 +11,7 @@ Customer portraits are real stock photographs from Pexels. They are used as
 illustrative portraits under the [Pexels license](https://www.pexels.com/license/).
 
 - Gabriel W.: [Professional man in a blue suit smiling](https://www.pexels.com/photo/professional-man-in-blue-suit-smiling-portrait-38677836/)
-- Josephina B.: [Professional portrait of a smiling woman in a studio](https://www.pexels.com/photo/professional-portrait-of-smiling-woman-in-studio-38197025/)
+- Josephina B.: [Studio portrait of an elegant woman](https://www.pexels.com/photo/studio-portrait-of-an-elegant-woman-15780887/)
 - Torrin W.: [Professional headshot of a smiling businessman](https://www.pexels.com/photo/professional-headshot-of-smiling-businessman-30004315/)
 - Sabrina C.: [Smiling woman standing in a studio](https://www.pexels.com/photo/smiling-woman-standing-in-studio-15306494/)
 - Wert P.: [Smiling young man in a suit](https://www.pexels.com/photo/smiling-young-man-in-suit-posing-on-white-studio-background-17311570/)
