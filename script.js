@@ -119,7 +119,7 @@
         output.replaceChildren(fragment);
         counter?.setAttribute(
           "aria-label",
-          `The Movie Master has ${count.toLocaleString("en-US")} satisfied customers and counting!`,
+          `THE MOVIE MASTER HAS ${count.toLocaleString("en-US")} SATISFIED CUSTOMERS AND COUNTING!`,
         );
         priorFormatted = formatted;
       }

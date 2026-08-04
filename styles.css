@@ -383,57 +383,73 @@ h3 {
   z-index: 1;
   display: block;
   white-space: nowrap;
-  color: #ffc21c;
+  color: #e7a000;
   background: linear-gradient(
     180deg,
-    #fff2a2 0%,
-    #ffd945 25%,
-    #ffbc0b 64%,
-    #e99400 100%
+    #ffd85a 0%,
+    #d48a00 19%,
+    #f4b000 34%,
+    #ffe788 45%,
+    #fff2b4 49%,
+    #dfa000 57%,
+    #bd6e00 77%,
+    #e9a000 100%
   );
-  background-size: 100% 145%;
-  background-position: 50% 22%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: clamp(1px, 0.014em, 2px) #a55300;
+  -webkit-text-stroke: clamp(1px, 0.014em, 2px) #8f4300;
   text-shadow:
-    -0.016em -0.018em 0 #fff0a0,
-    0.055em 0.065em 0 #a64e00,
-    0 0.14em 0.17em rgba(113, 55, 0, 0.28),
-    0 0 0.2em rgba(255, 185, 23, 0.2);
-  animation: masthead-shine 38s ease-in-out infinite;
+    -0.016em -0.018em 0 #ffe99a,
+    0.055em 0.065em 0 #934000,
+    0 0.14em 0.17em rgba(88, 40, 0, 0.3),
+    0 0 0.2em rgba(226, 145, 0, 0.18);
+  animation: masthead-shine 32s ease-in-out infinite;
 }
 
 .masthead-sparkle {
   position: absolute;
   z-index: 4;
-  color: #fff8bd;
-  font-size: clamp(0.72rem, 1.15vw, 1.2rem);
+  color: #fff7b8;
+  font-size: clamp(1rem, 1.6vw, 1.7rem);
   line-height: 1;
-  opacity: 0;
+  opacity: 0.28;
   pointer-events: none;
   text-shadow:
-    0 0 5px #fff,
-    0 0 13px rgba(255, 183, 0, 0.88);
-  animation: masthead-sparkle 16s ease-in-out infinite;
+    0 0 1px #7c3d00,
+    0 0 6px #fff,
+    0 0 16px rgba(255, 174, 0, 0.95),
+    0 0 28px rgba(255, 198, 53, 0.5);
+  animation: masthead-sparkle 18s ease-in-out infinite;
 }
 
 .sparkle-one {
-  top: 33%;
-  left: 21%;
+  top: 25%;
+  left: 26%;
 }
 
 .sparkle-two {
-  top: 27%;
-  right: 17%;
-  animation-delay: -5.3s;
+  top: 52%;
+  right: 10%;
+  animation-delay: -3.6s;
 }
 
 .sparkle-three {
-  right: 45%;
-  bottom: 24%;
-  animation-delay: -10.6s;
+  right: 48%;
+  bottom: 17%;
+  animation-delay: -7.2s;
+}
+
+.sparkle-four {
+  top: 20%;
+  right: 34%;
+  animation-delay: -10.8s;
+}
+
+.sparkle-five {
+  bottom: 21%;
+  left: 12%;
+  animation-delay: -14.4s;
 }
 
 .master-glint {
@@ -452,28 +468,30 @@ h3 {
   0%,
   100% {
     filter: brightness(1) saturate(1);
-    background-position: 50% 22%;
   }
-  48% {
-    filter: brightness(1.06) saturate(1.03);
-    background-position: 50% 74%;
+  50% {
+    filter: brightness(1.04) saturate(1.025);
   }
 }
 
 @keyframes masthead-sparkle {
   0%,
-  76%,
   100% {
-    opacity: 0;
-    transform: scale(0.35) rotate(0deg);
+    opacity: 0.25;
+    transform: scale(0.68) rotate(0deg);
   }
-  82% {
-    opacity: 0.92;
-    transform: scale(1.05) rotate(45deg);
+  14% {
+    opacity: 0.98;
+    transform: scale(1.12) rotate(45deg);
   }
-  88% {
-    opacity: 0.42;
+  28%,
+  72% {
+    opacity: 0.22;
     transform: scale(0.72) rotate(90deg);
+  }
+  84% {
+    opacity: 0.7;
+    transform: scale(0.94) rotate(135deg);
   }
 }
 
@@ -585,34 +603,6 @@ h3 {
     drop-shadow(0 20px 15px rgba(61, 35, 12, 0.28));
 }
 
-.master-shimmer {
-  position: absolute;
-  z-index: 4;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.65;
-  background: linear-gradient(
-    112deg,
-    transparent 26%,
-    rgba(255, 255, 255, 0.05) 39%,
-    rgba(255, 247, 186, 0.78) 47%,
-    rgba(255, 255, 255, 0.1) 54%,
-    transparent 66%
-  );
-  background-position: 180% 50%;
-  background-size: 280% 100%;
-  -webkit-mask-image: url("./assets/images/movie-master.webp");
-  mask-image: url("./assets/images/movie-master.webp");
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-  -webkit-mask-position: center bottom;
-  mask-position: center bottom;
-  mix-blend-mode: screen;
-  animation: master-shine 26s ease-in-out infinite;
-}
-
 .master-glint-one {
   top: 18%;
   right: 18%;
@@ -660,17 +650,6 @@ h3 {
   }
   to {
     transform: translate3d(1px, -1px, 0) rotate(0.14deg);
-  }
-}
-
-@keyframes master-shine {
-  0%,
-  58% {
-    background-position: 180% 50%;
-  }
-  88%,
-  100% {
-    background-position: -95% 50%;
   }
 }
 
@@ -1665,6 +1644,7 @@ h3 {
 .counter-label {
   font-size: clamp(0.88rem, 2vw, 1.08rem);
   font-weight: 700;
+  text-transform: uppercase;
 }
 
 .counter-digits {
