@@ -1,7 +1,7 @@
 @font-face {
-  font-family: "Cinzel Movie";
-  src: url("./assets/fonts/cinzel-900.woff2") format("woff2");
-  font-weight: 900;
+  font-family: "Alfa Movie";
+  src: url("./assets/fonts/alfa-slab-one-400.woff2") format("woff2");
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
@@ -47,20 +47,21 @@
 }
 
 :root {
-  --ink: #15110c;
-  --ink-soft: #2b2117;
-  --paper: #f4eddd;
-  --paper-light: #fffaf0;
-  --white: #ffffff;
-  --gold: #ffb800;
-  --gold-bright: #ffd968;
-  --gold-light: #fff0a6;
-  --gold-dark: #bd6900;
-  --gold-deep: #743800;
-  --purple: #6d368e;
-  --purple-dark: #3f1c57;
+  --ink: #120c08;
+  --ink-soft: #291a10;
+  --paper: #d4c2a1;
+  --paper-light: #eadfc9;
+  --white: #f5eddf;
+  --portrait-white: #ffffff;
+  --gold: #e3a10b;
+  --gold-bright: #ffd15c;
+  --gold-light: #ffe39a;
+  --gold-dark: #914800;
+  --gold-deep: #4f2300;
+  --purple: #5b3370;
+  --purple-dark: #32183d;
   --border: 3px solid var(--ink);
-  --shadow: 9px 9px 0 rgba(104, 58, 0, 0.2);
+  --shadow: 9px 9px 0 rgba(57, 29, 5, 0.32);
   --marquee-height: 46px;
 }
 
@@ -81,7 +82,7 @@ body {
   padding-top: var(--marquee-height);
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.8), transparent 32rem),
+    radial-gradient(circle at 20% 10%, rgba(240, 222, 188, 0.58), transparent 32rem),
     repeating-linear-gradient(
       0deg,
       rgba(102, 70, 29, 0.025) 0,
@@ -228,7 +229,7 @@ h3 {
   align-items: center;
   min-width: max-content;
   white-space: nowrap;
-  animation: marquee-scroll 600s linear infinite;
+  animation: marquee-scroll 800s linear infinite;
   will-change: transform;
 }
 
@@ -271,9 +272,9 @@ h3 {
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.98), transparent 40%),
-    radial-gradient(circle at 18% 66%, rgba(255, 199, 47, 0.23), transparent 33%),
-    linear-gradient(180deg, #fffaf0 0%, var(--paper) 86%);
+    radial-gradient(circle at 50% 8%, rgba(246, 222, 169, 0.55), transparent 38%),
+    radial-gradient(circle at 18% 66%, rgba(192, 121, 20, 0.22), transparent 33%),
+    linear-gradient(180deg, #decba9 0%, #c7b28e 86%);
 }
 
 .hero-grain {
@@ -291,80 +292,83 @@ h3 {
 .masthead-stage {
   position: relative;
   z-index: 1;
-  width: min(1380px, calc(100% - 24px));
-  min-height: clamp(150px, 16vw, 224px);
-  margin: 0 auto;
-  padding: clamp(18px, 2vw, 28px) 0 8px;
+  isolation: isolate;
+  width: 100%;
+  min-height: clamp(138px, 13.5vw, 188px);
+  margin: 0;
+  padding: clamp(15px, 1.8vw, 24px) 20px 13px;
+  overflow: hidden;
   display: grid;
   place-items: center;
+  border-bottom: 3px solid var(--gold-dark);
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(120, 73, 28, 0.68) 0%, rgba(42, 24, 14, 0.82) 49%, transparent 76%),
+    linear-gradient(180deg, #24170f 0%, #0e0a07 58%, #1c1009 100%);
+  box-shadow:
+    inset 0 -12px 28px rgba(0, 0, 0, 0.42),
+    0 10px 24px rgba(45, 23, 5, 0.32);
 }
 
 .masthead-rays {
   position: absolute;
-  z-index: -1;
-  inset: -70% -12% -58%;
-  opacity: 0.2;
+  z-index: 0;
+  inset: -145% -12%;
+  opacity: 0.12;
+  pointer-events: none;
   background: repeating-conic-gradient(
-    from -8deg at 50% 52%,
-    rgba(255, 194, 44, 0.32) 0deg 3deg,
-    rgba(255, 241, 180, 0) 3deg 12deg,
-    rgba(255, 223, 111, 0.16) 12deg 15deg,
-    transparent 15deg 26deg
+    from -7deg at 50% 50%,
+    rgba(255, 200, 74, 0.38) 0deg 2.5deg,
+    transparent 2.5deg 14deg,
+    rgba(255, 224, 143, 0.16) 14deg 16deg,
+    transparent 16deg 29deg
   );
-  mask-image: radial-gradient(ellipse at center, black 0%, rgba(0, 0, 0, 0.68) 30%, transparent 67%);
-  animation: masthead-rays-breathe 30s ease-in-out infinite alternate;
+  mask-image: radial-gradient(ellipse at center, black 0%, rgba(0, 0, 0, 0.74) 29%, transparent 69%);
+  animation: masthead-rays-breathe 42s ease-in-out infinite alternate;
 }
 
 .masthead {
   position: relative;
   z-index: 2;
-  width: 100%;
+  width: min(1380px, calc(100% - 16px));
   margin: 0;
   color: var(--gold);
-  font-family: "Cinzel Movie", Georgia, serif;
-  font-size: clamp(3rem, 7.15vw, 7rem);
-  font-weight: 900;
-  line-height: 0.9;
-  letter-spacing: -0.045em;
+  font-family: "Alfa Movie", Rockwell, "Roboto Slab", serif;
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: -0.032em;
   text-align: center;
   text-transform: uppercase;
-  filter: drop-shadow(0 11px 14px rgba(115, 56, 0, 0.2));
-}
-
-.masthead-line {
-  position: relative;
-  display: block;
-  white-space: nowrap;
 }
 
 .masthead-face {
   position: relative;
   z-index: 1;
   display: block;
+  white-space: nowrap;
   color: transparent;
   background:
     linear-gradient(
-      112deg,
-      transparent 0% 40%,
-      rgba(255, 255, 230, 0.8) 47%,
+      108deg,
+      transparent 0% 42%,
+      rgba(255, 255, 225, 0.9) 48%,
       transparent 54% 100%
-    ) 180% 0 / 280% 100%,
+    ) 185% 0 / 270% 100%,
     linear-gradient(
       180deg,
-      #fff4a5 0%,
-      #ffd04a 28%,
-      #f1a100 52%,
-      #bd6800 78%,
-      #8b4300 100%
+      #fff1a8 0%,
+      #f6c43f 30%,
+      #d98a00 57%,
+      #8b4100 100%
     ) 0 0 / 100% 100%;
   -webkit-background-clip: text;
   background-clip: text;
-  -webkit-text-stroke: clamp(1px, 0.01em, 2px) #8f4a00;
+  -webkit-text-stroke: clamp(1px, 0.014em, 2px) #713000;
   text-shadow:
-    0 0.06em 0.04em rgba(123, 59, 0, 0.82),
-    0 0.15em 0.2em rgba(104, 49, 0, 0.22),
-    0 0 0.25em rgba(255, 190, 35, 0.36);
-  animation: masthead-shine 28s ease-in-out infinite;
+    0.055em 0.065em 0 #592600,
+    0 0.14em 0.17em rgba(0, 0, 0, 0.48),
+    0 0 0.2em rgba(239, 166, 31, 0.18);
+  animation: masthead-shine 38s ease-in-out infinite;
 }
 
 .master-glint {
@@ -381,23 +385,23 @@ h3 {
 
 @keyframes masthead-shine {
   0%,
-  58% {
-    background-position: 180% 0, 0 0;
+  62% {
+    background-position: 185% 0, 0 0;
   }
-  88%,
+  90%,
   100% {
-    background-position: -80% 0, 0 0;
+    background-position: -85% 0, 0 0;
   }
 }
 
 @keyframes masthead-rays-breathe {
   from {
-    opacity: 0.14;
-    transform: scale(0.98);
+    opacity: 0.08;
+    transform: scale(0.985);
   }
   to {
-    opacity: 0.23;
-    transform: scale(1.02);
+    opacity: 0.14;
+    transform: scale(1.015);
   }
 }
 
@@ -645,6 +649,15 @@ h3 {
   text-underline-offset: 4px;
 }
 
+.claim-tm {
+  position: relative;
+  top: -0.52em;
+  margin-left: 0.22em;
+  font-size: 0.38em;
+  letter-spacing: 0.03em;
+  text-decoration: none;
+}
+
 .contact-marquee {
   position: relative;
   padding: 26px clamp(18px, 2.6vw, 30px) 22px;
@@ -727,9 +740,9 @@ h3 {
   padding: 10px 23px;
   border: 3px solid var(--ink);
   background:
-    radial-gradient(circle at 0 50%, transparent 0 9px, var(--gold) 10px),
-    radial-gradient(circle at 100% 50%, transparent 0 9px, var(--gold) 10px);
-  background-color: var(--gold);
+    radial-gradient(circle at 0 50%, transparent 0 9px, var(--paper-light) 10px),
+    radial-gradient(circle at 100% 50%, transparent 0 9px, var(--paper-light) 10px);
+  background-color: var(--paper-light);
   color: var(--ink);
   box-shadow: 5px 5px 0 rgba(255, 245, 192, 0.25);
   text-decoration: none;
@@ -737,9 +750,6 @@ h3 {
 }
 
 .ticket-email {
-  background:
-    radial-gradient(circle at 0 50%, transparent 0 9px, var(--paper-light) 10px),
-    radial-gradient(circle at 100% 50%, transparent 0 9px, var(--paper-light) 10px);
   background-color: var(--paper-light);
 }
 
@@ -850,7 +860,7 @@ h3 {
 .outlined-panel {
   border: var(--border);
   background:
-    linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)),
+    linear-gradient(rgba(245, 237, 223, 0.62), rgba(245, 237, 223, 0.62)),
     var(--paper-light);
   box-shadow: var(--shadow);
 }
@@ -1488,7 +1498,7 @@ h3 {
   overflow: hidden;
   border: 4px solid var(--ink);
   border-radius: 50%;
-  background: var(--white);
+  background: var(--portrait-white);
   box-shadow:
     0 0 0 6px var(--gold),
     7px 8px 0 rgba(97, 51, 0, 0.22);
@@ -1498,8 +1508,7 @@ h3 {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scale(var(--portrait-scale, 1));
-  transform-origin: var(--portrait-origin, 50% 50%);
+  object-position: center;
 }
 
 .testimonial-card figcaption {

@@ -90,10 +90,7 @@
     const tickLength = 1000 / visitorsPerSecond;
     let priorFormatted = "";
 
-    const formatCount = (value) =>
-      String(value)
-        .padStart(9, "0")
-        .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const formatCount = (value) => value.toLocaleString("en-US");
 
     const render = () => {
       const elapsed = Math.max(0, Date.now() - epoch);
