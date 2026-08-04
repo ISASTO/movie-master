@@ -386,21 +386,19 @@ h3 {
   color: #e7a000;
   background: linear-gradient(
     180deg,
-    #f4b20a 0%,
-    #c87500 20%,
-    #e99d00 36%,
-    #ffd45c 45%,
-    #fff0a0 49%,
-    #d88d00 55%,
-    #ab5400 78%,
-    #dd8c00 100%
+    #f6c12a 0%,
+    #d68b00 23%,
+    #ffcc3b 42%,
+    #ed9e00 54%,
+    #c06a00 77%,
+    #e19800 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: clamp(1px, 0.014em, 2px) #8f4300;
   text-shadow:
-    -0.016em -0.018em 0 #ffe99a,
+    -0.016em -0.018em 0 #ffd765,
     0.055em 0.065em 0 #934000,
     0 0.14em 0.17em rgba(88, 40, 0, 0.3),
     0 0 0.2em rgba(226, 145, 0, 0.18);
@@ -410,47 +408,35 @@ h3 {
 .masthead-sparkle {
   position: absolute;
   z-index: 4;
-  color: #fff8c7;
-  font-size: clamp(1.15rem, 1.9vw, 2rem);
+  color: #fffbe0;
   line-height: 1;
-  opacity: 0.4;
   pointer-events: none;
-  -webkit-text-stroke: 0.7px #8d4500;
   text-shadow:
-    0 0 2px #fff,
-    0 0 8px #fff4b0,
-    0 0 16px rgba(255, 174, 0, 0.98),
-    0 0 27px rgba(197, 91, 0, 0.66);
-  animation: masthead-sparkle 18s ease-in-out infinite;
+    0 0 6px #fff,
+    0 0 14px var(--gold-bright),
+    0 0 28px var(--gold);
+  animation: glint 16s ease-in-out infinite;
 }
 
 .sparkle-one {
-  top: 39%;
-  left: 22%;
+  top: 30%;
+  left: 25%;
+  font-size: 1.7rem;
+  animation-delay: -1.4s;
 }
 
 .sparkle-two {
-  top: 45%;
-  right: 16%;
-  animation-delay: -3.6s;
+  top: 46%;
+  right: 17%;
+  font-size: 1.2rem;
+  animation-delay: -3.8s;
 }
 
 .sparkle-three {
-  right: 48%;
-  bottom: 29%;
-  animation-delay: -7.2s;
-}
-
-.sparkle-four {
-  top: 34%;
-  right: 35%;
-  animation-delay: -10.8s;
-}
-
-.sparkle-five {
-  bottom: 34%;
-  left: 13%;
-  animation-delay: -14.4s;
+  right: 47%;
+  bottom: 24%;
+  font-size: 1rem;
+  animation-delay: -5s;
 }
 
 .master-glint {
@@ -472,27 +458,6 @@ h3 {
   }
   50% {
     filter: brightness(1.04) saturate(1.025);
-  }
-}
-
-@keyframes masthead-sparkle {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.68) rotate(0deg);
-  }
-  14% {
-    opacity: 0.98;
-    transform: scale(1.12) rotate(45deg);
-  }
-  28%,
-  72% {
-    opacity: 0.22;
-    transform: scale(0.72) rotate(90deg);
-  }
-  84% {
-    opacity: 0.7;
-    transform: scale(0.94) rotate(135deg);
   }
 }
 
