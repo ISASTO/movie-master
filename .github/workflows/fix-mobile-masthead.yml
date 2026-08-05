@@ -23,6 +23,7 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PY'
+          import base64
           from pathlib import Path
 
           path = Path("styles.css")
@@ -32,51 +33,9 @@ jobs:
           if marker in text:
               raise SystemExit("Mobile masthead guard already exists")
 
-          guard = r'''
-
-/* Mobile masthead overflow guard */
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-@media (max-width: 820px) {
-  .masthead-stage {
-    padding-right: 14px;
-    padding-left: 14px;
-  }
-
-  .masthead {
-    width: 100%;
-    max-width: 100%;
-    font-size: clamp(2.8rem, 13.8vw, 5.9rem);
-  }
-
-  .masthead-face > span {
-    width: 100%;
-    transform: scaleX(0.98);
-    transform-origin: center;
-  }
-}
-
-@media (max-width: 560px) {
-  .masthead-stage {
-    padding-right: 12px;
-    padding-left: 12px;
-  }
-
-  .masthead {
-    font-size: clamp(2.35rem, 13.6vw, 4.8rem);
-  }
-
-  .masthead-face > span {
-    transform: scaleX(0.96);
-  }
-}
-'''
-
-          text += guard
-          path.write_text(text, encoding="utf-8")
+          payload = "CgovKiBNb2JpbGUgbWFzdGhlYWQgb3ZlcmZsb3cgZ3VhcmQgKi8KaHRtbCB7CiAgLXdlYmtpdC10ZXh0LXNpemUtYWRqdXN0OiAxMDAlOwogIHRleHQtc2l6ZS1hZGp1c3Q6IDEwMCU7Cn0KCkBtZWRpYSAobWF4LXdpZHRoOiA4MjBweCkgewogIC5tYXN0aGVhZC1zdGFnZSB7CiAgICBwYWRkaW5nLXJpZ2h0OiAxNHB4OwogICAgcGFkZGluZy1sZWZ0OiAxNHB4OwogIH0KCiAgLm1hc3RoZWFkIHsKICAgIHdpZHRoOiAxMDAlOwogICAgbWF4LXdpZHRoOiAxMDAlOwogICAgZm9udC1zaXplOiBjbGFtcCgyLjhyZW0sIDEzLjh2dywgNS45cmVtKTsKICB9CgogIC5tYXN0aGVhZC1mYWNlID4gc3BhbiB7CiAgICB3aWR0aDogMTAwJTsKICAgIHRyYW5zZm9ybTogc2NhbGVYKDAuOTgpOwogICAgdHJhbnNmb3JtLW9yaWdpbjogY2VudGVyOwogIH0KfQoKQG1lZGlhIChtYXgtd2lkdGg6IDU2MHB4KSB7CiAgLm1hc3RoZWFkLXN0YWdlIHsKICAgIHBhZGRpbmctcmlnaHQ6IDEycHg7CiAgICBwYWRkaW5nLWxlZnQ6IDEycHg7CiAgfQoKICAubWFzdGhlYWQgewogICAgZm9udC1zaXplOiBjbGFtcCgyLjM1cmVtLCAxMy42dncsIDQuOHJlbSk7CiAgfQoKICAubWFzdGhlYWQtZmFjZSA+IHNwYW4gewogICAgdHJhbnNmb3JtOiBzY2FsZVgoMC45Nik7CiAgfQp9Cg=="
+          guard = base64.b64decode(payload).decode("utf-8")
+          path.write_text(text + guard, encoding="utf-8")
 
           verified = path.read_text(encoding="utf-8")
           required = [
