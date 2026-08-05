@@ -28,7 +28,7 @@ illustrative portraits under the [Pexels license](https://www.pexels.com/license
 - Sarah B.: [Smiling woman in professional attire](https://www.pexels.com/photo/smiling-woman-in-white-shirt-24389353/)
 - Thomas L.: [Smiling man in a suit jacket](https://www.pexels.com/photo/a-man-in-a-suit-jacket-5906433/)
 - Leona S.: [Smiling woman in a black blazer](https://www.pexels.com/photo/a-smiling-woman-in-black-blazer-12946488/)
-- Eric W.: [Smiling man in a black suit](https://www.pexels.com/photo/man-wearing-black-suit-on-white-background-12311572/)
+- Eric W.: [Smiling man in a white shirt](https://www.pexels.com/photo/a-man-in-white-shirt-smiling-8508753/)
 - Inez P.: [Smiling woman in a mint green blazer](https://www.pexels.com/photo/smiling-woman-in-mint-green-blazer-portrait-31622604/)
 - Jack R.: [Confident businessman in formal attire smiling](https://www.pexels.com/photo/confident-businessman-in-formal-attire-smiling-36845967/)
 - Rachel L.: [Woman in mustard business attire smiling](https://www.pexels.com/photo/woman-in-mustard-business-attire-sitting-on-white-floor-while-smiling-at-the-camera-8498380/)
