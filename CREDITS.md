@@ -26,6 +26,14 @@ illustrative portraits under the [Pexels license](https://www.pexels.com/license
 - Greta H.: [Smiling professional woman in a navy blazer](https://www.pexels.com/photo/smiling-elegant-businesswoman-17050919/)
 - Maynard P.: [A man smiling at the camera](https://www.pexels.com/photo/a-man-smiling-at-the-camera-7821728/)
 - Sarah B.: [Smiling woman in professional attire](https://www.pexels.com/photo/smiling-woman-in-white-shirt-24389353/)
+- Thomas L.: [Smiling man in a suit jacket](https://www.pexels.com/photo/a-man-in-a-suit-jacket-5906433/)
+- Leona S.: [Smiling woman in a black blazer](https://www.pexels.com/photo/a-smiling-woman-in-black-blazer-12946488/)
+- Eric W.: [Smiling man in a black suit](https://www.pexels.com/photo/man-wearing-black-suit-on-white-background-12311572/)
+- Inez P.: [Smiling woman in a mint green blazer](https://www.pexels.com/photo/smiling-woman-in-mint-green-blazer-portrait-31622604/)
+- Jack R.: [Confident businessman in formal attire smiling](https://www.pexels.com/photo/confident-businessman-in-formal-attire-smiling-36845967/)
+- Rachel L.: [Woman in mustard business attire smiling](https://www.pexels.com/photo/woman-in-mustard-business-attire-sitting-on-white-floor-while-smiling-at-the-camera-8498380/)
+- Lucas P.: [Man in a suit posing on a white studio background](https://www.pexels.com/photo/man-in-suit-posing-on-white-studio-background-17311569/)
+- Geodonia S.: [Smiling woman carrying folders](https://www.pexels.com/photo/portrait-photo-of-smiling-woman-in-teal-top-carrying-folders-while-standing-in-front-of-white-background-3762814/)
 
 ## Fonts
 

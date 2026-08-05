@@ -61,19 +61,22 @@
 
   function setUpTestimonials() {
     const button = document.querySelector("#see-more-testimonials");
-    const hiddenCards = [...document.querySelectorAll(".testimonial-extra")];
+    const cards = [...document.querySelectorAll(".testimonial-extra")];
+    const batchSize = 8;
 
-    if (!button || !hiddenCards.length) return;
+    if (!button || !cards.length) return;
 
     button.addEventListener("click", () => {
-      hiddenCards.forEach((card, index) => {
+      const nextBatch = cards.filter((card) => card.hidden).slice(0, batchSize);
+
+      nextBatch.forEach((card, index) => {
         card.hidden = false;
         card.style.animationDelay = `${Math.min(index * 55, 330)}ms`;
         card.classList.add("revealed");
       });
 
-      button.hidden = true;
-      hiddenCards[0]?.scrollIntoView({
+      button.hidden = !cards.some((card) => card.hidden);
+      nextBatch[0]?.scrollIntoView({
         behavior: reducedMotion.matches ? "auto" : "smooth",
         block: "center",
       });

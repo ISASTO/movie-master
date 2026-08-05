@@ -391,12 +391,12 @@ h3 {
   display: inline-block;
   color: var(--gold);
   background: linear-gradient(
-    90deg,
-    #b96a00 0%,
-    #e7a31a 24%,
-    #ffd873 50%,
-    #e7a31a 76%,
-    #b96a00 100%
+    180deg,
+    #f2d36f 0%,
+    #d89a22 36%,
+    #f6df8c 52%,
+    #cb8212 70%,
+    #ad5d05 100%
   );
   background-size: 100% 100%;
   -webkit-background-clip: text;
@@ -1450,7 +1450,6 @@ h3 {
 .quote-bubble {
   position: relative;
   width: 100%;
-  min-height: 148px;
   margin: 0 0 25px;
   padding: 19px 19px 21px;
   border: 3px solid var(--ink);
@@ -1856,10 +1855,6 @@ h3 {
 
   .testimonial-card:nth-child(even) {
     transform: translateY(16px);
-  }
-
-  .quote-bubble {
-    min-height: 0;
   }
 
   .projector-decoration {
