@@ -384,26 +384,29 @@ h3 {
   display: block;
   white-space: nowrap;
   color: var(--gold);
+  animation: masthead-shine 32s ease-in-out infinite;
+}
+
+.masthead-face > span {
+  display: inline-block;
+  color: var(--gold);
   background: linear-gradient(
-    90deg,
-    #9a4700 0%,
-    #d98500 13%,
-    #ffd15c 30%,
-    #bd6000 48%,
-    #ffe08a 64%,
-    #df8e00 82%,
-    #914800 100%
+    180deg,
+    #fff1a6 0%,
+    #efb01c 30%,
+    #a64b00 54%,
+    #ffd15c 72%,
+    #914000 100%
   );
+  background-size: 100% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: clamp(1px, 0.014em, 2px) #8f4300;
-  text-shadow:
-    -0.016em -0.018em 0 #ffd765,
-    0.055em 0.065em 0 #934000,
-    0 0.14em 0.17em rgba(88, 40, 0, 0.3),
-    0 0 0.2em rgba(226, 145, 0, 0.18);
-  animation: masthead-shine 32s ease-in-out infinite;
+  filter:
+    drop-shadow(0.035em 0.045em 0 #b85a00)
+    drop-shadow(0.045em 0.05em 0 #783000)
+    drop-shadow(0 0.12em 0.11em rgba(88, 40, 0, 0.34));
 }
 
 .masthead-sparkle {
