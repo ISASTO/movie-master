@@ -383,15 +383,16 @@ h3 {
   z-index: 1;
   display: block;
   white-space: nowrap;
-  color: #e7a000;
+  color: var(--gold);
   background: linear-gradient(
-    180deg,
-    #f6c12a 0%,
-    #d68b00 23%,
-    #ffcc3b 42%,
-    #ed9e00 54%,
-    #c06a00 77%,
-    #e19800 100%
+    90deg,
+    #9a4700 0%,
+    #d98500 13%,
+    #ffd15c 30%,
+    #bd6000 48%,
+    #ffe08a 64%,
+    #df8e00 82%,
+    #914800 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -422,21 +423,21 @@ h3 {
   top: 30%;
   left: 25%;
   font-size: 1.7rem;
-  animation-delay: -1.4s;
+  animation-delay: -14.1s;
 }
 
 .sparkle-two {
   top: 46%;
   right: 17%;
   font-size: 1.2rem;
-  animation-delay: -3.8s;
+  animation-delay: -8.8s;
 }
 
 .sparkle-three {
   right: 47%;
   bottom: 24%;
   font-size: 1rem;
-  animation-delay: -5s;
+  animation-delay: -3.5s;
 }
 
 .master-glint {
@@ -1678,20 +1679,6 @@ h3 {
 
 .footer-inner p {
   margin: 0;
-}
-
-.footer-inner a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding-inline: 4px;
-  color: var(--gold-bright);
-  font-weight: 700;
-}
-
-.footer-inner a:focus-visible {
-  outline: 2px solid var(--gold-bright);
-  outline-offset: 3px;
 }
 
 .reveal-on-scroll {
