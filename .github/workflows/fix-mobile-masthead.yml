@@ -1,0 +1,118 @@
+name: Fix mobile masthead fit
+
+on:
+  push:
+    branches:
+      - agent/movie-master-site
+    paths:
+      - .github/workflows/fix-mobile-masthead.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-masthead:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out live site branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/movie-master-site
+
+      - name: Apply responsive masthead fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("styles.css")
+          text = path.read_text(encoding="utf-8")
+
+          replacements = [
+              (
+                  '''html {
+            scroll-behavior: smooth;
+            scroll-padding-top: calc(var(--marquee-height) + 18px);
+            overflow-x: clip;
+          }''',
+                  '''html {
+            scroll-behavior: smooth;
+            scroll-padding-top: calc(var(--marquee-height) + 18px);
+            overflow-x: clip;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+          }''',
+              ),
+              (
+                  '''  .masthead-stage {
+            min-height: clamp(210px, 30vw, 250px);
+            padding: 28px 0 12px;
+          }''',
+                  '''  .masthead-stage {
+            min-height: clamp(210px, 30vw, 250px);
+            padding: 28px 14px 12px;
+          }''',
+              ),
+              (
+                  '''  .masthead {
+            font-size: clamp(3.35rem, 14.2vw, 6.4rem);
+            line-height: 0.9;
+          }''',
+                  '''  .masthead {
+            width: 100%;
+            max-width: 100%;
+            font-size: clamp(2.8rem, 13.8vw, 5.9rem);
+            line-height: 0.9;
+          }''',
+              ),
+              (
+                  '''  .masthead-stage {
+            min-height: 225px;
+            padding: 24px 0 10px;
+          }''',
+                  '''  .masthead-stage {
+            min-height: 225px;
+            padding: 24px 12px 10px;
+          }''',
+              ),
+              (
+                  '''  .masthead {
+            font-size: clamp(2.8rem, 15.8vw, 5.2rem);
+            letter-spacing: -0.055em;
+          }''',
+                  '''  .masthead {
+            font-size: clamp(2.35rem, 13.6vw, 4.8rem);
+            letter-spacing: -0.055em;
+          }''',
+              ),
+          ]
+
+          for old, new in replacements:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected exactly one match, found {count}: {old[:90]!r}")
+              text = text.replace(old, new, 1)
+
+          required = [
+              "-webkit-text-size-adjust: 100%;",
+              "padding: 28px 14px 12px;",
+              "font-size: clamp(2.8rem, 13.8vw, 5.9rem);",
+              "padding: 24px 12px 10px;",
+              "font-size: clamp(2.35rem, 13.6vw, 4.8rem);",
+          ]
+          for snippet in required:
+              if text.count(snippet) != 1:
+                  raise SystemExit(f"Verification failed for {snippet!r}")
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit fix and remove one-off workflow
+        shell: bash
+        run: |
+          rm .github/workflows/fix-mobile-masthead.yml
+          git config user.name "Movie Master Site Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add styles.css .github/workflows/fix-mobile-masthead.yml
+          git commit -m "Prevent mobile masthead clipping"
+          git push origin HEAD:agent/movie-master-site
