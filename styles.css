@@ -239,11 +239,6 @@ h3 {
   align-items: center;
 }
 
-.testimonial-marquee:hover .marquee-track,
-.testimonial-marquee:focus-within .marquee-track {
-  animation-play-state: paused;
-}
-
 .marquee-item {
   display: inline-flex;
   align-items: center;
