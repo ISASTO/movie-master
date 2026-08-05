@@ -391,12 +391,12 @@ h3 {
   display: inline-block;
   color: var(--gold);
   background: linear-gradient(
-    180deg,
-    #fff1a6 0%,
-    #efb01c 30%,
-    #a64b00 54%,
-    #ffd15c 72%,
-    #914000 100%
+    90deg,
+    #b96a00 0%,
+    #e7a31a 24%,
+    #ffd873 50%,
+    #e7a31a 76%,
+    #b96a00 100%
   );
   background-size: 100% 100%;
   -webkit-background-clip: text;
