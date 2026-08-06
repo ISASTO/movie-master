@@ -5,7 +5,7 @@
 
   function buildMarquee() {
     const track = document.querySelector("#marquee-track");
-    const testimonials = [...document.querySelectorAll(".testimonial-card")];
+    const testimonials = [...document.querySelectorAll(".testimonial-card.testimonial-marquee-source")];
 
     if (!track || !testimonials.length) return;
 
