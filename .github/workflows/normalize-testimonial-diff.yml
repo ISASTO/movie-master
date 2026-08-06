@@ -1,0 +1,121 @@
+name: Normalize testimonial batch diff
+
+on:
+  push:
+    branches:
+      - agent/testimonial-batch-staging
+    paths:
+      - .github/workflows/normalize-testimonial-diff.yml
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/testimonial-batch-staging
+          fetch-depth: 0
+
+      - name: Rebuild only the testimonial grid
+        shell: bash
+        run: |
+          python3 -m pip install --quiet beautifulsoup4
+          git show c678cd8db7a411fdc8993342f1661646ba3526bf:index.html > /tmp/base-index.html
+          cat > /tmp/normalize.py <<'PY'
+          from pathlib import Path
+          from bs4 import BeautifulSoup
+          import html
+          import re
+          import textwrap
+
+          current_path = Path("index.html")
+          current = current_path.read_text(encoding="utf-8")
+          base = Path("/tmp/base-index.html").read_text(encoding="utf-8")
+          soup = BeautifulSoup(current, "html.parser")
+
+          items = []
+          for card in soup.select("#testimonial-grid > article.testimonial-card"):
+              quote = " ".join(card.select_one(".testimonial-quote").get_text(" ", strip=True).split())
+              name = card.select_one("figcaption").get_text(" ", strip=True)
+              image = card.select_one("img")["src"]
+              classes = card.get("class", [])
+              items.append({
+                  "quote": quote,
+                  "name": name,
+                  "image": image,
+                  "classes": classes,
+                  "hidden": card.has_attr("hidden"),
+              })
+
+          if len(items) != 32:
+              raise SystemExit(f"Expected 32 staged testimonials, found {len(items)}")
+
+          def wrap_text(value, width=72):
+              return textwrap.wrap(value, width=width, break_long_words=False, break_on_hyphens=False)
+
+          rendered_cards = []
+          for item in items:
+              class_text = " ".join(item["classes"])
+              hidden = " hidden" if item["hidden"] else ""
+              quote_lines = "\n".join(
+                  f"                {html.escape(line, quote=False)}"
+                  for line in wrap_text(item["quote"])
+              )
+              card_html = (
+                  f'            <article class="{class_text}"{hidden}>\n'
+                  '              <blockquote class="quote-bubble testimonial-quote">\n'
+                  f'{quote_lines}\n'
+                  '              </blockquote>\n'
+                  '              <figure>\n'
+                  '                <div class="portrait-frame">\n'
+                  f'                  <img src="{html.escape(item["image"], quote=True)}" alt="" loading="lazy" width="480" height="480">\n'
+                  '                </div>\n'
+                  f'                <figcaption>{html.escape(item["name"], quote=False)}</figcaption>\n'
+                  '              </figure>\n'
+                  '            </article>'
+              )
+              rendered_cards.append(card_html)
+
+          body = "\n\n".join(rendered_cards)
+          pattern = re.compile(
+              r'(<div class="testimonial-grid" id="testimonial-grid">\n).*?'
+              r'(\n          </div>\n\n          <button class="see-more-button")',
+              re.S,
+          )
+          match = pattern.search(base)
+          if not match:
+              raise SystemExit("Could not isolate testimonial grid in base HTML")
+
+          updated = pattern.sub(
+              lambda m: m.group(1) + body + m.group(2),
+              base,
+              count=1,
+          )
+          current_path.write_text(updated, encoding="utf-8")
+
+          verified = BeautifulSoup(updated, "html.parser")
+          cards = verified.select("#testimonial-grid > article.testimonial-card")
+          if len(cards) != 32:
+              raise SystemExit(f"Expected 32 normalized cards, found {len(cards)}")
+          if sum(not c.has_attr("hidden") for c in cards) != 8:
+              raise SystemExit("Initial visible testimonial count is not 8")
+          if sum(c.has_attr("hidden") for c in cards) != 24:
+              raise SystemExit("Hidden testimonial count is not 24")
+          if sum("testimonial-marquee-source" in c.get("class", []) for c in cards) != 12:
+              raise SystemExit("Selective marquee count is not 12")
+          PY
+          python3 /tmp/normalize.py
+
+      - name: Commit normalized batch and remove workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/normalize-testimonial-diff.yml
+          git config user.name "Movie Master Site Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/normalize-testimonial-diff.yml
+          git commit -m "Keep testimonial update scoped"
+          git push origin HEAD:agent/testimonial-batch-staging
