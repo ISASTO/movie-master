@@ -1,0 +1,43 @@
+name: Apply portrait crop fix
+
+on:
+  push:
+    branches:
+      - agent/movie-master-site
+    paths:
+      - .github/workflows/apply-portrait-crop-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out live site branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/movie-master-site
+          fetch-depth: 0
+
+      - name: Decode and verify corrected portraits
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in suzi robert leslie tobey brock; do
+            base64 --decode ".portrait-fix/${name}.b64" > "assets/portraits/${name}.webp"
+            test -s "assets/portraits/${name}.webp"
+            file "assets/portraits/${name}.webp" | grep -q "Web/P image"
+          done
+
+      - name: Commit image-only correction and clean up
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .portrait-fix
+          rm -f .github/workflows/apply-portrait-crop-fix.yml
+          git config user.name "Movie Master Site Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add assets/portraits/suzi.webp assets/portraits/robert.webp assets/portraits/leslie.webp assets/portraits/tobey.webp assets/portraits/brock.webp .portrait-fix .github/workflows/apply-portrait-crop-fix.yml
+          git commit -m "Correct five testimonial portrait crops"
+          git push origin HEAD:agent/movie-master-site
