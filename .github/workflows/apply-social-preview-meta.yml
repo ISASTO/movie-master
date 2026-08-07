@@ -1,0 +1,74 @@
+name: Apply social preview metadata
+
+on:
+  push:
+    branches:
+      - agent/movie-master-site
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/movie-master-site
+
+      - name: Update social metadata
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          text = text.replace(
+              'content="https://isasto.github.io/movie-master/"',
+              'content="https://moviemaster.vip/"',
+              1,
+          )
+          text = text.replace(
+              'content="https://isasto.github.io/movie-master/assets/images/movie-master.webp"',
+              'content="https://moviemaster.vip/assets/images/social-preview.jpg"',
+              1,
+          )
+          text = text.replace(
+              'content="A cutout image of a dashing young man in a well-fitted suit with a million-dollar smile and the world in his eye. This is the Movie Master in all his glory."',
+              'content="The Movie Master logo in gold over radiant blockbuster-style rays."',
+              1,
+          )
+          text = text.replace(
+              '<link rel="canonical" href="https://isasto.github.io/movie-master/">',
+              '<link rel="canonical" href="https://moviemaster.vip/">',
+              1,
+          )
+
+          marker = '    <link rel="canonical" href="https://moviemaster.vip/">'
+          extra = '''    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="600">
+    <meta property="og:image:height" content="216">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MOVIE MASTER">
+    <meta name="twitter:description" content="The Movie Master's official website">
+    <meta name="twitter:image" content="https://moviemaster.vip/assets/images/social-preview.jpg">
+'''
+          if 'property="og:image:width"' not in text:
+              text = text.replace(marker, extra + marker, 1)
+
+          path.write_text(text, encoding="utf-8")
+
+      - name: Verify and commit
+        shell: bash
+        run: |
+          test -s assets/images/social-preview.jpg
+          grep -q 'https://moviemaster.vip/assets/images/social-preview.jpg' index.html
+          grep -q 'twitter:card' index.html
+          rm .github/workflows/apply-social-preview-meta.yml
+          git config user.name "Movie Master Site Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html .github/workflows/apply-social-preview-meta.yml
+          git commit -m "Use Movie Master social share card"
+          git push origin HEAD:agent/movie-master-site
