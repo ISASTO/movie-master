@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   apply:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +17,7 @@ jobs:
           ref: agent/movie-master-site
 
       - name: Update social metadata
-        shell: python
+        shell: python {0}
         run: |
           from pathlib import Path
 
@@ -47,14 +46,16 @@ jobs:
           )
 
           marker = '    <link rel="canonical" href="https://moviemaster.vip/">'
-          extra = '''    <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:width" content="600">
-    <meta property="og:image:height" content="216">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="MOVIE MASTER">
-    <meta name="twitter:description" content="The Movie Master's official website">
-    <meta name="twitter:image" content="https://moviemaster.vip/assets/images/social-preview.jpg">
-'''
+          extra_lines = [
+              '    <meta property="og:image:type" content="image/jpeg">',
+              '    <meta property="og:image:width" content="600">',
+              '    <meta property="og:image:height" content="216">',
+              '    <meta name="twitter:card" content="summary_large_image">',
+              '    <meta name="twitter:title" content="MOVIE MASTER">',
+              '    <meta name="twitter:description" content="The Movie Master&apos;s official website">',
+              '    <meta name="twitter:image" content="https://moviemaster.vip/assets/images/social-preview.jpg">',
+          ]
+          extra = "\n".join(extra_lines) + "\n"
           if 'property="og:image:width"' not in text:
               text = text.replace(marker, extra + marker, 1)
 
