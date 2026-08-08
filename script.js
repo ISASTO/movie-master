@@ -184,7 +184,7 @@
       messageField.style.height = `${messageField.scrollHeight + 2}px`;
     };
 
-    const selectPackage = (packageKey, shouldReveal = false) => {
+    const selectPackage = (packageKey) => {
       const message = packageMessages[packageKey];
       if (!message) return;
 
@@ -201,12 +201,6 @@
       clearCopyStatuses();
       window.requestAnimationFrame(() => {
         sizeMessageField();
-        if (shouldReveal) {
-          requestPanel.querySelector(".purchase-instruction")?.scrollIntoView({
-            behavior: reducedMotion.matches ? "auto" : "smooth",
-            block: "start",
-          });
-        }
       });
     };
 
@@ -280,7 +274,7 @@
     });
 
     packageSelectors.forEach((button) => {
-      button.addEventListener("click", () => selectPackage(button.dataset.packageSelect, true));
+      button.addEventListener("click", () => selectPackage(button.dataset.packageSelect));
     });
 
     closeButton.addEventListener("click", closeDialog);
@@ -358,11 +352,8 @@
 
     const updateActiveLink = () => {
       ticking = false;
-      const threshold = Number.parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue("--marquee-height"),
-      ) + Number.parseFloat(
-        getComputedStyle(document.documentElement).getPropertyValue("--action-bar-height"),
-      ) + 30;
+      const headerHeight = document.querySelector(".site-header-strip")?.getBoundingClientRect().height ?? 0;
+      const threshold = headerHeight + 30;
       let activeTarget = null;
 
       targets.forEach((entry) => {
