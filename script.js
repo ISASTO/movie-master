@@ -61,13 +61,26 @@
 
   function setUpTestimonials() {
     const button = document.querySelector("#see-more-testimonials");
-    const cards = [...document.querySelectorAll(".testimonial-extra")];
-    const batchSize = 8;
+    const cards = [
+      ...document.querySelectorAll(".testimonial-mobile-extra, .testimonial-extra"),
+    ];
+    const mobileTestimonials = window.matchMedia("(max-width: 560px)");
 
     if (!button || !cards.length) return;
 
+    const isCollapsed = (card) =>
+      card.hidden ||
+      (mobileTestimonials.matches &&
+        card.classList.contains("testimonial-mobile-extra") &&
+        !card.classList.contains("revealed"));
+
+    const updateButton = () => {
+      button.hidden = !cards.some(isCollapsed);
+    };
+
     button.addEventListener("click", () => {
-      const nextBatch = cards.filter((card) => card.hidden).slice(0, batchSize);
+      const batchSize = mobileTestimonials.matches ? 4 : 8;
+      const nextBatch = cards.filter(isCollapsed).slice(0, batchSize);
 
       nextBatch.forEach((card, index) => {
         card.hidden = false;
@@ -75,12 +88,15 @@
         card.classList.add("revealed");
       });
 
-      button.hidden = !cards.some((card) => card.hidden);
+      updateButton();
       nextBatch[0]?.scrollIntoView({
         behavior: reducedMotion.matches ? "auto" : "smooth",
         block: "center",
       });
     });
+
+    mobileTestimonials.addEventListener?.("change", updateButton);
+    updateButton();
   }
 
   function setUpVisitorCounter() {
@@ -166,11 +182,11 @@
     const emailSubject = "Movie Master Package Purchase Request";
     const packageMessages = {
       five:
-        "Hello Mr. Movie Master sir. I am interested in purchasing 5 Blockbuster Smash Hit recommendations for $5. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I am interested in purchasing 5 Blockbuster Smash Hit Masterpieces for $5. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
       ten:
-        "Hello Mr. Movie Master sir. I am interested in purchasing 10 Blockbuster Smash Hit recommendations for $10. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I am interested in purchasing 10 Blockbuster Smash Hit Masterpieces for $10. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
       vip:
-        "Hello Mr. Movie Master sir. I am interested in purchasing the Movie Master VIP Package for $20. It includes 20 Blockbuster Smash Hit recommendations, 3 of the best R&B music videos ever made, and a VIP certificate to prove my VIP status. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I am interested in purchasing the Movie Master VIP Package for $20. It includes 20 Blockbuster Smash Hit Masterpieces, 3 of the best R&B music videos ever made, and a VIP certificate to prove my VIP status. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
     };
     let launchElement = null;
 
