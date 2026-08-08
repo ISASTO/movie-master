@@ -884,7 +884,7 @@ h3 {
   align-content: center;
   gap: 5px;
   min-width: 0;
-  min-height: 94px;
+  min-height: 108px;
   padding: 10px 8px;
   border: 2px solid var(--gold-dark);
   background:
@@ -919,7 +919,7 @@ h3 {
 
 .reservation-package-options span {
   min-width: 0;
-  font-size: clamp(0.56rem, 1.05vw, 0.68rem);
+  font-size: clamp(0.68rem, 1.2vw, 0.82rem);
   font-weight: 800;
   line-height: 1.12;
   text-transform: uppercase;
@@ -928,7 +928,7 @@ h3 {
 .reservation-package-options .reservation-package-detail {
   max-width: 30ch;
   color: var(--ink);
-  font-size: clamp(0.49rem, 0.8vw, 0.58rem);
+  font-size: clamp(0.59rem, 0.95vw, 0.68rem);
   font-weight: 800;
   letter-spacing: 0.015em;
   line-height: 1.12;
@@ -3221,7 +3221,7 @@ h3 {
   }
 
   .reservation-package-options button {
-    min-height: 104px;
+    min-height: 116px;
     padding: 11px 5px;
   }
 
@@ -3231,7 +3231,7 @@ h3 {
 
   .reservation-package-options span {
     max-width: none;
-    font-size: 0.68rem;
+    font-size: 0.8rem;
     letter-spacing: -0.012em;
     line-height: 1.16;
   }
@@ -3239,7 +3239,7 @@ h3 {
   .reservation-package-options .reservation-package-vip {
     grid-column: 1 / -1;
     grid-template-columns: 1fr;
-    min-height: 118px;
+    min-height: 132px;
     padding: 12px 20px;
   }
 
@@ -3249,13 +3249,13 @@ h3 {
 
   .reservation-package-options .reservation-package-vip span {
     max-width: none;
-    font-size: 0.78rem;
+    font-size: 0.9rem;
     letter-spacing: 0.08em;
   }
 
   .reservation-package-options .reservation-package-vip .reservation-package-detail {
     max-width: 38ch;
-    font-size: 0.62rem;
+    font-size: 0.72rem;
     letter-spacing: 0.025em;
     line-height: 1.15;
   }
