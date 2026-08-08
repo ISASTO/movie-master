@@ -39,5 +39,6 @@ illustrative portraits under the [Pexels license](https://www.pexels.com/license
 
 - Alfa Slab One, distributed through Fontsource under the SIL Open Font License 1.1.
 - Jost, distributed through Fontsource under the SIL Open Font License 1.1.
+- Mr De Haviland, distributed through Fontsource under the SIL Open Font License 1.1.
 
 The complete font license texts are included in `assets/fonts/`.

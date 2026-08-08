@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#17100b">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <meta
+      name="description"
+      content="The official Movie Master VIP certificate"
+    >
+    <link rel="canonical" href="https://moviemaster.vip/vip/">
+    <title>MOVIE MASTER VIP</title>
+    <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./script.js" defer></script>
+  </head>
+  <body class="vip-locked">
+    <div
+      class="vip-gate"
+      id="vip-gate"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vip-gate-title"
+    >
+      <div class="gate-rays" aria-hidden="true"></div>
+      <section class="gate-notice">
+        <div class="gate-bulbs gate-bulbs-top" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="gate-emblem" aria-hidden="true">
+          <span>VIP</span>
+        </div>
+        <h1 id="vip-gate-title">
+          THIS WEBPAGE IS ONLY TO BE USED BY MOVIE MASTER VIPS. ONLY PROCEED IF
+          YOU HAVE PURCHASED THE VIP PACKAGE
+        </h1>
+        <div class="gate-actions">
+          <button class="gate-button gate-button-enter" id="enter-vip" type="button" autofocus>
+            I have purchased the VIP package
+          </button>
+          <button class="gate-button gate-button-leave" id="leave-vip" type="button">
+            I have not purchased the VIP package
+          </button>
+        </div>
+        <div class="gate-bulbs gate-bulbs-bottom" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </section>
+    </div>
+
+    <main class="vip-page-shell" id="vip-page" inert>
+      <div class="certificate-toolbar">
+        <button class="print-button" id="print-certificate" type="button">
+          <span aria-hidden="true">▣</span>
+          PRINT
+        </button>
+      </div>
+
+      <div class="certificate-stage">
+        <article
+          class="certificate-sheet"
+          id="certificate"
+          aria-labelledby="certificate-title"
+          tabindex="-1"
+        >
+          <div class="certificate-film certificate-film-top" aria-hidden="true"></div>
+          <div class="certificate-film certificate-film-bottom" aria-hidden="true"></div>
+          <div class="certificate-reel certificate-reel-one" aria-hidden="true"></div>
+
+          <div class="certificate-inner">
+            <header class="certificate-header">
+              <p class="certificate-brand">THE MOVIE MASTER</p>
+              <p class="certificate-package">VIP PACKAGE</p>
+            </header>
+
+            <div class="certificate-stars" aria-hidden="true">★★★★★</div>
+
+            <h1 id="certificate-title">
+              THE BEARER OF THIS CERTIFICATE IS OFFICIALLY A MOVIE MASTER VIP
+              CUSTOMER
+            </h1>
+
+            <div class="certificate-flourish" aria-hidden="true">
+              <span></span><b>★</b><span></span>
+            </div>
+
+            <div class="certificate-attestation">
+              <div class="certificate-date">
+                <span class="certificate-label">DATE:</span>
+                <time id="certificate-date"></time>
+              </div>
+
+              <div class="certificate-signature">
+                <span class="certificate-label">AUTHORIZED BY:</span>
+                <span class="signature-name">
+                  <span class="signature-word">Movie</span>
+                  <span class="signature-word signature-word-master">Master</span>
+                </span>
+                <span class="signature-line" aria-hidden="true"></span>
+              </div>
+
+              <div class="certificate-seal" aria-hidden="true">
+                <span class="seal-stars">★★★★★</span>
+                <strong>VIP</strong>
+                <span class="seal-stars">★★★★★</span>
+              </div>
+            </div>
+
+            <footer class="certificate-footer">
+              <span>© 2026 Movie Master Worldwide. All rights reserved.</span>
+              <strong>www.moviemaster.vip</strong>
+            </footer>
+          </div>
+        </article>
+      </div>
+    </main>
+  </body>
+</html>
