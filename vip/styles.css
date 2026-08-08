@@ -96,11 +96,14 @@ button {
   position: fixed;
   z-index: 100;
   inset: 0;
-  display: grid;
-  place-items: center;
-  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100dvh;
   padding: 24px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background:
     linear-gradient(rgba(10, 7, 5, 0.72), rgba(10, 7, 5, 0.9)),
     repeating-linear-gradient(135deg, var(--purple-dark) 0 24px, var(--ink) 24px 48px);
@@ -126,7 +129,9 @@ button {
 
 .gate-notice {
   position: relative;
+  flex: 0 0 auto;
   width: min(760px, 100%);
+  margin-block: auto;
   padding: clamp(72px, 9vw, 96px) clamp(24px, 7vw, 70px);
   border: 6px solid var(--gold);
   outline: 5px solid var(--ink);
@@ -245,7 +250,8 @@ button {
 }
 
 .gate-button,
-.print-button {
+.print-button,
+.back-button {
   border: 3px solid var(--ink);
   cursor: pointer;
   font-weight: 800;
@@ -272,19 +278,22 @@ button {
 }
 
 .gate-button:hover,
-.print-button:hover {
+.print-button:hover,
+.back-button:hover {
   transform: translate(-2px, -2px);
   box-shadow: 7px 7px 0 var(--gold-dark);
 }
 
 .gate-button:active,
-.print-button:active {
+.print-button:active,
+.back-button:active {
   transform: translate(3px, 3px);
   box-shadow: 2px 2px 0 var(--gold-dark);
 }
 
 .gate-button:focus-visible,
-.print-button:focus-visible {
+.print-button:focus-visible,
+.back-button:focus-visible {
   outline: 4px solid var(--white);
   outline-offset: 4px;
 }
@@ -296,11 +305,14 @@ button {
 
 .certificate-toolbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  gap: 16px;
   padding: 0 18px 28px;
 }
 
-.print-button {
+.print-button,
+.back-button {
   display: inline-flex;
   align-items: center;
   gap: 12px;
@@ -310,16 +322,32 @@ button {
   color: var(--ink);
   box-shadow: 5px 5px 0 var(--gold-dark);
   letter-spacing: 0.08em;
+  text-decoration: none;
 }
 
-.print-button span {
+.back-button {
+  border-color: var(--gold);
+  background: var(--ink-soft);
+  color: var(--paper-light);
+}
+
+.print-button span,
+.back-button span {
   display: grid;
   place-items: center;
   width: 26px;
   height: 21px;
   border: 2px solid var(--ink);
   background: var(--paper-light);
+  color: var(--ink);
   font-size: 0.7rem;
+}
+
+.back-button span {
+  border: 0;
+  background: transparent;
+  color: var(--gold-bright);
+  font-size: 1.25rem;
 }
 
 .certificate-stage {
@@ -534,7 +562,13 @@ button {
 .certificate-signature {
   position: relative;
   align-self: end;
-  min-height: 95px;
+  min-height: 108px;
+}
+
+.certificate-signature .certificate-label {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 18px;
 }
 
 .signature-name {
@@ -543,11 +577,11 @@ button {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  margin: -15px 0 -8px;
+  margin: 0 0 -7px;
   font-family: "Movie Master Signature", "Brush Script MT", cursive;
-  font-size: clamp(4rem, 8.2vw, 7.3rem);
+  font-size: clamp(3.5rem, 7vw, 6rem);
   font-weight: 400;
-  line-height: 0.73;
+  line-height: 0.78;
   white-space: nowrap;
   transform: rotate(-3deg);
   transform-origin: center;
@@ -694,6 +728,69 @@ button {
   }
 }
 
+@media (max-height: 760px) {
+  .gate-notice {
+    padding-block: 46px;
+  }
+
+  .gate-bulbs-top {
+    top: 14px;
+  }
+
+  .gate-bulbs-bottom {
+    bottom: 14px;
+  }
+
+  .gate-emblem {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 14px;
+    border-width: 4px;
+  }
+
+  .gate-emblem::before {
+    inset: 9px;
+  }
+
+  .gate-emblem span {
+    font-size: 1.15rem;
+  }
+
+  .gate-notice h1 {
+    font-size: clamp(1.35rem, 5vh, 2.45rem);
+  }
+
+  .gate-actions {
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .gate-button {
+    min-height: 52px;
+    padding-block: 10px;
+  }
+}
+
+@media (max-height: 520px) {
+  .gate-notice {
+    padding-block: 30px;
+  }
+
+  .gate-bulbs-top {
+    top: 9px;
+  }
+
+  .gate-bulbs-bottom {
+    bottom: 9px;
+  }
+
+  .gate-emblem {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 10px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -824,7 +921,7 @@ button {
   }
 
   .signature-name {
-    font-size: 57pt;
+    font-size: 51pt;
   }
 
   .certificate-seal {

@@ -10,6 +10,11 @@
   const certificate = document.querySelector("#certificate");
   const dateOutput = document.querySelector("#certificate-date");
 
+  if (gate && enterButton) {
+    gate.scrollTop = 0;
+    enterButton.focus({ preventScroll: true });
+  }
+
   if (dateOutput) {
     const today = new Date();
     dateOutput.dateTime = today.toISOString().slice(0, 10);

@@ -1090,11 +1090,11 @@ h3 {
 
 .package-ticket-standard {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 124px minmax(0, 1fr);
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   min-height: 116px;
-  padding: 20px 28px;
+  padding: 20px 26px;
 }
 
 .package-ticket-standard:first-child {
@@ -1129,6 +1129,15 @@ h3 {
   text-transform: uppercase;
 }
 
+.package-ticket-standard .package-price {
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 124px;
+  justify-self: center;
+  text-align: center;
+}
+
 .package-or {
   align-self: center;
   display: grid;
@@ -1156,28 +1165,6 @@ h3 {
   box-shadow:
     9px 9px 0 var(--gold-dark),
     inset 0 0 0 3px var(--gold);
-}
-
-.package-ticket-vip::before,
-.package-ticket-vip::after {
-  content: "";
-  position: absolute;
-  z-index: 3;
-  top: 50%;
-  width: 36px;
-  height: 36px;
-  border: 4px solid var(--ink);
-  border-radius: 50%;
-  background: var(--paper);
-  transform: translateY(-50%);
-}
-
-.package-ticket-vip::before {
-  left: -21px;
-}
-
-.package-ticket-vip::after {
-  right: -21px;
 }
 
 .vip-package-heading {
@@ -1419,7 +1406,6 @@ h3 {
   overflow: hidden;
   border-bottom: 3px solid var(--ink);
   background:
-    linear-gradient(90deg, transparent 49.88%, rgba(79, 35, 0, 0.08) 50%, transparent 50.12%),
     repeating-linear-gradient(0deg, rgba(79, 35, 0, 0.025) 0 1px, transparent 1px 5px),
     radial-gradient(circle at 12% 18%, rgba(227, 161, 11, 0.18), transparent 25rem),
     var(--paper);
@@ -1706,54 +1692,85 @@ h3 {
 .samples-notice {
   position: relative;
   grid-column: 6 / -1;
-  padding: 58px 56px 31px 34px;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+  padding: 31px 34px;
   overflow: hidden;
-  border: 4px solid var(--ink);
+  border: 4px solid var(--gold);
+  outline: 3px solid var(--ink);
+  outline-offset: -11px;
   background:
-    linear-gradient(110deg, rgba(255, 209, 92, 0.19), transparent 55%),
-    var(--paper-light);
+    linear-gradient(105deg, rgba(91, 51, 112, 0.34), transparent 52%),
+    repeating-linear-gradient(0deg, rgba(255, 209, 92, 0.035) 0 1px, transparent 1px 7px),
+    var(--ink-soft);
+  color: var(--paper-light);
   box-shadow: 9px 9px 0 var(--gold-dark);
 }
 
-.samples-marquee {
+.samples-notice::after {
+  content: "";
   position: absolute;
-  inset: 0 0 auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 10px;
+  border-top: 2px solid var(--gold);
+  background: repeating-linear-gradient(135deg, var(--gold-bright) 0 9px, var(--ink) 9px 18px);
+}
+
+.samples-payment-mark {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  align-items: center;
-  height: 34px;
-  padding: 0 13px;
-  border-bottom: 3px solid var(--ink);
-  background: var(--ink-soft);
+  place-items: center;
+  width: 118px;
+  height: 104px;
+  border: 6px double var(--gold-bright);
+  background: rgba(18, 12, 8, 0.55);
+  box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.35);
 }
 
-.samples-marquee span {
-  justify-self: center;
-  width: 13px;
-  height: 13px;
-  border: 2px solid var(--gold-dark);
-  border-radius: 50%;
+.samples-ticket-icon {
+  display: grid;
+  place-items: center;
+  width: 70px;
+  height: 47px;
+  border: 3px solid var(--ink);
   background: var(--gold-bright);
-  box-shadow: 0 0 7px rgba(255, 209, 92, 0.7);
+  color: var(--ink);
+  font-size: 1.25rem;
+  clip-path: polygon(0 0, 100% 0, 100% 30%, 92% 50%, 100% 70%, 100% 100%, 0 100%, 0 70%, 8% 50%, 0 30%);
 }
 
-.samples-ticket-edge {
+.samples-coin {
   position: absolute;
-  inset: 34px 0 0 auto;
-  width: 24px;
-  border-left: 3px dashed var(--gold-dark);
-  background:
-    radial-gradient(circle at right center, var(--paper) 0 8px, transparent 8.5px) right top / 100% 28px repeat-y;
+  right: 10px;
+  bottom: 7px;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 3px double var(--ink);
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--ink);
+  font-family: Georgia, serif;
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: rotate(-8deg);
 }
 
 .samples-notice h3 {
-  margin-bottom: 13px;
-  font-size: clamp(1.45rem, 2.9vw, 2.4rem);
+  margin-bottom: 14px;
+  color: var(--gold-bright);
+  font-size: clamp(1.4rem, 2.55vw, 2.15rem);
 }
 
 .samples-notice p {
   max-width: 650px;
-  font-size: 1rem;
+  font-size: 0.97rem;
   line-height: 1.52;
 }
 
@@ -2408,7 +2425,8 @@ h3 {
   }
 
   .samples-notice {
-    padding-right: 68px;
+    grid-template-columns: 128px minmax(0, 1fr);
+    padding: 31px 34px;
   }
 }
 
@@ -2538,9 +2556,14 @@ h3 {
   }
 
   .package-ticket-standard {
+    grid-template-columns: 112px minmax(0, 1fr);
     gap: 15px;
     min-height: 94px;
     padding: 13px 6px;
+  }
+
+  .package-ticket-standard .package-price {
+    width: 112px;
   }
 
   .package-ticket-standard p {
@@ -2695,20 +2718,20 @@ h3 {
   }
 
   .samples-notice {
-    padding: 56px 43px 27px 22px;
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 27px 23px 34px;
+    text-align: center;
   }
 
   .samples-notice h3 {
     font-size: 1.48rem;
   }
 
-  .samples-marquee {
-    padding-inline: 8px;
-  }
-
-  .samples-marquee span {
-    width: 10px;
-    height: 10px;
+  .samples-payment-mark {
+    width: 108px;
+    height: 94px;
+    margin-inline: auto;
   }
 
   .testimonial-intermission figure {
