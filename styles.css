@@ -2822,15 +2822,16 @@ h3 {
 
 @media (max-width: 1040px) {
   :root {
-    --mobile-action-bar-height: 58px;
+    --marquee-height: 36px;
+    --mobile-action-bar-height: 44px;
   }
 
   html {
-    scroll-padding-top: calc(var(--mobile-action-bar-height) + env(safe-area-inset-top) + 18px);
+    scroll-padding-top: calc(var(--marquee-height) + var(--mobile-action-bar-height) + env(safe-area-inset-top) + 18px);
   }
 
   body {
-    padding-top: calc(var(--mobile-action-bar-height) + env(safe-area-inset-top));
+    padding-top: calc(var(--marquee-height) + var(--mobile-action-bar-height) + env(safe-area-inset-top));
     padding-bottom: 0;
   }
 
@@ -2844,18 +2845,27 @@ h3 {
   }
 
   .testimonial-marquee {
-    display: none;
+    position: fixed;
+    z-index: 1210;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: block;
+    height: calc(var(--marquee-height) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    border-bottom: 1px solid var(--gold-dark);
+    font-size: 0.76rem;
   }
 
   .site-action-bar {
     position: fixed;
     z-index: 1200;
-    top: 0;
+    top: calc(var(--marquee-height) + env(safe-area-inset-top));
     right: 0;
     bottom: auto;
     left: 0;
-    height: calc(var(--mobile-action-bar-height) + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
+    height: var(--mobile-action-bar-height);
+    padding-top: 0;
     padding-bottom: 0;
     border-top: 0;
     border-bottom: 3px solid var(--gold);
@@ -2899,12 +2909,12 @@ h3 {
   .mobile-nav-panel {
     position: fixed;
     z-index: 1190;
-    top: calc(var(--mobile-action-bar-height) + env(safe-area-inset-top) + 10px);
+    top: calc(var(--marquee-height) + var(--mobile-action-bar-height) + env(safe-area-inset-top) + 10px);
     right: 12px;
     bottom: auto;
     left: 12px;
     display: grid;
-    max-height: calc(100dvh - var(--mobile-action-bar-height) - env(safe-area-inset-top) - 20px);
+    max-height: calc(100dvh - var(--marquee-height) - var(--mobile-action-bar-height) - env(safe-area-inset-top) - 20px);
     overflow: hidden auto;
     overscroll-behavior: contain;
     border: 3px solid var(--gold);
