@@ -3191,8 +3191,8 @@ h3 {
   }
 
   .reservation-selector-label {
-    margin-bottom: 7px;
-    font-size: 0.6rem;
+    margin-bottom: 8px;
+    font-size: 0.66rem;
   }
 
   .reservation-package-options {
@@ -3201,23 +3201,36 @@ h3 {
   }
 
   .reservation-package-options button {
-    min-height: 82px;
-    padding: 8px 6px;
+    min-height: 104px;
+    padding: 11px 5px;
   }
 
   .reservation-package-options strong {
-    font-size: 2rem;
+    font-size: 2.15rem;
   }
 
   .reservation-package-options span {
-    font-size: 0.55rem;
+    max-width: none;
+    font-size: 0.68rem;
+    letter-spacing: -0.012em;
+    line-height: 1.16;
   }
 
   .reservation-package-options .reservation-package-vip {
     grid-column: 1 / -1;
-    grid-template-columns: 78px minmax(0, 1fr);
-    min-height: 68px;
-    padding-inline: 24px;
+    grid-template-columns: 1fr;
+    min-height: 100px;
+    padding: 12px 20px;
+  }
+
+  .reservation-package-options .reservation-package-vip strong {
+    font-size: 2.5rem;
+  }
+
+  .reservation-package-options .reservation-package-vip span {
+    max-width: none;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
   }
 
   .finale-package-selector {
