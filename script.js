@@ -134,8 +134,264 @@
     render();
   }
 
+  function setUpPurchaseFlow() {
+    const dialog = document.querySelector("#purchase-dialog");
+    const closeButton = document.querySelector("#purchase-dialog-close");
+    const requestPanel = document.querySelector("#purchase-request");
+    const messageField = document.querySelector("#purchase-message");
+    const copyMessageButton = document.querySelector("#copy-message-button");
+    const messageCopyStatus = document.querySelector("#message-copy-status");
+    const emailLink = document.querySelector("#purchase-email-link");
+    const copyEmailButton = document.querySelector("#copy-email-button");
+    const emailCopyStatus = document.querySelector("#email-copy-status");
+    const packageButtons = [...document.querySelectorAll("[data-package]")];
+    const packageSelectors = [...document.querySelectorAll("[data-package-select]")];
+    const generalLaunchButtons = [...document.querySelectorAll("[data-purchase-launch]")];
+
+    if (
+      !dialog ||
+      !closeButton ||
+      !requestPanel ||
+      !messageField ||
+      !copyMessageButton ||
+      !messageCopyStatus ||
+      !emailLink ||
+      !copyEmailButton ||
+      !emailCopyStatus
+    ) {
+      return;
+    }
+
+    const emailAddress = "rcravens60@gmail.com";
+    const emailSubject = "Movie Master Package Purchase Request";
+    const packageMessages = {
+      five:
+        "Hello Mr. Movie Master sir. I am interested in purchasing 5 Blockbuster Smash Hit recommendations for $5. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+      ten:
+        "Hello Mr. Movie Master sir. I am interested in purchasing 10 Blockbuster Smash Hit recommendations for $10. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+      vip:
+        "Hello Mr. Movie Master sir. I am interested in purchasing the Movie Master VIP Package for $20. It includes 20 Blockbuster Smash Hit recommendations, 3 of the best R&B music videos ever made, and a VIP certificate to prove my VIP status. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+    };
+    let launchElement = null;
+
+    const clearCopyStatuses = () => {
+      messageCopyStatus.textContent = "";
+      emailCopyStatus.textContent = "";
+    };
+
+    const sizeMessageField = () => {
+      messageField.style.height = "auto";
+      messageField.style.height = `${messageField.scrollHeight + 2}px`;
+    };
+
+    const selectPackage = (packageKey, shouldReveal = false) => {
+      const message = packageMessages[packageKey];
+      if (!message) return;
+
+      packageSelectors.forEach((button) => {
+        button.setAttribute(
+          "aria-pressed",
+          String(button.dataset.packageSelect === packageKey),
+        );
+      });
+
+      messageField.value = message;
+      emailLink.href = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(message)}`;
+      requestPanel.hidden = false;
+      clearCopyStatuses();
+      window.requestAnimationFrame(() => {
+        sizeMessageField();
+        if (shouldReveal) {
+          requestPanel.querySelector(".purchase-instruction")?.scrollIntoView({
+            behavior: reducedMotion.matches ? "auto" : "smooth",
+            block: "start",
+          });
+        }
+      });
+    };
+
+    const clearPackageSelection = () => {
+      packageSelectors.forEach((button) => button.setAttribute("aria-pressed", "false"));
+      requestPanel.hidden = true;
+      messageField.value = "";
+      clearCopyStatuses();
+    };
+
+    const openDialog = (packageKey, trigger) => {
+      launchElement = trigger;
+
+      if (packageKey) {
+        selectPackage(packageKey);
+      } else {
+        clearPackageSelection();
+      }
+
+      if (typeof dialog.showModal === "function") {
+        if (!dialog.open) dialog.showModal();
+      } else {
+        dialog.setAttribute("open", "");
+      }
+    };
+
+    const closeDialog = () => {
+      if (typeof dialog.close === "function") {
+        dialog.close();
+      } else {
+        dialog.removeAttribute("open");
+        launchElement?.focus();
+      }
+    };
+
+    const copyText = async (text, selectableElement = null) => {
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch {
+          // Continue to the selection-based fallback.
+        }
+      }
+
+      const temporaryField = selectableElement ?? document.createElement("textarea");
+      const isTemporary = !selectableElement;
+
+      if (isTemporary) {
+        temporaryField.value = text;
+        temporaryField.setAttribute("readonly", "");
+        temporaryField.style.position = "fixed";
+        temporaryField.style.opacity = "0";
+        dialog.append(temporaryField);
+      }
+
+      temporaryField.focus();
+      temporaryField.select();
+      temporaryField.setSelectionRange(0, temporaryField.value.length);
+      const copied = document.execCommand("copy");
+      if (isTemporary) temporaryField.remove();
+      return copied;
+    };
+
+    packageButtons.forEach((button) => {
+      button.addEventListener("click", () => openDialog(button.dataset.package, button));
+    });
+
+    generalLaunchButtons.forEach((button) => {
+      button.addEventListener("click", () => openDialog(null, button));
+    });
+
+    packageSelectors.forEach((button) => {
+      button.addEventListener("click", () => selectPackage(button.dataset.packageSelect, true));
+    });
+
+    closeButton.addEventListener("click", closeDialog);
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) closeDialog();
+    });
+    dialog.addEventListener("close", () => launchElement?.focus());
+
+    copyMessageButton.addEventListener("click", async () => {
+      const copied = await copyText(messageField.value, messageField);
+      messageCopyStatus.textContent = copied ? "MESSAGE COPIED" : "";
+      copyMessageButton.focus();
+    });
+
+    copyEmailButton.addEventListener("click", async () => {
+      const copied = await copyText(emailAddress);
+      emailCopyStatus.textContent = copied ? "EMAIL ADDRESS COPIED" : "";
+      copyEmailButton.focus();
+    });
+
+    window.addEventListener("resize", () => {
+      if (!requestPanel.hidden) sizeMessageField();
+    });
+  }
+
+  function setUpActionBar() {
+    const menuButton = document.querySelector("#mobile-menu-button");
+    const menuPanel = document.querySelector("#mobile-nav-panel");
+    const desktopLinks = [...document.querySelectorAll(".action-bar-desktop a[href^='#']")];
+
+    if (!menuButton || !menuPanel) return;
+
+    const closeMenu = () => {
+      menuPanel.hidden = true;
+      menuButton.setAttribute("aria-expanded", "false");
+    };
+
+    const openMenu = () => {
+      menuPanel.hidden = false;
+      menuButton.setAttribute("aria-expanded", "true");
+    };
+
+    menuButton.addEventListener("click", () => {
+      if (menuPanel.hidden) openMenu();
+      else closeMenu();
+    });
+
+    menuPanel.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", closeMenu);
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (menuPanel.hidden || menuPanel.contains(event.target) || menuButton.contains(event.target)) {
+        return;
+      }
+      closeMenu();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || menuPanel.hidden) return;
+      closeMenu();
+      menuButton.focus();
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 820) closeMenu();
+    });
+
+    if (!desktopLinks.length) return;
+
+    const targets = desktopLinks
+      .map((link) => ({ link, target: document.querySelector(link.getAttribute("href")) }))
+      .filter(({ target }) => target);
+    let ticking = false;
+
+    const updateActiveLink = () => {
+      ticking = false;
+      const threshold = Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--marquee-height"),
+      ) + Number.parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue("--action-bar-height"),
+      ) + 30;
+      let activeTarget = null;
+
+      targets.forEach((entry) => {
+        if (entry.target.getBoundingClientRect().top <= threshold) activeTarget = entry;
+      });
+
+      targets.forEach(({ link }) => {
+        const isActive = activeTarget?.link === link;
+        link.classList.toggle("is-active", isActive);
+        if (isActive) link.setAttribute("aria-current", "location");
+        else link.removeAttribute("aria-current");
+      });
+    };
+
+    const requestUpdate = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(updateActiveLink);
+    };
+
+    updateActiveLink();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+  }
+
   buildMarquee();
   setUpScrollReveals();
   setUpTestimonials();
   setUpVisitorCounter();
+  setUpPurchaseFlow();
+  setUpActionBar();
 })();

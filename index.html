@@ -52,6 +52,45 @@
       </div>
     </aside>
 
+    <nav class="site-action-bar" aria-label="Primary navigation">
+      <div class="action-bar-inner">
+        <div class="action-bar-desktop">
+          <a href="#offer">PACKAGES</a>
+          <a href="#process">HOW IT WORKS</a>
+          <a href="#rules">RULES</a>
+          <a href="#faq">FAQ</a>
+          <a href="#testimonials">TESTIMONIALS</a>
+          <button class="action-bar-purchase" type="button" data-purchase-launch>
+            PURCHASE
+          </button>
+        </div>
+
+        <div class="action-bar-mobile">
+          <button
+            class="mobile-menu-button"
+            id="mobile-menu-button"
+            type="button"
+            aria-expanded="false"
+            aria-controls="mobile-nav-panel"
+          >
+            MENU
+          </button>
+          <a href="#offer">PACKAGES</a>
+          <button class="action-bar-purchase" type="button" data-purchase-launch>
+            PURCHASE
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="mobile-nav-panel" id="mobile-nav-panel" hidden>
+      <a href="#top">TOP</a>
+      <a href="#process">HOW IT WORKS</a>
+      <a href="#rules">RULES</a>
+      <a href="#faq">FAQ</a>
+      <a href="#testimonials">TESTIMONIALS</a>
+    </div>
+
     <main id="main-content">
       <header class="hero" id="top">
         <div class="hero-grain" aria-hidden="true"></div>
@@ -183,12 +222,22 @@
             <div class="standard-package-row">
               <div class="package-ticket package-ticket-standard">
                 <strong class="package-price"><sup>$</sup>5</strong>
-                <p>5 Blockbuster Smash Hit Masterpieces</p>
+                <div class="package-ticket-details">
+                  <p>5 Blockbuster Smash Hit Masterpieces</p>
+                  <button class="package-purchase-button" type="button" data-package="five">
+                    PURCHASE $5 PACKAGE
+                  </button>
+                </div>
               </div>
               <span class="package-or" aria-hidden="true">OR</span>
               <div class="package-ticket package-ticket-standard">
                 <strong class="package-price"><sup>$</sup>10</strong>
-                <p>10 Blockbuster Smash Hit Masterpieces</p>
+                <div class="package-ticket-details">
+                  <p>10 Blockbuster Smash Hit Masterpieces</p>
+                  <button class="package-purchase-button" type="button" data-package="ten">
+                    PURCHASE $10 PACKAGE
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -198,11 +247,16 @@
                 <h3>VIP Package</h3>
                 <strong class="package-price"><sup>$</sup>20</strong>
               </div>
-              <ul class="vip-inclusions">
-                <li>20 Blockbuster Smash Hit Masterpieces</li>
-                <li>3 of the best R&amp;B music videos ever made</li>
-                <li>One VIP certificate to prove your VIP status</li>
-              </ul>
+              <div class="vip-package-body">
+                <ul class="vip-inclusions">
+                  <li>20 Blockbuster Smash Hit Masterpieces</li>
+                  <li>3 of the best R&amp;B music videos ever made</li>
+                  <li>One VIP certificate to prove your VIP status</li>
+                </ul>
+                <button class="package-purchase-button package-purchase-vip" type="button" data-package="vip">
+                  PURCHASE VIP PACKAGE
+                </button>
+              </div>
             </div>
           </div>
 
@@ -213,35 +267,50 @@
           <ol class="process-film reveal-on-scroll">
             <li>
               <span class="step-number">1</span>
-              <p>
-                You message the Movie Master, telling him you are interested in
-                purchasing movie recommendations.
-              </p>
+              <div class="process-copy">
+                <h4>CHOOSE YOUR PACKAGE</h4>
+                <p>Select the $5, $10, or VIP Package.</p>
+              </div>
             </li>
             <li>
               <span class="step-number">2</span>
-              <p>
-                Tell him what kinds of movies you want, or tell him he can pick
-                for you.
-              </p>
+              <div class="process-copy">
+                <h4>SEND YOUR PURCHASE REQUEST</h4>
+                <p>
+                  Press the package's purchase button, copy the prepared message,
+                  and send it to the Movie Master through Facebook or email.
+                </p>
+              </div>
             </li>
             <li>
               <span class="step-number">3</span>
-              <p>Pay the Movie Master for your selected package.</p>
+              <div class="process-copy">
+                <h4>RECEIVE PAYMENT INFORMATION</h4>
+                <p>
+                  The Movie Master will reply with the information you need to pay
+                  through PayPal or Cash App.
+                </p>
+              </div>
             </li>
             <li>
               <span class="step-number">4</span>
-              <p>
-                You will be given a curated list of the best Blockbuster Smash
-                Hit Masterpieces to watch.
-              </p>
+              <div class="process-copy">
+                <h4>PAY AND PROVIDE YOUR PREFERENCES</h4>
+                <p>
+                  Pay the Movie Master for your selected package. Tell him what
+                  kinds of movies you prefer, or let him choose for you.
+                </p>
+              </div>
             </li>
             <li>
               <span class="step-number">5</span>
-              <p>
-                <strong>(Optional)</strong> Watch the movies and tell the Movie
-                Master how grateful you are for his amazing recommendations.
-              </p>
+              <div class="process-copy">
+                <h4>RECEIVE YOUR PACKAGE</h4>
+                <p>
+                  After payment, the Movie Master will send your Blockbuster Smash
+                  Hit recommendations and any VIP additions included with your package.
+                </p>
+              </div>
             </li>
           </ol>
         </div>
@@ -1009,5 +1078,91 @@
         </p>
       </div>
     </footer>
+
+    <dialog class="purchase-dialog" id="purchase-dialog" aria-labelledby="purchase-dialog-title">
+      <div class="purchase-dialog-shell">
+        <button
+          class="purchase-dialog-close"
+          id="purchase-dialog-close"
+          type="button"
+          aria-label="Close purchase window"
+        >
+          ×
+        </button>
+
+        <div class="purchase-dialog-content">
+          <h2 id="purchase-dialog-title">CONTACT THE MOVIE MASTER TO PURCHASE</h2>
+
+          <div
+            class="purchase-package-selector"
+            role="group"
+            aria-labelledby="package-selector-title"
+          >
+            <h3 id="package-selector-title">SELECT YOUR PACKAGE</h3>
+            <div class="purchase-package-options">
+              <button type="button" data-package-select="five" aria-pressed="false">
+                <strong>$5</strong>
+                <span>5 Blockbuster Smash Hit Masterpieces</span>
+              </button>
+              <button type="button" data-package-select="ten" aria-pressed="false">
+                <strong>$10</strong>
+                <span>10 Blockbuster Smash Hit Masterpieces</span>
+              </button>
+              <button type="button" data-package-select="vip" aria-pressed="false">
+                <strong>VIP $20</strong>
+                <span>Movie Master VIP Package</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="purchase-request" id="purchase-request" hidden>
+            <p class="purchase-instruction">
+              Copy the message below, then send it to the Movie Master through Facebook or email.
+            </p>
+
+            <textarea
+              class="purchase-message"
+              id="purchase-message"
+              rows="5"
+              readonly
+              aria-label="Purchase request message"
+            ></textarea>
+
+            <div class="purchase-copy-row">
+              <button class="purchase-copy-button" id="copy-message-button" type="button">
+                COPY MESSAGE
+              </button>
+              <span class="purchase-copy-status" id="message-copy-status" role="status" aria-live="polite"></span>
+            </div>
+
+            <div class="purchase-contact-links">
+              <a
+                class="purchase-contact-button purchase-contact-facebook"
+                href="https://www.facebook.com/robert.cravens.7"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span aria-hidden="true">f</span>
+                OPEN FACEBOOK
+              </a>
+              <a
+                class="purchase-contact-button purchase-contact-email"
+                id="purchase-email-link"
+                href="mailto:rcravens60@gmail.com"
+              >
+                <span aria-hidden="true">✉</span>
+                SEND BY EMAIL
+              </a>
+            </div>
+
+            <div class="purchase-email-copy">
+              <strong>rcravens60@gmail.com</strong>
+              <button id="copy-email-button" type="button">COPY EMAIL ADDRESS</button>
+              <span id="email-copy-status" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </dialog>
   </body>
 </html>
