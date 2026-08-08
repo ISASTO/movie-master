@@ -1591,6 +1591,7 @@ h3 {
 .prohibition-mark::after {
   content: "";
   position: absolute;
+  z-index: 2;
   top: 50%;
   left: -10px;
   width: calc(100% + 20px);
@@ -1598,6 +1599,16 @@ h3 {
   border-block: 2px solid var(--ink);
   background: var(--gold-bright);
   transform: translateY(-50%) rotate(-45deg);
+}
+
+.prohibition-mark::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: -10px;
+  border: 10px solid var(--gold-bright);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .prohibition-omega {

@@ -8,7 +8,24 @@
   const leaveButton = document.querySelector("#leave-vip");
   const printButton = document.querySelector("#print-certificate");
   const certificate = document.querySelector("#certificate");
+  const certificatePreview = document.querySelector("#certificate-preview");
   const dateOutput = document.querySelector("#certificate-date");
+
+  function fitCertificatePreview() {
+    if (!certificate || !certificatePreview) return;
+
+    const previewWidth = certificatePreview.getBoundingClientRect().width;
+    const scale = Math.min(1, previewWidth / 1100);
+    certificate.style.setProperty("--certificate-preview-scale", scale.toFixed(6));
+  }
+
+  fitCertificatePreview();
+
+  if (certificatePreview && "ResizeObserver" in window) {
+    new ResizeObserver(fitCertificatePreview).observe(certificatePreview);
+  } else {
+    window.addEventListener("resize", fitCertificatePreview);
+  }
 
   if (gate && enterButton) {
     gate.scrollTop = 0;
