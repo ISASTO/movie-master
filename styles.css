@@ -3409,7 +3409,7 @@ h3 {
   .process-film {
     grid-template-columns: 1fr;
     gap: 8px;
-    padding: 12px 34px;
+    padding: 10px 28px;
     background:
       repeating-linear-gradient(0deg, transparent 0 28px, var(--paper) 28px 52px) left 8px top / 14px auto repeat-y,
       repeating-linear-gradient(0deg, transparent 0 28px, var(--paper) 28px 52px) right 8px top / 14px auto repeat-y,
@@ -3419,11 +3419,11 @@ h3 {
   .process-film li {
     display: grid;
     grid-column: 1;
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: 38px minmax(0, 1fr);
     align-items: start;
-    gap: 14px;
+    gap: 10px 12px;
     min-height: 0;
-    padding: 20px 18px;
+    padding: 16px 14px;
   }
 
   .process-film li:nth-child(4),
@@ -3438,12 +3438,19 @@ h3 {
     transform: none;
   }
 
+  .process-copy {
+    display: contents;
+  }
+
   .process-copy h4 {
-    margin-top: 2px;
+    grid-column: 2;
+    align-self: center;
+    margin: 0;
     text-align: left;
   }
 
   .process-film p {
+    grid-column: 1 / -1;
     font-size: 0.92rem;
   }
 
