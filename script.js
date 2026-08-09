@@ -105,8 +105,7 @@
 
     const counter = output.closest(".visitor-counter");
     const epoch = Date.parse("2026-08-03T00:00:00-05:00");
-    const visitorsPerSecond = 3;
-    const tickLength = 1000 / visitorsPerSecond;
+    const tickLength = 2500;
     let priorFormatted = "";
 
     const formatCount = (value) => value.toLocaleString("en-US");

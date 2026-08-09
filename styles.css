@@ -3400,6 +3400,7 @@ h3 {
   }
 
   .package-purchase-vip {
+    justify-self: center;
     min-height: 45px;
     margin-top: 13px;
     font-size: 0.76rem;
@@ -3601,8 +3602,23 @@ h3 {
     text-align: center;
   }
 
+  .specialties-section {
+    padding-block: 52px;
+  }
+
+  .specialties-section .section-heading {
+    margin-bottom: 30px;
+  }
+
+  .specialty-grid {
+    gap: 10px;
+  }
+
   .specialty-card {
-    padding-inline: 18px;
+    gap: 12px;
+    min-height: 68px;
+    padding: 13px 16px;
+    box-shadow: 4px 4px 0 var(--gold-dark);
   }
 
   .popcorn-decoration,
