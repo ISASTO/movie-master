@@ -2239,31 +2239,35 @@ h3 {
 .merch-glint {
   position: absolute;
   z-index: 3;
-  color: var(--gold-dark);
+  color: #fffbe0;
   line-height: 1;
-  text-shadow: 0 2px 0 var(--gold-light);
+  pointer-events: none;
+  text-shadow:
+    0 0 6px #fff,
+    0 0 14px var(--gold-bright),
+    0 0 28px var(--gold);
+  animation: glint 16s ease-in-out infinite;
 }
 
 .merch-glint-one {
   top: 12%;
   left: 9%;
   font-size: 2.6rem;
-  transform: rotate(-12deg);
+  animation-delay: -13.2s;
 }
 
 .merch-glint-two {
   right: 7%;
   bottom: 19%;
   font-size: 2rem;
-  transform: rotate(9deg);
+  animation-delay: -8.1s;
 }
 
 .merch-glint-three {
   bottom: 10%;
   left: 17%;
-  color: var(--purple);
   font-size: 1.35rem;
-  transform: rotate(-5deg);
+  animation-delay: -3.4s;
 }
 
 .merch-price-seal {
