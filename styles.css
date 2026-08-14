@@ -574,15 +574,19 @@ h3 {
 
 @keyframes glint {
   0%,
+  32%,
+  50%,
   82%,
   100% {
     opacity: 0;
     transform: scale(0.2) rotate(0deg);
   }
+  38%,
   88% {
     opacity: 1;
     transform: scale(1.25) rotate(45deg);
   }
+  44%,
   94% {
     opacity: 0.7;
     transform: scale(0.7) rotate(90deg);
