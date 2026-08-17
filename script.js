@@ -2,6 +2,57 @@
   "use strict";
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const movieMasterEmail = "rcravens60@gmail.com";
+
+  async function copyText(text, selectableElement = null) {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        // Continue to the selection-based fallback.
+      }
+    }
+
+    const temporaryField = selectableElement ?? document.createElement("textarea");
+    const isTemporary = !selectableElement;
+
+    if (isTemporary) {
+      temporaryField.value = text;
+      temporaryField.setAttribute("readonly", "");
+      temporaryField.style.position = "fixed";
+      temporaryField.style.opacity = "0";
+      temporaryField.style.pointerEvents = "none";
+      document.body.append(temporaryField);
+    }
+
+    temporaryField.focus();
+    temporaryField.select();
+    temporaryField.setSelectionRange(0, temporaryField.value.length);
+    const copied = document.execCommand("copy");
+    if (isTemporary) temporaryField.remove();
+    return copied;
+  }
+
+  function setUpEmailCopyButtons() {
+    const buttons = [...document.querySelectorAll("[data-copy-email]")];
+    const statuses = [...document.querySelectorAll("[data-email-copy-status]")];
+
+    buttons.forEach((button) => {
+      const statusId = button.getAttribute("aria-describedby");
+      const status = statusId ? document.getElementById(statusId) : null;
+      if (!status) return;
+
+      button.addEventListener("click", async () => {
+        const copied = await copyText(movieMasterEmail);
+        statuses.forEach((entry) => {
+          entry.textContent = "";
+        });
+        status.textContent = copied ? "EMAIL ADDRESS COPIED" : "";
+        button.focus();
+      });
+    });
+  }
 
   function buildMarquee() {
     const track = document.querySelector("#marquee-track");
@@ -157,7 +208,6 @@
     const copyMessageButton = document.querySelector("#copy-message-button");
     const messageCopyStatus = document.querySelector("#message-copy-status");
     const emailLink = document.querySelector("#purchase-email-link");
-    const copyEmailButton = document.querySelector("#copy-email-button");
     const emailCopyStatus = document.querySelector("#email-copy-status");
     const packageButtons = [...document.querySelectorAll("[data-package]")];
     const packageSelectors = [...document.querySelectorAll("[data-package-select]")];
@@ -171,13 +221,12 @@
       !copyMessageButton ||
       !messageCopyStatus ||
       !emailLink ||
-      !copyEmailButton ||
       !emailCopyStatus
     ) {
       return;
     }
 
-    const emailAddress = "rcravens60@gmail.com";
+    const emailAddress = movieMasterEmail;
     const emailSubject = "Movie Master Package Purchase Request";
     const packageMessages = {
       five:
@@ -251,35 +300,6 @@
       }
     };
 
-    const copyText = async (text, selectableElement = null) => {
-      if (navigator.clipboard?.writeText) {
-        try {
-          await navigator.clipboard.writeText(text);
-          return true;
-        } catch {
-          // Continue to the selection-based fallback.
-        }
-      }
-
-      const temporaryField = selectableElement ?? document.createElement("textarea");
-      const isTemporary = !selectableElement;
-
-      if (isTemporary) {
-        temporaryField.value = text;
-        temporaryField.setAttribute("readonly", "");
-        temporaryField.style.position = "fixed";
-        temporaryField.style.opacity = "0";
-        dialog.append(temporaryField);
-      }
-
-      temporaryField.focus();
-      temporaryField.select();
-      temporaryField.setSelectionRange(0, temporaryField.value.length);
-      const copied = document.execCommand("copy");
-      if (isTemporary) temporaryField.remove();
-      return copied;
-    };
-
     packageButtons.forEach((button) => {
       button.addEventListener("click", () => openDialog(button.dataset.package, button));
     });
@@ -302,12 +322,6 @@
       const copied = await copyText(messageField.value, messageField);
       messageCopyStatus.textContent = copied ? "MESSAGE COPIED" : "";
       copyMessageButton.focus();
-    });
-
-    copyEmailButton.addEventListener("click", async () => {
-      const copied = await copyText(emailAddress);
-      emailCopyStatus.textContent = copied ? "EMAIL ADDRESS COPIED" : "";
-      copyEmailButton.focus();
     });
 
     window.addEventListener("resize", () => {
@@ -399,5 +413,6 @@
   setUpTestimonials();
   setUpVisitorCounter();
   setUpPurchaseFlow();
+  setUpEmailCopyButtons();
   setUpActionBar();
 })();
