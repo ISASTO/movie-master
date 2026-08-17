@@ -36,8 +36,8 @@
     <link rel="canonical" href="https://moviemaster.vip/">
     <title>MOVIE MASTER</title>
     <link rel="icon" href="./assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./styles.css?v=20260817-referrals-r2">
-    <script src="./script.js?v=20260817-referrals-r2" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260817-hero-cleanup">
+    <script src="./script.js?v=20260817-hero-cleanup" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to the Movie Master</a>
@@ -144,9 +144,9 @@
 
             <section class="contact-marquee" id="contact" aria-labelledby="contact-title">
               <div class="bulb-frame" aria-hidden="true"></div>
-              <p class="eyebrow">CONTACT THE MOVIE MASTER NOW</p>
-              <h2 id="contact-title">
-                RESERVE YOUR PERSONALIZED MOVIE RECOMMENDATIONS TODAY
+              <h2 class="hero-contact-title" id="contact-title">
+                <span>RESERVE YOUR PERSONALIZED</span>
+                <span>MOVIE RECOMMENDATIONS TODAY</span>
               </h2>
               <div class="direct-email-card">
                 <p class="direct-email-label">EMAIL THE MOVIE MASTER DIRECTLY</p>
@@ -171,28 +171,9 @@
                   aria-live="polite"
                 ></span>
               </div>
-              <div class="reservation-package-selector" role="group" aria-label="Select your package">
-                <p class="reservation-selector-label">SELECT YOUR PACKAGE</p>
-                <div class="reservation-package-options">
-                  <button type="button" data-package="five">
-                    <strong><sup>$</sup>5</strong>
-                    <span>5 Blockbuster Smash Hit Masterpieces</span>
-                  </button>
-                  <button type="button" data-package="ten">
-                    <strong><sup>$</sup>10</strong>
-                    <span>10 Blockbuster Smash Hit Masterpieces</span>
-                  </button>
-                  <button class="reservation-package-vip" type="button" data-package="vip">
-                    <strong><sup>$</sup>20</strong>
-                    <span>VIP Package</span>
-                    <small class="reservation-package-detail">20 BLOCKBUSTER SMASH HIT MASTERPIECES + MORE!</small>
-                  </button>
-                </div>
-              </div>
-              <a class="referral-jump" href="#referrals">
-                <span aria-hidden="true">★</span>
-                <span>EARN FREE RECOMMENDATIONS — SEE THE OFFICIAL REFERRAL PROGRAM</span>
-                <span aria-hidden="true">★</span>
+              <a class="hero-packages-button" href="#offer">
+                <span>VIEW RECOMMENDATION PACKAGES</span>
+                <span class="hero-packages-arrow" aria-hidden="true">↓</span>
               </a>
             </section>
           </div>
@@ -285,6 +266,12 @@
               </div>
             </div>
           </div>
+
+          <a class="package-referral-link reveal-on-scroll" href="#referrals">
+            <span aria-hidden="true">★</span>
+            <span>EARN FREE RECOMMENDATIONS — SEE THE OFFICIAL REFERRAL PROGRAM</span>
+            <span aria-hidden="true">★</span>
+          </a>
 
           <div class="section-heading process-heading reveal-on-scroll" id="process">
             <p class="eyebrow" aria-hidden="true">★★★★★</p>
