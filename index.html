@@ -36,8 +36,8 @@
     <link rel="canonical" href="https://moviemaster.vip/">
     <title>MOVIE MASTER</title>
     <link rel="icon" href="./assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./styles.css?v=cf6432f">
-    <script src="./script.js" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260817-referrals">
+    <script src="./script.js?v=20260817-referrals" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to the Movie Master</a>
@@ -148,6 +148,29 @@
               <h2 id="contact-title">
                 RESERVE YOUR PERSONALIZED MOVIE RECOMMENDATIONS TODAY
               </h2>
+              <div class="direct-email-card">
+                <p class="direct-email-label">EMAIL THE MOVIE MASTER DIRECTLY</p>
+                <div class="direct-email-actions">
+                  <a class="direct-email-address" href="mailto:rcravens60@gmail.com">
+                    rcravens60@gmail.com
+                  </a>
+                  <button
+                    class="direct-email-copy"
+                    type="button"
+                    data-copy-email
+                    aria-describedby="hero-email-copy-status"
+                  >
+                    COPY EMAIL ADDRESS
+                  </button>
+                </div>
+                <span
+                  class="direct-email-status"
+                  id="hero-email-copy-status"
+                  data-email-copy-status
+                  role="status"
+                  aria-live="polite"
+                ></span>
+              </div>
               <div class="reservation-package-selector" role="group" aria-label="Select your package">
                 <p class="reservation-selector-label">SELECT YOUR PACKAGE</p>
                 <div class="reservation-package-options">
@@ -166,6 +189,11 @@
                   </button>
                 </div>
               </div>
+              <a class="referral-jump" href="#referrals">
+                <span aria-hidden="true">★</span>
+                <span>EARN FREE RECOMMENDATIONS — SEE THE OFFICIAL REFERRAL PROGRAM</span>
+                <span aria-hidden="true">★</span>
+              </a>
             </section>
           </div>
         </div>
@@ -311,6 +339,45 @@
               </div>
             </li>
           </ol>
+        </div>
+      </section>
+
+      <section class="section referral-section" id="referrals" aria-labelledby="referral-title">
+        <div class="referral-rays" aria-hidden="true"></div>
+        <div class="page-shell referral-shell">
+          <article class="referral-coupon reveal-on-scroll">
+            <p class="referral-overline">
+              <span aria-hidden="true">★</span>
+              THE OFFICIAL MOVIE MASTER REFERRAL PROGRAM
+              <span aria-hidden="true">★</span>
+            </p>
+
+            <h2 class="referral-title" id="referral-title">
+              <span><b>1</b> PAYING REFERRAL</span>
+              <strong>=</strong>
+              <span><b>1</b> FREE RECOMMENDATION</span>
+            </h2>
+
+            <div class="referral-copy">
+              <p class="referral-lead">
+                Want more Blockbuster Smash Hit Masterpieces but don&rsquo;t want to pay
+                for them? The only official way to earn a free recommendation is to
+                refer a new paying customer.
+              </p>
+              <p>
+                If a friend purchases any Movie Master recommendation package and tells
+                the Movie Master that you sent them, you&rsquo;ll receive one free movie
+                recommendation as a thank-you.
+              </p>
+              <p class="referral-shout">GO TELL ALL YOUR FRIENDS!</p>
+            </div>
+
+            <small class="referral-fine-print">
+              Your friend must identify you when making the purchase. Referral rewards
+              are issued after payment is received. One reward per new paying customer.
+              No self-referrals.
+            </small>
+          </article>
         </div>
       </section>
 
@@ -491,7 +558,6 @@
                   <span>GO TO THE OFFICIAL MERCH STORE</span>
                   <span class="merch-button-arrow" aria-hidden="true">→</span>
                 </a>
-                <p class="merch-fine-print">SIZES, SHIPPING, AND ORDER DETAILS AT THE STORE</p>
               </div>
             </div>
           </article>
@@ -1104,6 +1170,29 @@
               RESERVE YOUR PERSONALIZED MOVIE RECOMMENDATIONS TODAY
             </h2>
           </div>
+          <div class="direct-email-card direct-email-card-finale">
+            <p class="direct-email-label">EMAIL THE MOVIE MASTER DIRECTLY</p>
+            <div class="direct-email-actions">
+              <a class="direct-email-address" href="mailto:rcravens60@gmail.com">
+                rcravens60@gmail.com
+              </a>
+              <button
+                class="direct-email-copy"
+                type="button"
+                data-copy-email
+                aria-describedby="final-email-copy-status"
+              >
+                COPY EMAIL ADDRESS
+              </button>
+            </div>
+            <span
+              class="direct-email-status"
+              id="final-email-copy-status"
+              data-email-copy-status
+              role="status"
+              aria-live="polite"
+            ></span>
+          </div>
           <div class="reservation-package-selector finale-package-selector" role="group" aria-label="Select your package">
             <p class="reservation-selector-label">SELECT YOUR PACKAGE</p>
             <div class="reservation-package-options">
@@ -1220,8 +1309,20 @@
 
             <div class="purchase-email-copy">
               <strong>rcravens60@gmail.com</strong>
-              <button id="copy-email-button" type="button">COPY EMAIL ADDRESS</button>
-              <span id="email-copy-status" role="status" aria-live="polite"></span>
+              <button
+                id="copy-email-button"
+                type="button"
+                data-copy-email
+                aria-describedby="email-copy-status"
+              >
+                COPY EMAIL ADDRESS
+              </button>
+              <span
+                id="email-copy-status"
+                data-email-copy-status
+                role="status"
+                aria-live="polite"
+              ></span>
             </div>
           </div>
         </div>
