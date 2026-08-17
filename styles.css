@@ -726,7 +726,7 @@ h3 {
 .hero-message {
   position: relative;
   z-index: 8;
-  padding-bottom: 24px;
+  padding-bottom: 12px;
 }
 
 .speech-bubble {
@@ -740,10 +740,10 @@ h3 {
 }
 
 .hero-bubble {
-  margin-bottom: 16px;
-  padding: clamp(18px, 2vw, 25px);
+  margin-bottom: 14px;
+  padding: clamp(15px, 1.7vw, 21px) clamp(18px, 2vw, 25px);
   font-size: clamp(1.4rem, 2.3vw, 2.05rem);
-  line-height: 1.12;
+  line-height: 1.1;
   text-align: center;
 }
 
@@ -752,7 +752,8 @@ h3 {
   position: absolute;
   z-index: 1;
   left: -17px;
-  bottom: 34px;
+  top: 32px;
+  bottom: auto;
   width: 30px;
   height: 30px;
   background: var(--white);
@@ -762,8 +763,8 @@ h3 {
 }
 
 .claim-banner {
-  margin: 0 0 16px;
-  padding: 11px 18px 9px;
+  margin: 0 0 14px;
+  padding: 9px 18px 8px;
   border: var(--border);
   background: var(--gold);
   box-shadow: 5px 5px 0 var(--gold-dark);
@@ -793,7 +794,7 @@ h3 {
 
 .contact-marquee {
   position: relative;
-  padding: 26px clamp(18px, 2.6vw, 30px) 22px;
+  padding: 28px clamp(18px, 2.6vw, 30px) 25px;
   border: 5px solid var(--ink);
   background:
     radial-gradient(circle at 50% 0, rgba(255, 194, 42, 0.13), transparent 46%),
@@ -805,21 +806,25 @@ h3 {
 }
 
 .contact-marquee h2 {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   color: var(--gold-bright);
-  font-size: clamp(1.45rem, 2.65vw, 2.15rem);
-  line-height: 1.02;
+  font-size: clamp(1.4rem, 2.15vw, 1.9rem);
+  line-height: 1.04;
   letter-spacing: 0.018em;
   text-align: center;
   text-transform: uppercase;
   text-shadow: 0 2px 0 var(--gold-deep), 0 0 16px rgba(255, 184, 0, 0.34);
 }
 
+.hero-contact-title span {
+  display: block;
+}
+
 .direct-email-card {
   position: relative;
   z-index: 1;
-  margin: 0 0 18px;
-  padding: 12px 14px 10px;
+  margin: 0 0 16px;
+  padding: 10px 12px 8px;
   border: 3px solid var(--gold);
   background:
     linear-gradient(105deg, rgba(227, 161, 11, 0.18), transparent 48%),
@@ -830,7 +835,7 @@ h3 {
 }
 
 .direct-email-label {
-  margin: 0 0 7px;
+  margin: 0 0 6px;
   color: var(--gold-deep);
   font-size: 0.66rem;
   font-weight: 800;
@@ -897,8 +902,8 @@ h3 {
 
 .direct-email-status {
   display: block;
-  min-height: 0.8rem;
-  margin-top: 5px;
+  min-height: 0.7rem;
+  margin-top: 4px;
   color: var(--purple-dark);
   font-size: 0.55rem;
   font-weight: 800;
@@ -907,32 +912,48 @@ h3 {
   text-transform: uppercase;
 }
 
-.referral-jump {
+.hero-packages-button {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  gap: 9px;
-  margin-top: 15px;
-  padding: 10px 13px;
-  border: 1px dashed var(--gold);
-  color: var(--gold-light);
-  font-size: 0.63rem;
+  justify-content: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 11px 18px;
+  border: 2px solid var(--gold-light);
+  background: var(--gold);
+  color: var(--ink);
+  box-shadow: 5px 5px 0 var(--gold-dark);
+  font-size: clamp(0.72rem, 1.25vw, 0.86rem);
   font-weight: 800;
-  letter-spacing: 0.065em;
-  line-height: 1.25;
+  letter-spacing: 0.075em;
+  line-height: 1.15;
   text-align: center;
   text-decoration: none;
   text-transform: uppercase;
-  transition: background 160ms ease, color 160ms ease;
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-.referral-jump:hover,
-.referral-jump:focus-visible {
-  background: var(--gold);
+.hero-packages-button:hover,
+.hero-packages-button:focus-visible {
+  background: var(--gold-bright);
   color: var(--ink);
+  box-shadow: 8px 8px 0 var(--purple);
   outline: none;
+  transform: translate(-3px, -3px);
+}
+
+.hero-packages-arrow {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .bulb-frame {
@@ -1392,6 +1413,35 @@ h3 {
   gap: 22px;
   max-width: 1040px;
   margin: 0 auto;
+}
+
+.package-referral-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  max-width: 680px;
+  margin: 25px auto 0;
+  padding: 9px 14px;
+  border: 1px dashed var(--gold-dark);
+  background: rgba(255, 255, 255, 0.28);
+  color: var(--gold-deep);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.065em;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.package-referral-link:hover,
+.package-referral-link:focus-visible {
+  background: var(--gold);
+  color: var(--ink);
+  outline: none;
+  transform: translateY(-2px);
 }
 
 .standard-package-row {
@@ -3934,6 +3984,24 @@ h3 {
     font-size: 1.55rem;
   }
 
+  .hero-contact-title span {
+    display: inline;
+  }
+
+  .hero-packages-button {
+    gap: 9px;
+    min-height: 53px;
+    padding-inline: 12px;
+    font-size: 0.68rem;
+    letter-spacing: 0.055em;
+  }
+
+  .hero-packages-arrow {
+    width: 25px;
+    height: 25px;
+    font-size: 0.9rem;
+  }
+
   .direct-email-card {
     padding: 10px 9px 8px;
     border-width: 2px;
@@ -3962,13 +4030,6 @@ h3 {
 
   .direct-email-copy {
     width: 100%;
-  }
-
-  .referral-jump {
-    gap: 6px;
-    padding-inline: 8px;
-    font-size: 0.57rem;
-    letter-spacing: 0.04em;
   }
 
   .reservation-package-selector {
