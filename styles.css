@@ -918,7 +918,6 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
   min-height: 56px;
   padding: 11px 18px;
   border: 2px solid var(--gold-light);
@@ -942,18 +941,6 @@ h3 {
   box-shadow: 8px 8px 0 var(--purple);
   outline: none;
   transform: translate(-3px, -3px);
-}
-
-.hero-packages-arrow {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  border: 2px solid var(--ink);
-  border-radius: 50%;
-  font-size: 1rem;
-  line-height: 1;
 }
 
 .bulb-frame {
@@ -3989,17 +3976,10 @@ h3 {
   }
 
   .hero-packages-button {
-    gap: 9px;
     min-height: 53px;
     padding-inline: 12px;
     font-size: 0.68rem;
     letter-spacing: 0.055em;
-  }
-
-  .hero-packages-arrow {
-    width: 25px;
-    height: 25px;
-    font-size: 0.9rem;
   }
 
   .direct-email-card {
