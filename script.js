@@ -204,6 +204,8 @@
     const dialog = document.querySelector("#purchase-dialog");
     const closeButton = document.querySelector("#purchase-dialog-close");
     const requestPanel = document.querySelector("#purchase-request");
+    const dialogTitle = document.querySelector("#purchase-dialog-title");
+    const packageSelector = document.querySelector(".purchase-package-selector");
     const messageField = document.querySelector("#purchase-message");
     const copyMessageButton = document.querySelector("#copy-message-button");
     const messageCopyStatus = document.querySelector("#message-copy-status");
@@ -235,6 +237,11 @@
         "Hello Mr. Movie Master sir. I am interested in purchasing 10 Blockbuster Smash Hit Masterpieces for $10. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
       vip:
         "Hello Mr. Movie Master sir. I am interested in purchasing the Movie Master VIP Package for $20. It includes 20 Blockbuster Smash Hit Masterpieces, 3 of the best R&B music videos ever made, and a VIP certificate to prove my VIP status. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+      lifetime:
+        "Hello Mr. Movie Master sir. I am interested in applying for the Ultimate Lifetime Membership for $1,000,000. I understand that membership requires your personal approval. Please tell me what I must do to prove that I am worthy. Thank you.",
+    };
+    const packageSubjects = {
+      lifetime: "Ultimate Lifetime Membership Inquiry",
     };
     let launchElement = null;
 
@@ -260,7 +267,8 @@
       });
 
       messageField.value = message;
-      emailLink.href = `mailto:${emailAddress}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(message)}`;
+      const subject = packageSubjects[packageKey] ?? emailSubject;
+      emailLink.href = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
       requestPanel.hidden = false;
       clearCopyStatuses();
       window.requestAnimationFrame(() => {
@@ -277,6 +285,15 @@
 
     const openDialog = (packageKey, trigger) => {
       launchElement = trigger;
+      const isLifetimeInquiry = packageKey === "lifetime";
+
+      dialog.classList.toggle("is-lifetime-inquiry", isLifetimeInquiry);
+      if (dialogTitle) {
+        dialogTitle.textContent = isLifetimeInquiry
+          ? "INQUIRE ABOUT ULTIMATE LIFETIME MEMBERSHIP"
+          : "CONTACT THE MOVIE MASTER TO PURCHASE";
+      }
+      if (packageSelector) packageSelector.hidden = isLifetimeInquiry;
 
       if (packageKey) {
         selectPackage(packageKey);
