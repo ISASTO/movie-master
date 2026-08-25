@@ -266,7 +266,7 @@ canvas:focus-visible {
   right: clamp(12px, 2vw, 28px);
   left: clamp(12px, 2vw, 28px);
   display: grid;
-  grid-template-columns: 0.8fr 0.8fr 1.15fr 2.75fr;
+  grid-template-columns: 0.72fr 0.72fr 1.08fr 0.62fr 2.55fr;
   min-height: 62px;
   border: 2px solid rgba(229, 164, 8, 0.9);
   background: rgba(16, 9, 5, 0.9);
@@ -881,7 +881,7 @@ canvas:focus-visible {
   }
 
   .hud {
-    grid-template-columns: 0.75fr 0.75fr 1fr;
+    grid-template-columns: 0.75fr 0.75fr 1fr 0.6fr;
   }
 
   .blast-meter {
@@ -957,7 +957,7 @@ canvas:focus-visible {
     top: 59px;
     right: 7px;
     left: 7px;
-    grid-template-columns: 1fr 1.35fr;
+    grid-template-columns: 0.78fr 1.25fr 0.62fr;
     min-height: 0;
   }
 
@@ -972,6 +972,10 @@ canvas:focus-visible {
 
   .hud-lives {
     grid-column: 2;
+  }
+
+  .hud-streak {
+    grid-column: 3;
     border-right: 0;
   }
 
@@ -1193,7 +1197,7 @@ canvas:focus-visible {
     top: 48px;
     right: 6px;
     left: 6px;
-    grid-template-columns: 0.72fr 1.08fr 1.7fr;
+    grid-template-columns: 0.65fr 1fr 0.55fr 1.6fr;
     min-height: 42px;
   }
 
@@ -1209,6 +1213,11 @@ canvas:focus-visible {
   }
 
   .hud-lives {
+    border-right: 1px solid rgba(229, 164, 8, 0.3);
+  }
+
+  .hud-streak {
+    grid-column: auto;
     border-right: 1px solid rgba(229, 164, 8, 0.3);
   }
 

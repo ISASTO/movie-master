@@ -11,6 +11,7 @@
     score: $("score-value"),
     best: $("best-value"),
     lives: $("lives-value"),
+    streak: $("streak-value"),
     masteryPercent: $("mastery-percent"),
     masteryTrack: $("mastery-track"),
     masteryFill: $("mastery-fill"),
@@ -152,6 +153,7 @@
   let blastReadyAnnounced = false;
   let lastRenderedScore = -1;
   let lastRenderedBest = -1;
+  let lastRenderedStreak = -1;
   let lastRenderedMastery = -1;
   let audioContext = null;
   let soundOn = readString(SOUND_KEY, "on") !== "off";
@@ -414,6 +416,7 @@
     bannerDanger = false;
     blastReadyAnnounced = false;
     lastRenderedScore = -1;
+    lastRenderedStreak = -1;
     lastRenderedMastery = -1;
 
     enemies.length = 0;
@@ -1603,6 +1606,12 @@
     ui.lives.textContent = "★".repeat(Math.max(0, player.lives)) + "☆".repeat(maxLives - Math.max(0, player.lives));
     ui.lives.setAttribute("aria-label", `${player.lives} of ${maxLives} lives remaining`);
     ui.lives.classList.toggle("danger", player.lives === 1);
+
+    if (force || popcornChain !== lastRenderedStreak) {
+      ui.streak.textContent = String(popcornChain);
+      ui.streak.setAttribute("aria-label", `Current popcorn streak: ${popcornChain}`);
+      lastRenderedStreak = popcornChain;
+    }
 
     const pickup = pickups[0];
 
