@@ -57,8 +57,10 @@
   const LEGACY_SCORE_KEY = "movie-master-vs-garbage-high-score-v1";
   const SCORE_KEY = "movie-master-vs-garbage-high-score-easy-v1";
   const MAX_LIVES = 5;
-  const POWERUP_DURATION = 10;
-  const MAGNET_RADIUS = 300;
+  const POWERUP_DURATION = 15;
+  const SHIELD_HITS = 3;
+  const MAGNET_RADIUS = 600;
+  const CLOSE_THREAT_RADIUS = 150;
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
   const MAX_GAME_SCALE = 2;
@@ -129,6 +131,7 @@
   let popcornCollected = 0;
   let popcornChain = 0;
   let recommendationPower = 0;
+  let movementPower = 0;
   let shieldTime = 0;
   let shieldHits = 0;
   let speedTime = 0;
@@ -391,6 +394,7 @@
     popcornCollected = 0;
     popcornChain = 0;
     recommendationPower = 0;
+    movementPower = 0;
     shieldTime = 0;
     shieldHits = 0;
     speedTime = 0;
@@ -899,9 +903,9 @@
     let announcement = "";
     if (powerup.type === "shield") {
       shieldTime = POWERUP_DURATION;
-      shieldHits = 2;
-      message = `SHIELD — 2 HITS / ${POWERUP_DURATION} SECONDS`;
-      announcement = `Shield activated for ${POWERUP_DURATION} seconds. It can block 2 hits.`;
+      shieldHits = SHIELD_HITS;
+      message = `SHIELD — ${SHIELD_HITS} HITS / ${POWERUP_DURATION} SECONDS`;
+      announcement = `Shield activated for ${POWERUP_DURATION} seconds. It can block ${SHIELD_HITS} hits.`;
     } else if (powerup.type === "speed") {
       speedTime = POWERUP_DURATION;
       message = `SUPER SPEED — ${POWERUP_DURATION} SECONDS`;
@@ -951,7 +955,7 @@
     const length = Math.hypot(dx, dy);
     if (length < 1) return false;
 
-    const speed = scaleWorld(690);
+    const speed = currentProjectileSpeed();
     projectiles.push({
       x: startX,
       y: startY,
@@ -967,6 +971,11 @@
   function currentShotInterval() {
     const baseInterval = Math.max(0.24, 0.36 - difficultyLevel * 0.008);
     return Math.max(0.105, baseInterval * Math.pow(0.88, recommendationPower));
+  }
+
+  function currentProjectileSpeed() {
+    const speedUpgrade = 1 + Math.min(0.8, recommendationPower * 0.12);
+    return scaleWorld(690) * speedUpgrade;
   }
 
   function currentProjectileRadius() {
@@ -988,7 +997,7 @@
   }
 
   function fireAutomaticRecommendation() {
-    if (!player.moving || !enemies.length) return false;
+    if (!enemies.length) return false;
 
     const rangeUpgrade = 1 + Math.min(0.65, recommendationPower * 0.07);
     const maxRange = scaleWorld(560) * rangeUpgrade;
@@ -1006,7 +1015,11 @@
 
     if (!target) return false;
 
-    const lead = target.mode === "rush" ? 0.11 : target.kind === "fast" ? 0.18 : 0.08;
+    const closeThreatDistance = scaleWorld(CLOSE_THREAT_RADIUS);
+    const closeThreat = nearest <= closeThreatDistance * closeThreatDistance;
+    if (!player.moving && !closeThreat) return false;
+
+    const lead = closeThreat ? 0 : target.mode === "rush" ? 0.11 : target.kind === "fast" ? 0.18 : 0.08;
     const aimX = target.x + (target.vx || 0) * lead;
     const aimY = target.y + (target.vy || 0) * lead;
     return launchRecommendation(aimX, aimY);
@@ -1074,11 +1087,26 @@
 
   function awardRecommendationUpgrade(pickup) {
     recommendationPower += 1;
-    const message = `${popcornChain} POPCORNS IN A ROW — FASTER, LARGER STARS`;
-    showCombo("RECOMMENDATION STARS UPGRADED");
+    const movementUpgraded = popcornChain % 20 === 0;
+    if (movementUpgraded) movementPower += 1;
+
+    const message = movementUpgraded
+      ? `${popcornChain} POPCORNS IN A ROW — STARS + MOVEMENT FASTER`
+      : `${popcornChain} POPCORNS IN A ROW — FASTER, LARGER STARS`;
+    showCombo(movementUpgraded ? "STARS + MOVEMENT UPGRADED" : "RECOMMENDATION STARS UPGRADED");
     setBanner(message, 2.4, false);
-    addFloatingText(pickup.x, pickup.y - scaleWorld(38), "★ UPGRADE ★", COLORS.goldBright, true);
-    announce(`${popcornChain} popcorns in a row. Recommendation stars upgraded.`);
+    addFloatingText(
+      pickup.x,
+      pickup.y - scaleWorld(38),
+      movementUpgraded ? "★ + SPEED ★" : "★ UPGRADE ★",
+      COLORS.goldBright,
+      true,
+    );
+    announce(
+      movementUpgraded
+        ? `${popcornChain} popcorns in a row. Recommendation stars and movement speed upgraded.`
+        : `${popcornChain} popcorns in a row. Recommendation stars upgraded.`,
+    );
     playCue("advance");
   }
 
@@ -1113,7 +1141,16 @@
   }
 
   function damagePlayer(enemyIndex) {
-    if (player.invulnerable > 0 || gameState !== "running") return;
+    if (gameState !== "running") return;
+
+    if (player.invulnerable > 0) {
+      const overlappingEnemy = enemies[enemyIndex];
+      if (overlappingEnemy) {
+        enemies.splice(enemyIndex, 1);
+        addParticles(overlappingEnemy.x, overlappingEnemy.y, overlappingEnemy.color, 5, 90);
+      }
+      return;
+    }
 
     const enemy = enemies[enemyIndex];
     enemies.splice(enemyIndex, 1);
@@ -1235,11 +1272,9 @@
     if (superStarsTime > 0 && shotTimer <= 0) {
       fireSuperStars();
       shotTimer = currentShotInterval();
-    } else if (player.moving && shotTimer <= 0) {
-      fireAutomaticRecommendation();
-      shotTimer = currentShotInterval();
-    } else if (!player.moving && superStarsTime <= 0) {
-      shotTimer = Math.min(shotTimer, 0.08);
+    } else if (shotTimer <= 0) {
+      const fired = fireAutomaticRecommendation();
+      shotTimer = fired || player.moving ? currentShotInterval() : 0.08;
     }
 
     if (!pickups.length) {
@@ -1314,7 +1349,8 @@
 
     const previousX = player.x;
     const previousY = player.y;
-    const movementSpeed = player.speed * (speedTime > 0 ? 1.85 : 1);
+    const popcornSpeedMultiplier = 1 + Math.min(0.6, movementPower * 0.1);
+    const movementSpeed = player.speed * popcornSpeedMultiplier * (speedTime > 0 ? 1.85 : 1);
     const requestedVx = dx * movementSpeed;
     const requestedVy = dy * movementSpeed;
     const movementBounds = getPlayerMovementBounds();
@@ -1352,7 +1388,17 @@
           continue;
         }
       } else {
-        const prediction = enemy.kind === "fast" ? 0.23 : enemy.kind === "heavy" ? 0.04 : 0.11;
+        const directDx = player.x - enemy.x;
+        const directDy = player.y - enemy.y;
+        const closeThreatDistance = scaleWorld(CLOSE_THREAT_RADIUS);
+        const isCloseThreat = directDx * directDx + directDy * directDy <= closeThreatDistance * closeThreatDistance;
+        const prediction = isCloseThreat
+          ? 0
+          : enemy.kind === "fast"
+            ? 0.23
+            : enemy.kind === "heavy"
+              ? 0.04
+              : 0.11;
         const targetX = player.x + player.vx * prediction;
         const targetY = player.y + player.vy * prediction;
         const dx = targetX - enemy.x;
@@ -1376,6 +1422,8 @@
     const offscreenMargin = scaleWorld(30);
     for (let i = projectiles.length - 1; i >= 0; i -= 1) {
       const projectile = projectiles[i];
+      const previousX = projectile.x;
+      const previousY = projectile.y;
       projectile.x += projectile.vx * dt;
       projectile.y += projectile.vy * dt;
       projectile.rotation += dt * 10;
@@ -1393,7 +1441,17 @@
       for (let j = enemies.length - 1; j >= 0; j -= 1) {
         const enemy = enemies[j];
         const hitDistance = projectile.radius + enemy.radius;
-        if (distanceSquared(projectile, enemy) <= hitDistance * hitDistance) {
+        if (
+          segmentIntersectsCircle(
+            previousX,
+            previousY,
+            projectile.x,
+            projectile.y,
+            enemy.x,
+            enemy.y,
+            hitDistance,
+          )
+        ) {
           projectiles.splice(i, 1);
           enemy.hp -= 1;
           enemy.hitFlash = 0.12;
@@ -1407,6 +1465,24 @@
         }
       }
     }
+  }
+
+  function segmentIntersectsCircle(startX, startY, endX, endY, circleX, circleY, radius) {
+    const segmentX = endX - startX;
+    const segmentY = endY - startY;
+    const segmentLengthSquared = segmentX * segmentX + segmentY * segmentY;
+    const projection = segmentLengthSquared > 0
+      ? clamp(
+        ((circleX - startX) * segmentX + (circleY - startY) * segmentY) / segmentLengthSquared,
+        0,
+        1,
+      )
+      : 0;
+    const closestX = startX + segmentX * projection;
+    const closestY = startY + segmentY * projection;
+    const dx = circleX - closestX;
+    const dy = circleY - closestY;
+    return dx * dx + dy * dy <= radius * radius;
   }
 
   function applyMagnet(collectible, dt) {
