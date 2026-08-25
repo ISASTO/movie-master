@@ -61,6 +61,7 @@
   const SHIELD_HITS = 3;
   const MAGNET_RADIUS = 600;
   const CLOSE_THREAT_RADIUS = 150;
+  const POPCORN_LIFETIME_MULTIPLIER = 1.25;
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
   const MAX_GAME_SCALE = 2;
@@ -847,7 +848,7 @@
       return;
     }
 
-    const totalTtl = clamp(8.8 - difficultyLevel * 0.18, 5.7, 8.6);
+    const totalTtl = clamp(8.8 - difficultyLevel * 0.18, 5.7, 8.6) * POPCORN_LIFETIME_MULTIPLIER;
     pickups.push({
       x: position.x,
       y: position.y,
