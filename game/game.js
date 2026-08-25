@@ -134,6 +134,7 @@
   let popcornChain = 0;
   let recommendationPower = 0;
   let movementPower = 0;
+  let starRowSize = 1;
   let shieldTime = 0;
   let shieldHits = 0;
   let speedTime = 0;
@@ -398,6 +399,7 @@
     popcornChain = 0;
     recommendationPower = 0;
     movementPower = 0;
+    starRowSize = 1;
     shieldTime = 0;
     shieldHits = 0;
     speedTime = 0;
@@ -917,8 +919,9 @@
     } else if (powerup.type === "super") {
       superStarsTime = POWERUP_DURATION;
       shotTimer = 0;
-      message = `SUPER STARS — 10 AT A TIME / ${POWERUP_DURATION} SECONDS`;
-      announcement = `Super Stars activated for ${POWERUP_DURATION} seconds. Ten stars fire in every direction at once.`;
+      const superStarCount = 10 * starRowSize;
+      message = `SUPER STARS — ${superStarCount} AT A TIME / ${POWERUP_DURATION} SECONDS`;
+      announcement = `Super Stars activated for ${POWERUP_DURATION} seconds. ${superStarCount} stars fire across ten directions at once.`;
     } else {
       magnetTime = POWERUP_DURATION;
       message = `MAGNET — NEARBY COLLECTIBLES / ${POWERUP_DURATION} SECONDS`;
@@ -959,16 +962,27 @@
     const length = Math.hypot(dx, dy);
     if (length < 1) return false;
 
+    const directionX = dx / length;
+    const directionY = dy / length;
+    const perpendicularX = -directionY;
+    const perpendicularY = directionX;
     const speed = currentProjectileSpeed();
-    projectiles.push({
-      x: startX,
-      y: startY,
-      vx: (dx / length) * speed,
-      vy: (dy / length) * speed,
-      radius: currentProjectileRadius(),
-      color,
-      rotation: Math.random() * Math.PI,
-    });
+    const projectileRadius = currentProjectileRadius();
+    const rowSpacing = projectileRadius * 1.8;
+    const rowCenter = (starRowSize - 1) / 2;
+
+    for (let index = 0; index < starRowSize; index += 1) {
+      const rowOffset = (index - rowCenter) * rowSpacing;
+      projectiles.push({
+        x: startX + perpendicularX * rowOffset,
+        y: startY + perpendicularY * rowOffset,
+        vx: directionX * speed,
+        vy: directionY * speed,
+        radius: projectileRadius,
+        color,
+        rotation: Math.random() * Math.PI,
+      });
+    }
     return true;
   }
 
@@ -1094,22 +1108,36 @@
     const movementUpgraded = popcornChain % 20 === 0;
     if (movementUpgraded) movementPower += 1;
 
-    const message = movementUpgraded
-      ? `${popcornChain} POPCORNS IN A ROW — STARS + MOVEMENT FASTER`
-      : `${popcornChain} POPCORNS IN A ROW — FASTER, LARGER STARS`;
-    showCombo(movementUpgraded ? "STARS + MOVEMENT UPGRADED" : "RECOMMENDATION STARS UPGRADED");
+    const unlockedRowSize = Math.min(5, 1 + Math.floor(popcornChain / 100));
+    const rowUpgraded = unlockedRowSize > starRowSize;
+    if (rowUpgraded) starRowSize = unlockedRowSize;
+
+    const message = rowUpgraded
+      ? `${popcornChain} POPCORNS IN A ROW — ${starRowSize}-STAR ROWS UNLOCKED`
+      : movementUpgraded
+        ? `${popcornChain} POPCORNS IN A ROW — STARS + MOVEMENT FASTER`
+        : `${popcornChain} POPCORNS IN A ROW — FASTER, LARGER STARS`;
+    showCombo(
+      rowUpgraded
+        ? `${starRowSize}-STAR ROWS UNLOCKED`
+        : movementUpgraded
+          ? "STARS + MOVEMENT UPGRADED"
+          : "RECOMMENDATION STARS UPGRADED",
+    );
     setBanner(message, 2.4, false);
     addFloatingText(
       pickup.x,
       pickup.y - scaleWorld(38),
-      movementUpgraded ? "★ + SPEED ★" : "★ UPGRADE ★",
+      rowUpgraded ? `★ × ${starRowSize}` : movementUpgraded ? "★ + SPEED ★" : "★ UPGRADE ★",
       COLORS.goldBright,
       true,
     );
     announce(
-      movementUpgraded
-        ? `${popcornChain} popcorns in a row. Recommendation stars and movement speed upgraded.`
-        : `${popcornChain} popcorns in a row. Recommendation stars upgraded.`,
+      rowUpgraded
+        ? `${popcornChain} popcorns in a row. Every shot now fires a row of ${starRowSize} stars.`
+        : movementUpgraded
+          ? `${popcornChain} popcorns in a row. Recommendation stars and movement speed upgraded.`
+          : `${popcornChain} popcorns in a row. Recommendation stars upgraded.`,
     );
     playCue("advance");
   }
@@ -2141,7 +2169,7 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.font = `800 ${Math.max(8, scaleWorld(20))}px "Futura Web", sans-serif`;
-        ctx.fillText(definition.icon, 0, 1);
+        ctx.fillText(`★${10 * starRowSize}`, 0, 1);
       } else {
         drawCenteredEmoji(definition.icon, 0, 0, Math.max(10, scaleWorld(28)));
       }

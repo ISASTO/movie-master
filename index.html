@@ -36,8 +36,8 @@
     <link rel="canonical" href="https://moviemaster.vip/">
     <title>MOVIE MASTER</title>
     <link rel="icon" href="./assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./styles.css?v=20260823-lifetime-responsive-spacing">
-    <script src="./script.js?v=20260823-lifetime-responsive-spacing" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260825-game-volley">
+    <script src="./script.js?v=20260825-game-volley" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to the Movie Master</a>
@@ -266,11 +266,12 @@
             </div>
           </div>
 
-          <article
-            class="lifetime-membership reveal-on-scroll"
-            id="lifetime-membership"
-            aria-labelledby="lifetime-membership-title"
-          >
+          <template id="lifetime-membership-template">
+            <article
+              class="lifetime-membership reveal-on-scroll"
+              id="lifetime-membership"
+              aria-labelledby="lifetime-membership-title"
+            >
             <div class="lifetime-sparkles" aria-hidden="true">
               <span>✦</span>
               <span>✦</span>
@@ -325,7 +326,8 @@
                 </p>
               </div>
             </div>
-          </article>
+            </article>
+          </template>
 
           <a class="package-referral-link reveal-on-scroll" href="#referrals">
             <span aria-hidden="true">★</span>
