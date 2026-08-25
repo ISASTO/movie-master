@@ -474,8 +474,8 @@
 
     ui.finalScore.textContent = formatScore(final);
     ui.gameoverTitle.textContent = isRecord
-      ? "NEW BEST SCORE."
-      : "OVERWHELMED BY GARBAGE 🗑️.";
+      ? "NEW BEST SCORE"
+      : "OVERWHELMED BY GARBAGE 🗑️";
     ui.gameoverOverlay.hidden = false;
     ui.pauseButton.disabled = true;
     resetJoystick();
