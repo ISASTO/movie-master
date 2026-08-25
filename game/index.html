@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#120c08">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Help the Movie Master save the world from garbage 🗑️.">
+    <title>MOVIE MASTER vs GARBAGE</title>
+    <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./game.css?v=20260825-22">
+    <script src="./game.js?v=20260825-22" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#game-canvas">Skip to the game</a>
+
+    <main class="game-shell">
+      <canvas
+        id="game-canvas"
+        tabindex="0"
+        aria-label="Movie Master vs. Garbage game. Move with the mouse, keyboard, or touch joystick, collect popcorn and power-ups, and avoid garbage cans."
+      ></canvas>
+
+      <div class="screen-texture" aria-hidden="true"></div>
+      <div class="screen-flash" id="screen-flash" aria-hidden="true"></div>
+
+      <header class="game-bar">
+        <div class="game-identity">
+          <span class="game-identity-kicker">MOVIE MASTER PRESENTS:</span>
+          <h1>MOVIE MASTER vs GARBAGE</h1>
+        </div>
+
+        <div class="game-actions">
+          <a href="https://moviemaster.vip/">EXIT</a>
+          <button class="movement-button" id="movement-button" type="button">MOVE: MOUSE</button>
+          <button id="pause-button" type="button" disabled>PAUSE</button>
+          <button id="sound-button" type="button" aria-pressed="false">SOUND ON</button>
+        </div>
+      </header>
+
+      <section class="hud" aria-label="Game status">
+        <div class="hud-stat">
+          <span>SCORE</span>
+          <strong id="score-value">000000</strong>
+        </div>
+        <div class="hud-stat hud-best">
+          <span>BEST</span>
+          <strong id="best-value">000000</strong>
+        </div>
+        <div class="hud-stat hud-lives">
+          <span>YOUR CURRENT RATING</span>
+          <strong id="lives-value" aria-label="Five lives">★★★★★</strong>
+        </div>
+        <div class="blast-meter">
+          <div class="blast-label">
+            <span>BLOCKBUSTER BLAST</span>
+            <strong id="mastery-percent">0%</strong>
+          </div>
+          <div
+            class="blast-track"
+            role="progressbar"
+            aria-label="Blockbuster Blast charge"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            id="mastery-track"
+          >
+            <span id="mastery-fill"></span>
+          </div>
+        </div>
+      </section>
+
+      <div class="mission-banner" id="mission-banner" aria-live="polite">
+        KEEP MOVING TO CONTINUE SHOOTING
+      </div>
+
+      <div class="combo-callout" id="combo-callout" aria-hidden="true"></div>
+      <div class="status-announcement visually-hidden" id="status-announcement" aria-live="polite"></div>
+
+      <div class="game-overlay" id="start-overlay">
+        <section class="start-poster" aria-labelledby="start-title">
+          <div class="start-master-wrap" aria-hidden="true">
+            <div class="start-rays"></div>
+            <img
+              src="../assets/images/movie-master.webp"
+              alt=""
+              width="705"
+              height="2048"
+            >
+          </div>
+
+          <div class="start-copy">
+            <h2 id="start-title">MOVIE MASTER vs GARBAGE</h2>
+            <p class="poster-deck">Help! The Movie Master is being attacked by garbage🗑!</p>
+            <div class="rules">
+              <p><b>KEEP MOVING.</b> The Movie Master shoots his recommendation stars automatically while he is in motion.</p>
+              <p><b>COLLECT THE POPCORN.</b> Every 10 in a row makes his recommendation stars faster and larger. Miss one and more garbage arrives.</p>
+              <p><b>COLLECT POWER-UPS.</b> Grab Shields, Super Speed, Super Stars, and the Magnet when they appear.</p>
+              <p><b>DO NOT TOUCH GARBAGE.</b> Each hit costs a star. Reach zero stars and you lose.</p>
+              <p><b>BLOCKBUSTER BLAST.</b> Collect popcorn to charge it. At 100%, press Space or the gold button to clear the screen.</p>
+            </div>
+            <div class="controls-line" aria-label="Controls">
+              <span><b>MOVE</b> <i id="start-move-copy">FOLLOW THE MOUSE</i></span>
+              <span><b>SHOOT</b> <i>AUTOMATIC WHILE MOVING</i></span>
+              <span><b>BLAST</b> SPACE / GOLD BUTTON AT 100%</span>
+            </div>
+            <button class="primary-button" id="start-button" type="button">
+              START THE GAME
+            </button>
+            <p class="start-best">BEST SCORE <strong id="start-best">000000</strong></p>
+          </div>
+        </section>
+      </div>
+
+      <div class="game-overlay intermission-overlay" id="pause-overlay" hidden>
+        <section class="intermission-panel" aria-labelledby="pause-title">
+          <p>YOU HAVE PAUSED THE MOVIE</p>
+          <h2 id="pause-title">INTERMISSION</h2>
+          <span>PRESS P OR ESCAPE TO RESUME</span>
+          <button class="primary-button" id="resume-button" type="button">CONTINUE</button>
+        </section>
+      </div>
+
+      <div class="game-overlay gameover-overlay" id="gameover-overlay" hidden>
+        <section class="gameover-panel" aria-labelledby="gameover-title">
+          <p class="poster-kicker">THE END</p>
+          <h2 id="gameover-title">OVERWHELMED BY GARBAGE 🗑️.</h2>
+          <div class="final-score">
+            <span>FINAL SCORE</span>
+            <strong id="final-score">000000</strong>
+          </div>
+          <button class="primary-button" id="restart-button" type="button">TRY AGAIN</button>
+        </section>
+      </div>
+
+      <div class="touch-controls" aria-label="Touch controls">
+        <div class="joystick" id="joystick" aria-label="Movement joystick">
+          <div class="joystick-cross" aria-hidden="true">◆</div>
+          <div class="joystick-knob" id="joystick-knob"></div>
+        </div>
+        <button class="blast-button" id="judgment-button" type="button" disabled>
+          <b>BLOCKBUSTER BLAST</b>
+        </button>
+      </div>
+
+      <div class="game-instructions" aria-hidden="true">
+        <span class="desktop-instructions" id="desktop-instructions">FOLLOW THE MOUSE TO MOVE &nbsp;•&nbsp; COLLECT POPCORN &nbsp;•&nbsp; SPACE FOR BLOCKBUSTER BLAST</span>
+        <span class="mobile-instructions" id="mobile-instructions">KEEP MOVING &nbsp;•&nbsp; COLLECT POPCORN &nbsp;•&nbsp; USE THE GOLD BUTTON WHEN READY</span>
+      </div>
+    </main>
+
+    <noscript>
+      <p class="noscript-message">JavaScript is required to defend the world from garbage.</p>
+    </noscript>
+  </body>
+</html>
