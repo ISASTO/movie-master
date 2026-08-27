@@ -36,8 +36,8 @@
     <link rel="canonical" href="https://moviemaster.vip/">
     <title>MOVIE MASTER</title>
     <link rel="icon" href="./assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./styles.css?v=20260825-game-volley">
-    <script src="./script.js?v=20260825-game-volley" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260827-referral-share">
+    <script src="./script.js?v=20260827-referral-share" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to the Movie Master</a>
@@ -418,7 +418,16 @@
                 the Movie Master that you sent them, you&rsquo;ll receive one free movie
                 recommendation as a thank-you.
               </p>
-              <p class="referral-shout">GO TELL ALL YOUR FRIENDS!</p>
+              <button
+                class="referral-shout"
+                id="referral-share-launch"
+                type="button"
+                aria-haspopup="dialog"
+                aria-controls="share-dialog"
+              >
+                <span>GO TELL ALL YOUR FRIENDS!</span>
+                <span class="referral-share-arrow" aria-hidden="true">↗</span>
+              </button>
             </div>
 
             <small class="referral-fine-print">
@@ -523,8 +532,9 @@
                 <h3>NO FREE SAMPLES WILL BE GIVEN</h3>
                 <p>
                   Quality Blockbuster Smash Hit Masterpiece recommendations are provided only to paying
-                  customers. Do not attempt to scam the Movie Master into giving you free
-                  recommendations.
+                  customers. The only way to get free recommendations is through the official
+                  <a class="rules-referral-link" href="#referrals">referral program</a>.
+                  Do not attempt to scam the Movie Master into giving you free recommendations.
                 </p>
               </div>
             </article>
@@ -1382,6 +1392,98 @@
               ></span>
             </div>
           </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog
+      class="purchase-dialog share-dialog"
+      id="share-dialog"
+      aria-labelledby="share-dialog-title"
+      aria-describedby="share-dialog-intro"
+    >
+      <div class="purchase-dialog-shell share-dialog-shell">
+        <button
+          class="purchase-dialog-close"
+          id="share-dialog-close"
+          type="button"
+          aria-label="Close share window"
+        >
+          ×
+        </button>
+
+        <div class="purchase-dialog-content share-dialog-content">
+          <p class="share-dialog-kicker" aria-hidden="true">★★★★★ OFFICIAL REFERRAL BROADCAST ★★★★★</p>
+          <h2 id="share-dialog-title">TELL EVERYONE ABOUT THE MOVIE MASTER</h2>
+          <p class="share-dialog-intro" id="share-dialog-intro">
+            Choose where to send this extremely convincing message.
+          </p>
+
+          <blockquote class="share-message-preview" id="share-message-preview">
+            <p>
+              The Movie Master has the best and most correct movie opinions at very
+              affordable prices. If you buy a recommendation package and tell him I
+              sent you, I get a recommendation for free! Please consider it. It&rsquo;s
+              worth it.
+            </p>
+            <cite>moviemaster.vip</cite>
+          </blockquote>
+
+          <div class="share-options" aria-label="Share options">
+            <a class="share-option" id="share-text-link" href="sms:">
+              <span class="share-option-icon" aria-hidden="true">TXT</span>
+              <span>TEXT MESSAGE</span>
+            </a>
+            <a
+              class="share-option"
+              id="share-twitter-link"
+              href="https://twitter.com/intent/tweet"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span class="share-option-icon share-option-icon-x" aria-hidden="true">X</span>
+              <span>X / TWITTER</span>
+            </a>
+            <a
+              class="share-option"
+              id="share-facebook-link"
+              href="https://www.facebook.com/sharer/sharer.php"
+              target="_blank"
+              rel="noreferrer"
+              data-copy-before-sharing
+            >
+              <span class="share-option-icon share-option-icon-facebook" aria-hidden="true">f</span>
+              <span>FACEBOOK</span>
+            </a>
+            <a
+              class="share-option"
+              id="share-instagram-link"
+              href="https://www.instagram.com/"
+              target="_blank"
+              rel="noreferrer"
+              data-copy-before-sharing
+            >
+              <span class="share-option-icon share-option-icon-instagram" aria-hidden="true">◎</span>
+              <span>INSTAGRAM</span>
+            </a>
+            <a class="share-option" id="share-email-link" href="mailto:">
+              <span class="share-option-icon" aria-hidden="true">✉</span>
+              <span>EMAIL</span>
+            </a>
+            <button class="share-option" id="share-native-button" type="button">
+              <span class="share-option-icon" aria-hidden="true">↗</span>
+              <span>MORE APPS</span>
+            </button>
+          </div>
+
+          <button class="share-copy-button" id="share-copy-button" type="button">
+            COPY MESSAGE &amp; LINK
+          </button>
+          <p class="share-platform-note">
+            Facebook and Instagram do not allow websites to fill in post text, so their
+            buttons copy the message first. Paste it into your post.
+          </p>
+          <p class="share-status" id="share-status" role="status" aria-live="polite"></p>
         </div>
       </div>
     </dialog>

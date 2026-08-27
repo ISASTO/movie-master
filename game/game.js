@@ -2215,30 +2215,95 @@
     ctx.restore();
   }
 
+  function drawPowerupStatusIcon(type, x, y, size, color) {
+    const radius = size / 2;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    if (type === "shield") {
+      ctx.lineWidth = Math.max(1.2, size * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(0, -radius * 0.92);
+      ctx.lineTo(radius * 0.72, -radius * 0.58);
+      ctx.lineTo(radius * 0.58, radius * 0.2);
+      ctx.quadraticCurveTo(radius * 0.34, radius * 0.72, 0, radius * 0.94);
+      ctx.quadraticCurveTo(-radius * 0.34, radius * 0.72, -radius * 0.58, radius * 0.2);
+      ctx.lineTo(-radius * 0.72, -radius * 0.58);
+      ctx.closePath();
+      ctx.globalAlpha = 0.22;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.stroke();
+    } else if (type === "speed") {
+      ctx.beginPath();
+      ctx.moveTo(radius * 0.08, -radius);
+      ctx.lineTo(-radius * 0.68, radius * 0.12);
+      ctx.lineTo(-radius * 0.12, radius * 0.06);
+      ctx.lineTo(-radius * 0.28, radius);
+      ctx.lineTo(radius * 0.72, -radius * 0.22);
+      ctx.lineTo(radius * 0.13, -radius * 0.12);
+      ctx.closePath();
+      ctx.fill();
+    } else if (type === "super") {
+      drawStar(0, 0, radius, radius * 0.44, 5, color);
+    } else {
+      ctx.lineWidth = Math.max(1.7, size * 0.19);
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.72, -radius * 0.52);
+      ctx.lineTo(-radius * 0.72, radius * 0.08);
+      ctx.arc(0, radius * 0.08, radius * 0.72, Math.PI, 0, true);
+      ctx.lineTo(radius * 0.72, -radius * 0.52);
+      ctx.stroke();
+      ctx.lineWidth = Math.max(2.2, size * 0.25);
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.72, -radius * 0.68);
+      ctx.lineTo(-radius * 0.72, -radius * 0.42);
+      ctx.moveTo(radius * 0.72, -radius * 0.68);
+      ctx.lineTo(radius * 0.72, -radius * 0.42);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   function drawPowerupStatus() {
     const statuses = [];
     if (shieldTime > 0 && shieldHits > 0) {
-      statuses.push({ text: `🛡️ SHIELD ${shieldHits} · ${shieldTime.toFixed(1)}s`, color: COLORS.shield });
+      statuses.push({ type: "shield", text: `SHIELD ${shieldHits} · ${shieldTime.toFixed(1)}s`, color: COLORS.shield });
     }
     if (speedTime > 0) {
-      statuses.push({ text: `⚡ SUPER SPEED · ${speedTime.toFixed(1)}s`, color: COLORS.speed });
+      statuses.push({ type: "speed", text: `SUPER SPEED · ${speedTime.toFixed(1)}s`, color: COLORS.speed });
     }
     if (superStarsTime > 0) {
-      statuses.push({ text: `★ SUPER STARS · ${superStarsTime.toFixed(1)}s`, color: COLORS.super });
+      statuses.push({ type: "super", text: `SUPER STARS · ${superStarsTime.toFixed(1)}s`, color: COLORS.super });
     }
     if (magnetTime > 0) {
-      statuses.push({ text: `🧲 MAGNET · ${magnetTime.toFixed(1)}s`, color: COLORS.magnet });
+      statuses.push({ type: "magnet", text: `MAGNET · ${magnetTime.toFixed(1)}s`, color: COLORS.magnet });
     }
     if (!statuses.length) return;
 
     const shortViewport = world.height <= 500;
     const fontSize = clamp(world.width * 0.012, shortViewport ? 9 : 10, shortViewport ? 11 : 13);
-    const height = fontSize + (shortViewport ? 10 : 15);
+    const iconSize = fontSize * (shortViewport ? 1.08 : 1.18);
+    const iconGap = shortViewport ? 4 : 6;
+    const horizontalPadding = shortViewport ? 7 : 10;
+    const verticalPadding = shortViewport ? 5 : 7;
+    const height = Math.max(fontSize, iconSize) + verticalPadding * 2;
     const gap = shortViewport ? 4 : 6;
-    const availableWidth = Math.max(100, world.bounds.right - world.bounds.left);
+    const availableWidth = Math.max(1, world.bounds.right - world.bounds.left);
     const widths = statuses.map((status) => {
       ctx.font = `800 ${fontSize}px "Futura Web", sans-serif`;
-      return Math.min(availableWidth, ctx.measureText(status.text).width + (shortViewport ? 14 : 20));
+      const textWidth = ctx.measureText(status.text).width;
+      status.textWidth = textWidth;
+      return Math.min(
+        availableWidth,
+        horizontalPadding * 2 + iconSize + iconGap + textWidth,
+      );
     });
 
     const rows = [];
@@ -2257,7 +2322,7 @@
 
     ctx.save();
     ctx.font = `800 ${fontSize}px "Futura Web", sans-serif`;
-    ctx.textAlign = "center";
+    ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
     let y = world.bounds.top + 10;
@@ -2270,8 +2335,26 @@
         ctx.strokeStyle = status.color;
         ctx.lineWidth = shortViewport ? 1.5 : 2;
         ctx.strokeRect(x, y, width, height);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, width, height);
+        ctx.clip();
+
+        const contentWidth = iconSize + iconGap + status.textWidth;
+        const contentStart = x + Math.max(horizontalPadding, (width - contentWidth) / 2);
+        const centerY = y + height / 2;
+        drawPowerupStatusIcon(
+          status.type,
+          contentStart + iconSize / 2,
+          centerY,
+          iconSize,
+          status.color,
+        );
         ctx.fillStyle = status.color;
-        ctx.fillText(status.text, x + width / 2, y + height / 2 + 1);
+        ctx.fillText(status.text, contentStart + iconSize + iconGap, centerY + 0.5);
+        ctx.restore();
+
         x += width + gap;
       });
       y += height + gap;
