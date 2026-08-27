@@ -62,6 +62,9 @@
   const SHIELD_HITS = 3;
   const MAGNET_RADIUS = 600;
   const CLOSE_THREAT_RADIUS = 150;
+  const GAMEPAD_DEAD_ZONE = 0.18;
+  const GAMEPAD_TRIGGER_THRESHOLD = 0.5;
+  const GAMEPAD_BLAST_BUTTONS = [0, 1, 2, 3, 7];
   const POPCORN_LIFETIME_MULTIPLIER = 1.25;
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
@@ -111,6 +114,7 @@
 
   const keys = new Set();
   const touchMove = { x: 0, y: 0, pointerId: null };
+  const gamepadMove = { x: 0, y: 0, active: false };
   const mouseTarget = { x: 0, y: 0, active: false };
   const enemies = [];
   const projectiles = [];
@@ -159,6 +163,8 @@
   let audioContext = null;
   let soundOn = readString(SOUND_KEY, "on") !== "off";
   let movementMode = coarsePointer ? "touch" : readString(MOVEMENT_KEY, "mouse");
+  let activeGamepadIndex = null;
+  let gamepadBlastPressed = false;
 
   if (movementMode !== "mouse" && movementMode !== "keys" && movementMode !== "touch") {
     movementMode = coarsePointer ? "touch" : "mouse";
@@ -439,6 +445,9 @@
     player.moving = false;
     player.stationaryTime = 0;
     mouseTarget.active = false;
+    gamepadMove.x = 0;
+    gamepadMove.y = 0;
+    gamepadMove.active = false;
 
     resetJoystick();
     updateInterface(true);
@@ -1354,7 +1363,10 @@
     let dy = 0;
     const touchMagnitude = Math.hypot(touchMove.x, touchMove.y);
 
-    if (touchMagnitude > 0.08) {
+    if (gamepadMove.active) {
+      dx = gamepadMove.x;
+      dy = gamepadMove.y;
+    } else if (touchMagnitude > 0.08) {
       dx = touchMove.x;
       dy = touchMove.y;
     } else if (movementMode === "mouse" && mouseTarget.active) {
@@ -1448,6 +1460,87 @@
         if (gameState !== "running") return;
       }
     }
+  }
+
+  function normalizeGamepadStick(x, y) {
+    const axisX = Number.isFinite(x) ? clamp(x, -1, 1) : 0;
+    const axisY = Number.isFinite(y) ? clamp(y, -1, 1) : 0;
+    const magnitude = Math.hypot(axisX, axisY);
+
+    if (magnitude <= GAMEPAD_DEAD_ZONE) return { x: 0, y: 0, active: false };
+
+    const scaledMagnitude = Math.min(1, (magnitude - GAMEPAD_DEAD_ZONE) / (1 - GAMEPAD_DEAD_ZONE));
+    return {
+      x: (axisX / magnitude) * scaledMagnitude,
+      y: (axisY / magnitude) * scaledMagnitude,
+      active: true,
+    };
+  }
+
+  function isGamepadButtonPressed(gamepad, index) {
+    const button = gamepad?.buttons?.[index];
+    if (typeof button === "number") return button >= GAMEPAD_TRIGGER_THRESHOLD;
+    return Boolean(button?.pressed || button?.value >= GAMEPAD_TRIGGER_THRESHOLD);
+  }
+
+  function hasRelevantGamepadInput(gamepad) {
+    const stickX = Number(gamepad?.axes?.[0]) || 0;
+    const stickY = Number(gamepad?.axes?.[1]) || 0;
+    return Math.hypot(stickX, stickY) > GAMEPAD_DEAD_ZONE
+      || GAMEPAD_BLAST_BUTTONS.some((index) => isGamepadButtonPressed(gamepad, index));
+  }
+
+  function readConnectedGamepads() {
+    const gamepadNavigator = window.navigator;
+    const getGamepads = gamepadNavigator?.getGamepads || gamepadNavigator?.webkitGetGamepads;
+    if (typeof getGamepads !== "function") return [];
+
+    try {
+      return Array.from(getGamepads.call(gamepadNavigator) || []).filter(
+        (gamepad) => gamepad && gamepad.connected !== false,
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  function chooseActiveGamepad() {
+    const gamepads = readConnectedGamepads();
+    if (!gamepads.length) {
+      activeGamepadIndex = null;
+      return null;
+    }
+
+    const current = gamepads.find((gamepad) => gamepad.index === activeGamepadIndex);
+    const engaged = gamepads.find(hasRelevantGamepadInput);
+    const selected = engaged && (!current || !hasRelevantGamepadInput(current))
+      ? engaged
+      : current || engaged || gamepads[0];
+    activeGamepadIndex = selected.index;
+    return selected;
+  }
+
+  function pollGamepad() {
+    const gamepad = chooseActiveGamepad();
+    if (!gamepad) {
+      gamepadMove.x = 0;
+      gamepadMove.y = 0;
+      gamepadMove.active = false;
+      gamepadBlastPressed = false;
+      return;
+    }
+
+    const movement = normalizeGamepadStick(gamepad.axes?.[0], gamepad.axes?.[1]);
+    gamepadMove.x = movement.x;
+    gamepadMove.y = movement.y;
+    gamepadMove.active = movement.active;
+    if (movement.active) mouseTarget.active = false;
+
+    const blastPressed = GAMEPAD_BLAST_BUTTONS.some(
+      (index) => isGamepadButtonPressed(gamepad, index),
+    );
+    if (blastPressed && !gamepadBlastPressed) activateBlast();
+    gamepadBlastPressed = blastPressed;
   }
 
   function updateProjectiles(dt) {
@@ -2465,6 +2558,7 @@
   function frame(now) {
     const dt = Math.min((now - lastFrame) / 1000, 0.034);
     lastFrame = now;
+    pollGamepad();
 
     if (gameState === "running") update(dt);
     else player.bob += dt * 2;
@@ -2510,6 +2604,19 @@
     keys.delete(event.code);
   });
 
+  window.addEventListener("gamepadconnected", (event) => {
+    activeGamepadIndex = event.gamepad.index;
+  });
+
+  window.addEventListener("gamepaddisconnected", (event) => {
+    if (event.gamepad.index !== activeGamepadIndex) return;
+    activeGamepadIndex = null;
+    gamepadMove.x = 0;
+    gamepadMove.y = 0;
+    gamepadMove.active = false;
+    gamepadBlastPressed = false;
+  });
+
   window.addEventListener("pointermove", (event) => {
     if (coarsePointer || event.pointerType === "touch") return;
     const rect = canvas.getBoundingClientRect();
@@ -2521,6 +2628,10 @@
 
   window.addEventListener("blur", () => {
     keys.clear();
+    gamepadMove.x = 0;
+    gamepadMove.y = 0;
+    gamepadMove.active = false;
+    gamepadBlastPressed = false;
     if (gameState === "running") togglePause(true);
   });
 
