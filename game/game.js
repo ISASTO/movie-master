@@ -65,6 +65,7 @@
   const GAMEPAD_DEAD_ZONE = 0.18;
   const GAMEPAD_TRIGGER_THRESHOLD = 0.5;
   const GAMEPAD_BLAST_BUTTONS = [0, 1, 2, 3, 7];
+  const GAMEPAD_PAUSE_BUTTON = 9;
   const POPCORN_LIFETIME_MULTIPLIER = 1.25;
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
@@ -165,6 +166,7 @@
   let movementMode = coarsePointer ? "touch" : readString(MOVEMENT_KEY, "mouse");
   let activeGamepadIndex = null;
   let gamepadBlastPressed = false;
+  let gamepadPausePressed = false;
 
   if (movementMode !== "mouse" && movementMode !== "keys" && movementMode !== "touch") {
     movementMode = coarsePointer ? "touch" : "mouse";
@@ -1487,7 +1489,8 @@
     const stickX = Number(gamepad?.axes?.[0]) || 0;
     const stickY = Number(gamepad?.axes?.[1]) || 0;
     return Math.hypot(stickX, stickY) > GAMEPAD_DEAD_ZONE
-      || GAMEPAD_BLAST_BUTTONS.some((index) => isGamepadButtonPressed(gamepad, index));
+      || GAMEPAD_BLAST_BUTTONS.some((index) => isGamepadButtonPressed(gamepad, index))
+      || isGamepadButtonPressed(gamepad, GAMEPAD_PAUSE_BUTTON);
   }
 
   function readConnectedGamepads() {
@@ -1527,6 +1530,7 @@
       gamepadMove.y = 0;
       gamepadMove.active = false;
       gamepadBlastPressed = false;
+      gamepadPausePressed = false;
       return;
     }
 
@@ -1541,6 +1545,16 @@
     );
     if (blastPressed && !gamepadBlastPressed) activateBlast();
     gamepadBlastPressed = blastPressed;
+
+    const pausePressed = isGamepadButtonPressed(gamepad, GAMEPAD_PAUSE_BUTTON);
+    if (
+      pausePressed
+      && !gamepadPausePressed
+      && (gameState === "running" || gameState === "paused")
+    ) {
+      togglePause();
+    }
+    gamepadPausePressed = pausePressed;
   }
 
   function updateProjectiles(dt) {
@@ -2615,6 +2629,7 @@
     gamepadMove.y = 0;
     gamepadMove.active = false;
     gamepadBlastPressed = false;
+    gamepadPausePressed = false;
   });
 
   window.addEventListener("pointermove", (event) => {
@@ -2632,6 +2647,7 @@
     gamepadMove.y = 0;
     gamepadMove.active = false;
     gamepadBlastPressed = false;
+    gamepadPausePressed = false;
     if (gameState === "running") togglePause(true);
   });
 
