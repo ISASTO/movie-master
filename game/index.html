@@ -8,8 +8,8 @@
     <meta name="description" content="Help the Movie Master save the world from garbage 🗑️.">
     <title>MOVIE MASTER vs GARBAGE</title>
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./game.css?v=20260827-powerup-status">
-    <script src="./game.js?v=20260827-gamepad-pause" defer></script>
+    <link rel="stylesheet" href="./game.css?v=20260827-performance">
+    <script src="./game.js?v=20260827-performance" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -41,11 +41,11 @@
       <section class="hud" aria-label="Game status">
         <div class="hud-stat">
           <span>SCORE</span>
-          <strong id="score-value">000000</strong>
+          <strong id="score-value">0</strong>
         </div>
         <div class="hud-stat hud-best">
           <span>BEST</span>
-          <strong id="best-value">000000</strong>
+          <strong id="best-value">0</strong>
         </div>
         <div class="hud-stat hud-lives">
           <span>YOUR CURRENT RATING</span>
@@ -54,6 +54,10 @@
         <div class="hud-stat hud-streak">
           <span>STREAK</span>
           <strong id="streak-value" aria-label="Current popcorn streak: 0">0</strong>
+        </div>
+        <div class="hud-stat hud-best-streak">
+          <span>BEST STREAK</span>
+          <strong id="best-streak-value" aria-label="Best popcorn streak: 0">0</strong>
         </div>
         <div class="blast-meter">
           <div class="blast-label">
@@ -111,7 +115,7 @@
             <button class="primary-button" id="start-button" type="button">
               START THE GAME
             </button>
-            <p class="start-best">BEST SCORE <strong id="start-best">000000</strong></p>
+            <p class="start-best">BEST SCORE <strong id="start-best">0</strong></p>
           </div>
         </section>
       </div>
@@ -121,7 +125,22 @@
           <p>YOU HAVE PAUSED THE MOVIE</p>
           <h2 id="pause-title">INTERMISSION</h2>
           <span>PRESS P OR ESCAPE TO RESUME</span>
-          <button class="primary-button" id="resume-button" type="button">CONTINUE</button>
+          <div class="pause-actions">
+            <button class="primary-button" id="resume-button" type="button">CONTINUE</button>
+            <button class="secondary-button" id="reset-button" type="button">RESET</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="game-overlay intermission-overlay" id="reset-confirm-overlay" hidden>
+        <section class="intermission-panel reset-confirmation-panel" aria-labelledby="reset-confirm-title">
+          <p>RESET CURRENT GAME</p>
+          <h2 id="reset-confirm-title">ARE YOU SURE?</h2>
+          <span>YOUR CURRENT GAME WILL END.</span>
+          <div class="pause-actions">
+            <button class="primary-button" id="reset-cancel-button" type="button">CANCEL</button>
+            <button class="secondary-button danger-button" id="reset-confirm-button" type="button">RESET GAME</button>
+          </div>
         </section>
       </div>
 
@@ -129,9 +148,15 @@
         <section class="gameover-panel" aria-labelledby="gameover-title">
           <p class="poster-kicker">THE END</p>
           <h2 id="gameover-title">OVERWHELMED BY GARBAGE 🗑️</h2>
-          <div class="final-score">
-            <span>FINAL SCORE</span>
-            <strong id="final-score">000000</strong>
+          <div class="final-stats">
+            <div class="final-stat">
+              <span>FINAL SCORE</span>
+              <strong id="final-score">0</strong>
+            </div>
+            <div class="final-stat">
+              <span>LONGEST STREAK</span>
+              <strong id="final-longest-streak">0</strong>
+            </div>
           </div>
           <button class="primary-button" id="restart-button" type="button">TRY AGAIN</button>
         </section>

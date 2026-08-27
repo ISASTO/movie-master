@@ -10,6 +10,7 @@
   const ui = {
     score: $("score-value"),
     best: $("best-value"),
+    bestStreak: $("best-streak-value"),
     lives: $("lives-value"),
     streak: $("streak-value"),
     masteryPercent: $("mastery-percent"),
@@ -18,9 +19,13 @@
     missionBanner: $("mission-banner"),
     startOverlay: $("start-overlay"),
     pauseOverlay: $("pause-overlay"),
+    resetConfirmOverlay: $("reset-confirm-overlay"),
     gameoverOverlay: $("gameover-overlay"),
     startButton: $("start-button"),
     resumeButton: $("resume-button"),
+    resetButton: $("reset-button"),
+    resetCancelButton: $("reset-cancel-button"),
+    resetConfirmButton: $("reset-confirm-button"),
     restartButton: $("restart-button"),
     movementButton: $("movement-button"),
     pauseButton: $("pause-button"),
@@ -30,6 +35,7 @@
     joystickKnob: $("joystick-knob"),
     startBest: $("start-best"),
     finalScore: $("final-score"),
+    finalLongestStreak: $("final-longest-streak"),
     gameoverTitle: $("gameover-title"),
     comboCallout: $("combo-callout"),
     statusAnnouncement: $("status-announcement"),
@@ -57,6 +63,7 @@
 
   const LEGACY_SCORE_KEY = "movie-master-vs-garbage-high-score-v1";
   const SCORE_KEY = "movie-master-vs-garbage-high-score-easy-v1";
+  const STREAK_SCORE_KEY = "movie-master-vs-garbage-best-streak-v1";
   const MAX_LIVES = 5;
   const POWERUP_DURATION = 15;
   const SHIELD_HITS = 3;
@@ -95,6 +102,17 @@
     gameScale: 1,
     backgroundStars: [],
     bounds: { left: 24, right: 300, top: 160, bottom: 500 },
+    playerBounds: { left: 24, right: 300, top: 160, bottom: 500 },
+  };
+
+  const renderCache = {
+    backgroundGradient: null,
+    backgroundRays: null,
+    backgroundGrid: null,
+    filmHoles: null,
+    starPaths: new Map(),
+    textWidths: new Map(),
+    emojiMetrics: new Map(),
   };
 
   const player = {
@@ -129,6 +147,7 @@
   let elapsed = 0;
   let score = 0;
   let bestScore = readNumber(SCORE_KEY, readNumber(LEGACY_SCORE_KEY, 0));
+  let bestStreak = readNumber(STREAK_SCORE_KEY, 0);
   let difficultyLevel = 1;
   let mastery = 0;
   let spawnTimer = 0;
@@ -137,6 +156,7 @@
   let powerupSpawnTimer = 0;
   let popcornCollected = 0;
   let popcornChain = 0;
+  let longestStreak = 0;
   let recommendationPower = 0;
   let movementPower = 0;
   let starRowSize = 1;
@@ -159,8 +179,13 @@
   let blastReadyAnnounced = false;
   let lastRenderedScore = -1;
   let lastRenderedBest = -1;
+  let lastRenderedBestStreak = -1;
+  let lastRenderedLives = -1;
   let lastRenderedStreak = -1;
   let lastRenderedMastery = -1;
+  let lastRenderedBlastReady = null;
+  let lastRenderedMissionMessage = null;
+  let lastRenderedMissionDanger = null;
   let audioContext = null;
   let soundOn = readString(SOUND_KEY, "on") !== "off";
   let movementMode = coarsePointer ? "touch" : readString(MOVEMENT_KEY, "mouse");
@@ -216,8 +241,14 @@
     return newStart + ((value - oldStart) / oldSpan) * (newEnd - newStart);
   }
 
+  const scoreFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+
   function formatScore(value) {
-    return Math.floor(Math.max(0, value)).toString().padStart(6, "0");
+    return scoreFormatter.format(Math.floor(Math.max(0, value)));
+  }
+
+  function magnitude(x, y) {
+    return Math.sqrt(x * x + y * y);
   }
 
   function distanceSquared(a, b) {
@@ -258,6 +289,60 @@
     return { left, right, top, bottom };
   }
 
+  function createBackgroundGradient() {
+    const gradient = ctx.createRadialGradient(
+      world.width * 0.5,
+      world.height * 0.52,
+      10,
+      world.width * 0.5,
+      world.height * 0.54,
+      Math.max(world.width, world.height) * 0.72,
+    );
+    gradient.addColorStop(0, "#442913");
+    gradient.addColorStop(0.42, "#25150b");
+    gradient.addColorStop(1, "#090604");
+    return gradient;
+  }
+
+  function rebuildRenderCache() {
+    renderCache.textWidths.clear();
+    renderCache.emojiMetrics.clear();
+    renderCache.backgroundGradient = createBackgroundGradient();
+
+    if (typeof Path2D !== "function") {
+      renderCache.backgroundRays = null;
+      renderCache.backgroundGrid = null;
+      renderCache.filmHoles = null;
+      return;
+    }
+
+    const rays = new Path2D();
+    const radius = magnitude(world.width, world.height);
+    const rayCount = 32;
+    for (let i = 0; i < rayCount; i += 2) {
+      const start = (i / rayCount) * Math.PI * 2;
+      const end = ((i + 1) / rayCount) * Math.PI * 2;
+      rays.moveTo(0, 0);
+      rays.arc(0, 0, radius, start, end);
+      rays.closePath();
+    }
+    renderCache.backgroundRays = rays;
+
+    const grid = new Path2D();
+    for (let y = world.bounds.top + 28; y < world.bounds.bottom; y += 64) {
+      grid.moveTo(world.bounds.left, y);
+      grid.lineTo(world.bounds.right, y);
+    }
+    renderCache.backgroundGrid = grid;
+
+    const holes = new Path2D();
+    for (let x = 12; x < world.width; x += 38) {
+      holes.rect(x, world.bounds.top + 3, 21, 6);
+      holes.rect(x, world.bounds.bottom - 9, 21, 6);
+    }
+    renderCache.filmHoles = holes;
+  }
+
   function resizeCanvas() {
     const rect = canvas.getBoundingClientRect();
     const hadWorld = world.width > 0 && world.height > 0;
@@ -286,8 +371,10 @@
     player.drawWidth = player.drawHeight * (705 / 2048);
     player.radius = scaleWorld(27);
     player.speed = scaleWorld(REFERENCE_PLAYER_SPEED);
+    world.playerBounds = getPlayerMovementBounds();
+    rebuildRenderCache();
 
-    const movementBounds = getPlayerMovementBounds();
+    const movementBounds = world.playerBounds;
     if (player.x && player.y) {
       player.x = clamp(
         remapAxis(player.x, oldBounds.left, oldBounds.right, left, right),
@@ -379,7 +466,7 @@
 
     if (blast) {
       remapGameplayPosition(blast);
-      blast.maxRadius = Math.hypot(world.width, world.height) * 1.06;
+      blast.maxRadius = magnitude(world.width, world.height) * 1.06;
       blast.radius = blast.maxRadius * (1 - Math.pow(1 - clamp(blast.life / blast.duration, 0, 1), 3));
     }
 
@@ -405,6 +492,7 @@
     powerupSpawnTimer = 6.5;
     popcornCollected = 0;
     popcornChain = 0;
+    longestStreak = 0;
     recommendationPower = 0;
     movementPower = 0;
     starRowSize = 1;
@@ -426,8 +514,14 @@
     bannerDanger = false;
     blastReadyAnnounced = false;
     lastRenderedScore = -1;
+    lastRenderedBest = -1;
+    lastRenderedBestStreak = -1;
+    lastRenderedLives = -1;
     lastRenderedStreak = -1;
     lastRenderedMastery = -1;
+    lastRenderedBlastReady = null;
+    lastRenderedMissionMessage = null;
+    lastRenderedMissionDanger = null;
 
     enemies.length = 0;
     projectiles.length = 0;
@@ -461,6 +555,7 @@
     gameState = "running";
     ui.startOverlay.hidden = true;
     ui.pauseOverlay.hidden = true;
+    ui.resetConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = true;
     ui.pauseButton.disabled = false;
     ui.pauseButton.textContent = "PAUSE";
@@ -471,33 +566,78 @@
     playCue("start");
   }
 
+  function saveRunRecords() {
+    const finalScore = Math.floor(score);
+    const scoreRecord = finalScore > bestScore;
+    const streakRecord = longestStreak > bestStreak;
+
+    if (scoreRecord) {
+      bestScore = finalScore;
+      saveValue(SCORE_KEY, bestScore);
+    }
+    if (streakRecord) {
+      bestStreak = longestStreak;
+      saveValue(STREAK_SCORE_KEY, bestStreak);
+    }
+
+    return { finalScore, scoreRecord, streakRecord };
+  }
+
   function endGame() {
     if (gameState === "gameover") return;
 
     gameState = "gameover";
-    const final = Math.floor(score);
-    const isRecord = final > bestScore;
+    const records = saveRunRecords();
 
-    if (isRecord) {
-      bestScore = final;
-      saveValue(SCORE_KEY, bestScore);
-    }
-
-    ui.finalScore.textContent = formatScore(final);
-    ui.gameoverTitle.textContent = isRecord
+    ui.finalScore.textContent = formatScore(records.finalScore);
+    ui.finalLongestStreak.textContent = String(longestStreak);
+    ui.gameoverTitle.textContent = records.scoreRecord
       ? "NEW BEST SCORE"
-      : "OVERWHELMED BY GARBAGE 🗑️";
+      : records.streakRecord
+        ? "NEW BEST STREAK"
+        : "OVERWHELMED BY GARBAGE 🗑️";
+    ui.pauseOverlay.hidden = true;
+    ui.resetConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = false;
     ui.pauseButton.disabled = true;
     resetJoystick();
     updateInterface(true);
-    announce(isRecord ? "New best score." : "Game over.");
+    announce(
+      records.scoreRecord
+        ? "New best score."
+        : records.streakRecord
+          ? "New best streak."
+          : "Game over.",
+    );
     playCue("gameover");
+  }
+
+  function openResetConfirmation() {
+    if (gameState !== "paused") return;
+    ui.pauseOverlay.hidden = true;
+    ui.resetConfirmOverlay.hidden = false;
+    ui.resetCancelButton.focus({ preventScroll: true });
+    announce("Confirm reset. Your current game will end.");
+  }
+
+  function cancelResetConfirmation() {
+    if (gameState !== "paused" || ui.resetConfirmOverlay.hidden) return;
+    ui.resetConfirmOverlay.hidden = true;
+    ui.pauseOverlay.hidden = false;
+    ui.resetButton.focus({ preventScroll: true });
+    announce("Reset cancelled. Intermission.");
+  }
+
+  function confirmResetGame() {
+    if (gameState !== "paused") return;
+    saveRunRecords();
+    startGame();
   }
 
   function togglePause(forcePause = false) {
     if (gameState === "running") {
       gameState = "paused";
+      ui.resetConfirmOverlay.hidden = true;
       ui.pauseOverlay.hidden = false;
       ui.pauseButton.textContent = "RESUME";
       resetJoystick();
@@ -508,6 +648,7 @@
     if (gameState === "paused" && !forcePause) {
       gameState = "running";
       ui.pauseOverlay.hidden = true;
+      ui.resetConfirmOverlay.hidden = true;
       ui.pauseButton.textContent = "PAUSE";
       lastFrame = performance.now();
       canvas.focus({ preventScroll: true });
@@ -970,7 +1111,7 @@
     const startY = player.y - player.drawHeight * 0.08;
     const dx = aimX - startX;
     const dy = aimY - startY;
-    const length = Math.hypot(dx, dy);
+    const length = magnitude(dx, dy);
     if (length < 1) return false;
 
     const directionX = dx / length;
@@ -1158,6 +1299,7 @@
     pickups.splice(index, 1);
     popcornCollected += 1;
     popcornChain += 1;
+    longestStreak = Math.max(longestStreak, popcornChain);
     popcornSpawnTimer = 0.65;
 
     const points = 300 + Math.min(500, Math.max(0, popcornChain - 1) * 75);
@@ -1238,8 +1380,8 @@
     if (enemy) {
       const dx = player.x - enemy.x;
       const dy = player.y - enemy.y;
-      const length = Math.hypot(dx, dy) || 1;
-      const movementBounds = getPlayerMovementBounds();
+      const length = magnitude(dx, dy) || 1;
+      const movementBounds = world.playerBounds;
       const knockback = scaleWorld(34);
       player.x = clamp(player.x + (dx / length) * knockback, movementBounds.left, movementBounds.right);
       player.y = clamp(player.y + (dy / length) * knockback, movementBounds.top, movementBounds.bottom);
@@ -1258,7 +1400,7 @@
       x: player.x,
       y: player.y,
       radius: 0,
-      maxRadius: Math.hypot(world.width, world.height) * 1.06,
+      maxRadius: magnitude(world.width, world.height) * 1.06,
       life: 0,
       duration: 0.72,
     };
@@ -1363,7 +1505,7 @@
   function updateMovement(dt) {
     let dx = 0;
     let dy = 0;
-    const touchMagnitude = Math.hypot(touchMove.x, touchMove.y);
+    const touchMagnitude = magnitude(touchMove.x, touchMove.y);
 
     if (gamepadMove.active) {
       dx = gamepadMove.x;
@@ -1374,7 +1516,7 @@
     } else if (movementMode === "mouse" && mouseTarget.active) {
       const targetDx = mouseTarget.x - player.x;
       const targetDy = mouseTarget.y - player.y;
-      const targetDistance = Math.hypot(targetDx, targetDy);
+      const targetDistance = magnitude(targetDx, targetDy);
       if (targetDistance > scaleWorld(9)) {
         const approachSpeed = Math.min(1, targetDistance / scaleWorld(72));
         dx = (targetDx / targetDistance) * approachSpeed;
@@ -1387,7 +1529,7 @@
       if (keys.has("ArrowDown") || keys.has("KeyS")) dy += 1;
     }
 
-    const length = Math.hypot(dx, dy);
+    const length = magnitude(dx, dy);
     if (length > 1) {
       dx /= length;
       dy /= length;
@@ -1399,13 +1541,13 @@
     const movementSpeed = player.speed * popcornSpeedMultiplier * (speedTime > 0 ? 1.85 : 1);
     const requestedVx = dx * movementSpeed;
     const requestedVy = dy * movementSpeed;
-    const movementBounds = getPlayerMovementBounds();
+    const movementBounds = world.playerBounds;
     const nextX = clamp(player.x + requestedVx * dt, movementBounds.left, movementBounds.right);
     const nextY = clamp(player.y + requestedVy * dt, movementBounds.top, movementBounds.bottom);
     const actualDx = nextX - previousX;
     const actualDy = nextY - previousY;
 
-    player.moving = Math.hypot(actualDx, actualDy) > 0.1;
+    player.moving = actualDx * actualDx + actualDy * actualDy > 0.01;
     if (player.moving) player.stationaryTime = 0;
     else player.stationaryTime += dt;
 
@@ -1449,7 +1591,7 @@
         const targetY = player.y + player.vy * prediction;
         const dx = targetX - enemy.x;
         const dy = targetY - enemy.y;
-        const length = Math.hypot(dx, dy) || 1;
+        const length = magnitude(dx, dy) || 1;
         enemy.vx = (dx / length) * enemy.speed;
         enemy.vy = (dy / length) * enemy.speed;
         enemy.x += enemy.vx * dt;
@@ -1464,19 +1606,27 @@
     }
   }
 
-  function normalizeGamepadStick(x, y) {
+  function normalizeGamepadStick(x, y, target = null) {
+    const output = target || { x: 0, y: 0, active: false };
     const axisX = Number.isFinite(x) ? clamp(x, -1, 1) : 0;
     const axisY = Number.isFinite(y) ? clamp(y, -1, 1) : 0;
-    const magnitude = Math.hypot(axisX, axisY);
+    const stickMagnitude = magnitude(axisX, axisY);
 
-    if (magnitude <= GAMEPAD_DEAD_ZONE) return { x: 0, y: 0, active: false };
+    if (stickMagnitude <= GAMEPAD_DEAD_ZONE) {
+      output.x = 0;
+      output.y = 0;
+      output.active = false;
+      return output;
+    }
 
-    const scaledMagnitude = Math.min(1, (magnitude - GAMEPAD_DEAD_ZONE) / (1 - GAMEPAD_DEAD_ZONE));
-    return {
-      x: (axisX / magnitude) * scaledMagnitude,
-      y: (axisY / magnitude) * scaledMagnitude,
-      active: true,
-    };
+    const scaledMagnitude = Math.min(
+      1,
+      (stickMagnitude - GAMEPAD_DEAD_ZONE) / (1 - GAMEPAD_DEAD_ZONE),
+    );
+    output.x = (axisX / stickMagnitude) * scaledMagnitude;
+    output.y = (axisY / stickMagnitude) * scaledMagnitude;
+    output.active = true;
+    return output;
   }
 
   function isGamepadButtonPressed(gamepad, index) {
@@ -1488,7 +1638,7 @@
   function hasRelevantGamepadInput(gamepad) {
     const stickX = Number(gamepad?.axes?.[0]) || 0;
     const stickY = Number(gamepad?.axes?.[1]) || 0;
-    return Math.hypot(stickX, stickY) > GAMEPAD_DEAD_ZONE
+    return magnitude(stickX, stickY) > GAMEPAD_DEAD_ZONE
       || GAMEPAD_BLAST_BUTTONS.some((index) => isGamepadButtonPressed(gamepad, index))
       || isGamepadButtonPressed(gamepad, GAMEPAD_PAUSE_BUTTON);
   }
@@ -1499,9 +1649,7 @@
     if (typeof getGamepads !== "function") return [];
 
     try {
-      return Array.from(getGamepads.call(gamepadNavigator) || []).filter(
-        (gamepad) => gamepad && gamepad.connected !== false,
-      );
+      return getGamepads.call(gamepadNavigator) || [];
     } catch {
       return [];
     }
@@ -1509,16 +1657,26 @@
 
   function chooseActiveGamepad() {
     const gamepads = readConnectedGamepads();
-    if (!gamepads.length) {
+    let first = null;
+    let current = null;
+    let engaged = null;
+
+    for (let i = 0; i < gamepads.length; i += 1) {
+      const gamepad = gamepads[i];
+      if (!gamepad || gamepad.connected === false) continue;
+      if (!first) first = gamepad;
+      if (gamepad.index === activeGamepadIndex) current = gamepad;
+      if (!engaged && hasRelevantGamepadInput(gamepad)) engaged = gamepad;
+    }
+
+    if (!first) {
       activeGamepadIndex = null;
       return null;
     }
 
-    const current = gamepads.find((gamepad) => gamepad.index === activeGamepadIndex);
-    const engaged = gamepads.find(hasRelevantGamepadInput);
     const selected = engaged && (!current || !hasRelevantGamepadInput(current))
       ? engaged
-      : current || engaged || gamepads[0];
+      : current || engaged || first;
     activeGamepadIndex = selected.index;
     return selected;
   }
@@ -1534,11 +1692,8 @@
       return;
     }
 
-    const movement = normalizeGamepadStick(gamepad.axes?.[0], gamepad.axes?.[1]);
-    gamepadMove.x = movement.x;
-    gamepadMove.y = movement.y;
-    gamepadMove.active = movement.active;
-    if (movement.active) mouseTarget.active = false;
+    normalizeGamepadStick(gamepad.axes?.[0], gamepad.axes?.[1], gamepadMove);
+    if (gamepadMove.active) mouseTarget.active = false;
 
     const blastPressed = GAMEPAD_BLAST_BUTTONS.some(
       (index) => isGamepadButtonPressed(gamepad, index),
@@ -1566,6 +1721,10 @@
       projectile.x += projectile.vx * dt;
       projectile.y += projectile.vy * dt;
       projectile.rotation += dt * 10;
+      const segmentMinX = Math.min(previousX, projectile.x);
+      const segmentMaxX = Math.max(previousX, projectile.x);
+      const segmentMinY = Math.min(previousY, projectile.y);
+      const segmentMaxY = Math.max(previousY, projectile.y);
 
       if (
         projectile.x < -offscreenMargin ||
@@ -1580,6 +1739,14 @@
       for (let j = enemies.length - 1; j >= 0; j -= 1) {
         const enemy = enemies[j];
         const hitDistance = projectile.radius + enemy.radius;
+        if (
+          enemy.x + hitDistance < segmentMinX
+          || enemy.x - hitDistance > segmentMaxX
+          || enemy.y + hitDistance < segmentMinY
+          || enemy.y - hitDistance > segmentMaxY
+        ) {
+          continue;
+        }
         if (
           segmentIntersectsCircle(
             previousX,
@@ -1628,7 +1795,7 @@
     if (magnetTime <= 0) return;
     const dx = player.x - collectible.x;
     const dy = player.y - collectible.y;
-    const distance = Math.hypot(dx, dy);
+    const distance = magnitude(dx, dy);
     if (distance < 1 || distance > scaleWorld(MAGNET_RADIUS)) return;
     const pullSpeed = Math.min(scaleWorld(900), scaleWorld(320) + distance * 0.7);
     const step = Math.min(distance, pullSpeed * dt);
@@ -1698,6 +1865,9 @@
   }
 
   function updateParticles(dt) {
+    const horizontalDrag = Math.pow(0.08, dt);
+    const verticalDrag = Math.pow(0.12, dt);
+    const gravity = scaleWorld(45) * dt;
     for (let i = particles.length - 1; i >= 0; i -= 1) {
       const particle = particles[i];
       particle.life -= dt;
@@ -1707,8 +1877,8 @@
       }
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
-      particle.vx *= Math.pow(0.08, dt);
-      particle.vy = particle.vy * Math.pow(0.12, dt) + scaleWorld(45) * dt;
+      particle.vx *= horizontalDrag;
+      particle.vy = particle.vy * verticalDrag + gravity;
     }
   }
 
@@ -1724,6 +1894,7 @@
   function updateInterface(force = false) {
     const roundedScore = Math.floor(score);
     const liveBest = Math.max(bestScore, roundedScore);
+    const liveBestStreak = Math.max(bestStreak, longestStreak);
     const masteryPercent = Math.round(mastery * 100);
 
     if (force || roundedScore !== lastRenderedScore) {
@@ -1737,10 +1908,19 @@
       lastRenderedBest = liveBest;
     }
 
-    const maxLives = MAX_LIVES;
-    ui.lives.textContent = "★".repeat(Math.max(0, player.lives)) + "☆".repeat(maxLives - Math.max(0, player.lives));
-    ui.lives.setAttribute("aria-label", `${player.lives} of ${maxLives} lives remaining`);
-    ui.lives.classList.toggle("danger", player.lives === 1);
+    if (force || liveBestStreak !== lastRenderedBestStreak) {
+      ui.bestStreak.textContent = String(liveBestStreak);
+      ui.bestStreak.setAttribute("aria-label", `Best popcorn streak: ${liveBestStreak}`);
+      lastRenderedBestStreak = liveBestStreak;
+    }
+
+    if (force || player.lives !== lastRenderedLives) {
+      const remainingLives = Math.max(0, player.lives);
+      ui.lives.textContent = "★".repeat(remainingLives) + "☆".repeat(MAX_LIVES - remainingLives);
+      ui.lives.setAttribute("aria-label", `${player.lives} of ${MAX_LIVES} lives remaining`);
+      ui.lives.classList.toggle("danger", player.lives === 1);
+      lastRenderedLives = player.lives;
+    }
 
     if (force || popcornChain !== lastRenderedStreak) {
       ui.streak.textContent = String(popcornChain);
@@ -1768,9 +1948,12 @@
     }
 
     const blastReady = fullyCharged && gameState === "running";
-    ui.masteryTrack.classList.toggle("is-ready", blastReady);
-    ui.judgmentButton.disabled = !blastReady;
-    ui.judgmentButton.classList.toggle("ready", blastReady);
+    if (force || blastReady !== lastRenderedBlastReady) {
+      ui.masteryTrack.classList.toggle("is-ready", blastReady);
+      ui.judgmentButton.disabled = !blastReady;
+      ui.judgmentButton.classList.toggle("ready", blastReady);
+      lastRenderedBlastReady = blastReady;
+    }
 
     let message = "";
     let danger = false;
@@ -1784,11 +1967,18 @@
       message = "KEEP MOVING TO CONTINUE SHOOTING";
     }
 
-    ui.missionBanner.textContent = message;
-    ui.missionBanner.classList.toggle("visible", Boolean(message));
-    ui.missionBanner.classList.toggle("danger", danger);
+    if (
+      force
+      || message !== lastRenderedMissionMessage
+      || danger !== lastRenderedMissionDanger
+    ) {
+      ui.missionBanner.textContent = message;
+      ui.missionBanner.classList.toggle("visible", Boolean(message));
+      ui.missionBanner.classList.toggle("danger", danger);
+      lastRenderedMissionMessage = message;
+      lastRenderedMissionDanger = danger;
+    }
   }
-
   function draw(now) {
     const time = now / 1000;
     ctx.save();
@@ -1814,34 +2004,30 @@
   }
 
   function drawBackground(time) {
-    const gradient = ctx.createRadialGradient(
-      world.width * 0.5,
-      world.height * 0.52,
-      10,
-      world.width * 0.5,
-      world.height * 0.54,
-      Math.max(world.width, world.height) * 0.72,
-    );
-    gradient.addColorStop(0, "#442913");
-    gradient.addColorStop(0.42, "#25150b");
-    gradient.addColorStop(1, "#090604");
-    ctx.fillStyle = gradient;
+    const backgroundGradient = shakeTime > 0 && !reducedMotion
+      ? createBackgroundGradient()
+      : renderCache.backgroundGradient;
+    ctx.fillStyle = backgroundGradient;
     ctx.fillRect(0, 0, world.width, world.height);
 
     ctx.save();
     ctx.translate(world.width / 2, world.height * 0.56);
     ctx.rotate(reducedMotion ? 0 : time * 0.016);
-    const radius = Math.hypot(world.width, world.height);
-    const rays = 32;
-    for (let i = 0; i < rays; i += 2) {
-      const start = (i / rays) * Math.PI * 2;
-      const end = ((i + 1) / rays) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, radius, start, end);
-      ctx.closePath();
-      ctx.fillStyle = "rgba(229, 164, 8, 0.062)";
-      ctx.fill();
+    ctx.fillStyle = "rgba(229, 164, 8, 0.062)";
+    if (renderCache.backgroundRays) {
+      ctx.fill(renderCache.backgroundRays);
+    } else {
+      const radius = magnitude(world.width, world.height);
+      const rays = 32;
+      for (let i = 0; i < rays; i += 2) {
+        const startAngle = (i / rays) * Math.PI * 2;
+        const endAngle = ((i + 1) / rays) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, radius, startAngle, endAngle);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
     ctx.restore();
 
@@ -1853,21 +2039,27 @@
 
     ctx.strokeStyle = "rgba(229, 164, 8, 0.13)";
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    for (let y = world.bounds.top + 28; y < world.bounds.bottom; y += 64) {
-      ctx.moveTo(world.bounds.left, y);
-      ctx.lineTo(world.bounds.right, y);
+    if (renderCache.backgroundGrid) {
+      ctx.stroke(renderCache.backgroundGrid);
+    } else {
+      ctx.beginPath();
+      for (let y = world.bounds.top + 28; y < world.bounds.bottom; y += 64) {
+        ctx.moveTo(world.bounds.left, y);
+        ctx.lineTo(world.bounds.right, y);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
 
-    const holeWidth = 21;
     ctx.fillStyle = "rgba(4, 2, 1, 0.38)";
-    for (let x = 12; x < world.width; x += 38) {
-      ctx.fillRect(x, world.bounds.top + 3, holeWidth, 6);
-      ctx.fillRect(x, world.bounds.bottom - 9, holeWidth, 6);
+    if (renderCache.filmHoles) {
+      ctx.fill(renderCache.filmHoles);
+    } else {
+      for (let x = 12; x < world.width; x += 38) {
+        ctx.fillRect(x, world.bounds.top + 3, 21, 6);
+        ctx.fillRect(x, world.bounds.bottom - 9, 21, 6);
+      }
     }
   }
-
   function drawRushWarning(time) {
     if (!rushWarning) return;
     const warning = rushWarning;
@@ -1904,34 +2096,51 @@
     ctx.restore();
   }
 
+  function measureCachedText(text, font) {
+    const key = `${font}\u0000${text}`;
+    const cached = renderCache.textWidths.get(key);
+    if (cached !== undefined) return cached;
+
+    ctx.font = font;
+    const width = ctx.measureText(text).width;
+    if (renderCache.textWidths.size >= 768) renderCache.textWidths.clear();
+    renderCache.textWidths.set(key, width);
+    return width;
+  }
+
   function drawCenteredEmoji(emoji, x, y, fontSize) {
     ctx.save();
-    ctx.font = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+    const font = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+    ctx.font = font;
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
-    const metrics = ctx.measureText(emoji);
-    const left = Number.isFinite(metrics.actualBoundingBoxLeft)
-      ? metrics.actualBoundingBoxLeft
-      : 0;
-    const right = Number.isFinite(metrics.actualBoundingBoxRight)
-      ? metrics.actualBoundingBoxRight
-      : metrics.width;
-    const ascent = Number.isFinite(metrics.actualBoundingBoxAscent)
-      ? metrics.actualBoundingBoxAscent
-      : fontSize * 0.8;
-    const descent = Number.isFinite(metrics.actualBoundingBoxDescent)
-      ? metrics.actualBoundingBoxDescent
-      : fontSize * 0.2;
+    const cacheKey = `${emoji}\u0000${font}`;
+    let bounds = renderCache.emojiMetrics.get(cacheKey);
+    if (!bounds) {
+      const metrics = ctx.measureText(emoji);
+      const left = Number.isFinite(metrics.actualBoundingBoxLeft)
+        ? metrics.actualBoundingBoxLeft
+        : 0;
+      const right = Number.isFinite(metrics.actualBoundingBoxRight)
+        ? metrics.actualBoundingBoxRight
+        : metrics.width;
+      const ascent = Number.isFinite(metrics.actualBoundingBoxAscent)
+        ? metrics.actualBoundingBoxAscent
+        : fontSize * 0.8;
+      const descent = Number.isFinite(metrics.actualBoundingBoxDescent)
+        ? metrics.actualBoundingBoxDescent
+        : fontSize * 0.2;
+      bounds = {
+        x: -(right - left) / 2,
+        y: (ascent - descent) / 2,
+      };
+      renderCache.emojiMetrics.set(cacheKey, bounds);
+    }
 
-    ctx.fillText(
-      emoji,
-      x - (right - left) / 2,
-      y + (ascent - descent) / 2,
-    );
+    ctx.fillText(emoji, x + bounds.x, y + bounds.y);
     ctx.restore();
   }
-
   function drawPlayer(time) {
     const movementTilt = clamp(player.vx / Math.max(1, player.speed), -1, 1) * 0.055;
     const bob = player.moving
@@ -1946,7 +2155,7 @@
     ctx.scale(readyPulse, readyPulse);
 
     if (speedTime > 0 && player.moving) {
-      const motion = Math.hypot(player.vx, player.vy) || 1;
+      const motion = magnitude(player.vx, player.vy) || 1;
       const trailX = -player.vx / motion;
       const trailY = -player.vy / motion;
       const sideX = -trailY;
@@ -2100,11 +2309,12 @@
       const alpha = 0.72 + (Math.sin(time * 7) + 1) * 0.12;
       ctx.save();
       ctx.globalAlpha = alpha;
-      ctx.font = `800 ${clamp(world.width * 0.012, 10, 14)}px "Futura Web", sans-serif`;
+      const font = `800 ${clamp(world.width * 0.012, 10, 14)}px "Futura Web", sans-serif`;
+      ctx.font = font;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       const text = "KEEP MOVING";
-      const width = ctx.measureText(text).width + scaleWorld(20);
+      const width = measureCachedText(text, font) + scaleWorld(20);
       const y = player.y + player.drawHeight * 0.55;
       ctx.fillStyle = "rgba(18, 12, 8, 0.9)";
       ctx.fillRect(player.x - width / 2, y - scaleWorld(12), width, scaleWorld(24));
@@ -2118,6 +2328,13 @@
 
   function drawEnemies() {
     for (const enemy of enemies) {
+      const margin = enemy.radius + scaleWorld(45);
+      if (
+        enemy.x < -margin
+        || enemy.x > world.width + margin
+        || enemy.y < -margin
+        || enemy.y > world.height + margin
+      ) continue;
       ctx.save();
       ctx.translate(enemy.x, enemy.y + Math.sin(enemy.phase) * scaleWorld(2.4));
       ctx.rotate(enemy.mode === "rush" ? 0 : Math.sin(enemy.phase * 0.7) * 0.07);
@@ -2162,6 +2379,13 @@
 
   function drawProjectiles() {
     for (const projectile of projectiles) {
+      const margin = projectile.radius + scaleWorld(30);
+      if (
+        projectile.x < -margin
+        || projectile.x > world.width + margin
+        || projectile.y < -margin
+        || projectile.y > world.height + margin
+      ) continue;
       ctx.save();
       ctx.translate(projectile.x, projectile.y);
       ctx.rotate(projectile.rotation);
@@ -2281,10 +2505,11 @@
         drawCenteredEmoji(definition.icon, 0, 0, Math.max(10, scaleWorld(28)));
       }
 
-      ctx.font = `800 ${Math.max(7, scaleWorld(10))}px "Futura Web", sans-serif`;
+      const labelFont = `800 ${Math.max(7, scaleWorld(10))}px "Futura Web", sans-serif`;
+      ctx.font = labelFont;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      const labelWidth = ctx.measureText(definition.label).width + scaleWorld(16);
+      const labelWidth = measureCachedText(definition.label, labelFont) + scaleWorld(16);
       const labelTop = powerup.radius + scaleWorld(20);
       const labelHeight = Math.max(13, scaleWorld(19));
       ctx.fillStyle = "rgba(18, 12, 8, 0.92)";
@@ -2403,9 +2628,9 @@
     const height = Math.max(fontSize, iconSize) + verticalPadding * 2;
     const gap = shortViewport ? 4 : 6;
     const availableWidth = Math.max(1, world.bounds.right - world.bounds.left);
+    const statusFont = `800 ${fontSize}px "Futura Web", sans-serif`;
     const widths = statuses.map((status) => {
-      ctx.font = `800 ${fontSize}px "Futura Web", sans-serif`;
-      const textWidth = ctx.measureText(status.text).width;
+      const textWidth = measureCachedText(status.text, statusFont);
       status.textWidth = textWidth;
       return Math.min(
         availableWidth,
@@ -2428,7 +2653,7 @@
     if (row.items.length) rows.push(row);
 
     ctx.save();
-    ctx.font = `800 ${fontSize}px "Futura Web", sans-serif`;
+    ctx.font = statusFont;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
 
@@ -2491,6 +2716,13 @@
 
   function drawParticles() {
     for (const particle of particles) {
+      const margin = particle.size + scaleWorld(16);
+      if (
+        particle.x < -margin
+        || particle.x > world.width + margin
+        || particle.y < -margin
+        || particle.y > world.height + margin
+      ) continue;
       const alpha = clamp(particle.life / particle.maxLife, 0, 1);
       ctx.save();
       ctx.globalAlpha = alpha;
@@ -2531,6 +2763,33 @@
   }
 
   function drawStar(x, y, outerRadius, innerRadius, points, color) {
+    if (typeof Path2D === "function" && outerRadius > 0) {
+      const innerRatio = innerRadius / outerRadius;
+      const key = `${points}:${innerRatio.toFixed(4)}`;
+      let path = renderCache.starPaths.get(key);
+      if (!path) {
+        path = new Path2D();
+        for (let i = 0; i < points * 2; i += 1) {
+          const radius = i % 2 === 0 ? 1 : innerRatio;
+          const angle = -Math.PI / 2 + (i * Math.PI) / points;
+          const px = Math.cos(angle) * radius;
+          const py = Math.sin(angle) * radius;
+          if (i === 0) path.moveTo(px, py);
+          else path.lineTo(px, py);
+        }
+        path.closePath();
+        renderCache.starPaths.set(key, path);
+      }
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(outerRadius, outerRadius);
+      ctx.fillStyle = color;
+      ctx.fill(path);
+      ctx.restore();
+      return;
+    }
+
     ctx.beginPath();
     for (let i = 0; i < points * 2; i += 1) {
       const radius = i % 2 === 0 ? outerRadius : innerRadius;
@@ -2544,7 +2803,6 @@
     ctx.fillStyle = color;
     ctx.fill();
   }
-
   function resetJoystick() {
     touchMove.x = 0;
     touchMove.y = 0;
@@ -2559,7 +2817,7 @@
     let dx = event.clientX - centerX;
     let dy = event.clientY - centerY;
     const maxDistance = rect.width * 0.31;
-    const length = Math.hypot(dx, dy);
+    const length = magnitude(dx, dy);
     if (length > maxDistance) {
       dx = (dx / length) * maxDistance;
       dy = (dy / length) * maxDistance;
@@ -2603,6 +2861,13 @@
         event.preventDefault();
         activateBlast();
       }
+    } else if (
+      event.code === "Escape"
+      && gameState === "paused"
+      && !ui.resetConfirmOverlay.hidden
+    ) {
+      event.preventDefault();
+      cancelResetConfirmation();
     } else if (event.code === "KeyP" || event.code === "Escape") {
       if (gameState === "running" || gameState === "paused") {
         event.preventDefault();
@@ -2635,7 +2900,7 @@
   window.addEventListener("pointermove", (event) => {
     if (coarsePointer || event.pointerType === "touch") return;
     const rect = canvas.getBoundingClientRect();
-    const movementBounds = getPlayerMovementBounds();
+    const movementBounds = world.playerBounds;
     mouseTarget.x = clamp(event.clientX - rect.left, movementBounds.left, movementBounds.right);
     mouseTarget.y = clamp(event.clientY - rect.top, movementBounds.top, movementBounds.bottom);
     if (gameState === "running") mouseTarget.active = true;
@@ -2658,6 +2923,9 @@
   ui.startButton.addEventListener("click", startGame);
   ui.restartButton.addEventListener("click", startGame);
   ui.resumeButton.addEventListener("click", () => togglePause());
+  ui.resetButton.addEventListener("click", openResetConfirmation);
+  ui.resetCancelButton.addEventListener("click", cancelResetConfirmation);
+  ui.resetConfirmButton.addEventListener("click", confirmResetGame);
   ui.movementButton.addEventListener("click", toggleMovementMode);
   ui.pauseButton.addEventListener("click", () => togglePause());
   ui.soundButton.addEventListener("click", toggleSound);
@@ -2700,5 +2968,11 @@
   resizeCanvas();
   updateMovementModeUi();
   updateInterface(true);
+  if (document.fonts?.ready) {
+    document.fonts.ready.then(() => {
+      renderCache.textWidths.clear();
+      renderCache.emojiMetrics.clear();
+    });
+  }
   window.requestAnimationFrame(frame);
 })();

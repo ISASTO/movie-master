@@ -266,7 +266,7 @@ canvas:focus-visible {
   right: clamp(12px, 2vw, 28px);
   left: clamp(12px, 2vw, 28px);
   display: grid;
-  grid-template-columns: 0.72fr 0.72fr 1.08fr 0.62fr 2.55fr;
+  grid-template-columns: 0.72fr 0.72fr 1.08fr 0.62fr 0.72fr 2.35fr;
   min-height: 62px;
   border: 2px solid rgba(229, 164, 8, 0.9);
   background: rgba(16, 9, 5, 0.9);
@@ -612,6 +612,7 @@ canvas:focus-visible {
 }
 
 .primary-button,
+.secondary-button,
 .blast-button {
   border: 3px solid var(--ink);
   background: var(--gold);
@@ -624,13 +625,27 @@ canvas:focus-visible {
   transition: transform 100ms ease, box-shadow 100ms ease, filter 100ms ease;
 }
 
-.primary-button {
+.primary-button,
+.secondary-button {
   min-height: 50px;
   padding: 11px 22px;
   font-size: clamp(0.72rem, 1vw, 0.9rem);
 }
 
+.secondary-button {
+  border-color: var(--gold);
+  background: rgba(18, 12, 8, 0.94);
+  color: var(--gold-light);
+}
+
+.danger-button {
+  border-color: #d7644e;
+  color: #ff9b84;
+  box-shadow: 5px 5px 0 #6f271b;
+}
+
 .primary-button:hover,
+.secondary-button:hover,
 .blast-button:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translate(-1px, -2px);
@@ -638,6 +653,7 @@ canvas:focus-visible {
 }
 
 .primary-button:active,
+.secondary-button:active,
 .blast-button:active:not(:disabled) {
   transform: translate(3px, 3px);
   box-shadow: 2px 2px 0 var(--gold-dark);
@@ -705,8 +721,16 @@ canvas:focus-visible {
   text-shadow: 0 3px 0 #6d3100, 0 8px 20px rgba(0, 0, 0, 0.5);
 }
 
-.intermission-panel .primary-button {
+.pause-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
   margin-top: 24px;
+}
+
+.reset-confirmation-panel {
+  width: min(720px, calc(100vw - 32px));
 }
 
 .gameover-panel {
@@ -729,29 +753,42 @@ canvas:focus-visible {
   color: var(--gold-light);
 }
 
-.final-score {
-  display: flex;
-  flex-direction: column;
+.final-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 16px 0 20px;
-  padding: 12px;
   border-block: 1px solid rgba(255, 211, 96, 0.45);
 }
 
-.final-score span {
+.final-stat {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px;
+}
+
+.final-stat + .final-stat {
+  border-left: 1px solid rgba(255, 211, 96, 0.3);
+}
+
+.final-stat span {
   color: var(--paper);
   font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.18em;
 }
 
-.final-score strong {
+.final-stat strong {
+  overflow: hidden;
   color: var(--gold-bright);
   font-family: "Alfa Movie", Rockwell, serif;
-  font-size: clamp(2.3rem, 6vw, 4.8rem);
+  font-size: clamp(1.8rem, 4.4vw, 3.8rem);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.055em;
   line-height: 1;
+  text-overflow: ellipsis;
 }
 
 .touch-controls {
@@ -957,7 +994,7 @@ canvas:focus-visible {
     top: 59px;
     right: 7px;
     left: 7px;
-    grid-template-columns: 0.78fr 1.25fr 0.62fr;
+    grid-template-columns: 0.72fr 1.2fr 0.58fr 0.8fr;
     min-height: 0;
   }
 
@@ -976,6 +1013,10 @@ canvas:focus-visible {
 
   .hud-streak {
     grid-column: 3;
+  }
+
+  .hud-best-streak {
+    grid-column: 4;
     border-right: 0;
   }
 
@@ -1197,7 +1238,7 @@ canvas:focus-visible {
     top: 48px;
     right: 6px;
     left: 6px;
-    grid-template-columns: 0.65fr 1fr 0.55fr 1.6fr;
+    grid-template-columns: 0.58fr 0.95fr 0.48fr 0.62fr 1.55fr;
     min-height: 42px;
   }
 
@@ -1309,7 +1350,8 @@ canvas:focus-visible {
     font-size: clamp(1.05rem, min(9vw, 18dvh), 3rem);
   }
 
-  .intermission-panel .primary-button {
+  .pause-actions {
+    gap: 8px;
     margin-top: 10px;
   }
 
@@ -1319,17 +1361,21 @@ canvas:focus-visible {
     font-size: clamp(1.15rem, min(4.4vw, 10dvh), 2.25rem);
   }
 
-  .final-score {
+  .final-stats {
     margin: 8px 0 10px;
+  }
+
+  .final-stat {
     padding: 7px;
   }
 
-  .final-score strong {
+  .final-stat strong {
     font-size: clamp(1.8rem, min(6vw, 13vh), 3rem);
     font-size: clamp(1.8rem, min(6vw, 13dvh), 3rem);
   }
 
-  .primary-button {
+  .primary-button,
+  .secondary-button {
     min-height: 38px;
     padding: 7px 16px;
     font-size: 0.64rem;
