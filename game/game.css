@@ -698,6 +698,10 @@ html[data-game-quality="low"] .game-instructions {
     rgba(9, 5, 3, 0.9);
 }
 
+.intermission-overlay {
+  inset: var(--play-top) 0 var(--play-bottom);
+}
+
 .intermission-panel,
 .gameover-panel {
   padding: clamp(32px, 5vw, 64px);
