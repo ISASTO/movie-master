@@ -28,6 +28,7 @@
     resetConfirmButton: $("reset-confirm-button"),
     restartButton: $("restart-button"),
     movementButton: $("movement-button"),
+    qualityButton: $("quality-button"),
     pauseButton: $("pause-button"),
     soundButton: $("sound-button"),
     judgmentButton: $("judgment-button"),
@@ -88,6 +89,57 @@
   };
   const SOUND_KEY = "movie-master-vs-garbage-sound-v1";
   const MOVEMENT_KEY = "movie-master-vs-garbage-movement-v1";
+  const QUALITY_KEY = "movie-master-vs-garbage-quality-v1";
+  const QUALITY_ORDER = ["high", "medium", "low"];
+  const QUALITY_LEVELS = {
+    high: {
+      label: "HIGH",
+      maxDpr: 2,
+      particleMultiplier: 1,
+      particleDrawStride: 1,
+      backgroundStarMultiplier: 1,
+      projectileGlow: 1,
+      projectileFrames: 12,
+      pickupBeams: true,
+      playerAura: "gradient",
+      speedTrailLines: 5,
+      superOrbitStars: 10,
+      enemyFrames: 11,
+    },
+    medium: {
+      label: "MEDIUM",
+      maxDpr: 1.5,
+      particleMultiplier: 0.68,
+      particleDrawStride: 1,
+      backgroundStarMultiplier: 0.68,
+      projectileGlow: 0.62,
+      projectileFrames: 8,
+      pickupBeams: true,
+      playerAura: "gradient",
+      speedTrailLines: 3,
+      superOrbitStars: 8,
+      enemyFrames: 7,
+    },
+    low: {
+      label: "LOW",
+      maxDpr: 1,
+      particleMultiplier: 0.36,
+      particleDrawStride: 2,
+      backgroundStarMultiplier: 0.34,
+      projectileGlow: 0.18,
+      projectileFrames: 4,
+      pickupBeams: false,
+      playerAura: "flat",
+      speedTrailLines: 1,
+      superOrbitStars: 5,
+      enemyFrames: 3,
+    },
+  };
+  const STAR_ROTATION_PERIOD = (Math.PI * 2) / 5;
+  const SUPER_STAR_DIRECTIONS = Array.from({ length: 10 }, (_, index) => {
+    const angle = (index / 10) * Math.PI * 2;
+    return { x: Math.cos(angle), y: Math.sin(angle) };
+  });
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const coarsePointer = window.matchMedia("(hover: none), (pointer: coarse)").matches;
 
@@ -111,6 +163,9 @@
     backgroundGrid: null,
     filmHoles: null,
     starPaths: new Map(),
+    projectileSprites: new Map(),
+    enemySprites: new Map(),
+    emojiSprites: new Map(),
     textWidths: new Map(),
     emojiMetrics: new Map(),
   };
@@ -141,6 +196,14 @@
   const powerups = [];
   const particles = [];
   const floatingTexts = [];
+  const projectilePool = [];
+  const particlePool = [];
+  const collisionIndex = {
+    enemies: [],
+    maxEnemyRadius: 0,
+  };
+  const MAX_PROJECTILE_POOL_SIZE = 1800;
+  const MAX_PARTICLE_POOL_SIZE = 2400;
 
   let gameState = "ready";
   let lastFrame = performance.now();
@@ -189,6 +252,9 @@
   let audioContext = null;
   let soundOn = readString(SOUND_KEY, "on") !== "off";
   let movementMode = coarsePointer ? "touch" : readString(MOVEMENT_KEY, "mouse");
+  let qualityLevel = readString(QUALITY_KEY, "high");
+  if (!QUALITY_LEVELS[qualityLevel]) qualityLevel = "high";
+  let qualitySettings = QUALITY_LEVELS[qualityLevel];
   let activeGamepadIndex = null;
   let gamepadBlastPressed = false;
   let gamepadPausePressed = false;
@@ -307,6 +373,9 @@
   function rebuildRenderCache() {
     renderCache.textWidths.clear();
     renderCache.emojiMetrics.clear();
+    renderCache.projectileSprites.clear();
+    renderCache.enemySprites.clear();
+    renderCache.emojiSprites.clear();
     renderCache.backgroundGradient = createBackgroundGradient();
 
     if (typeof Path2D !== "function") {
@@ -343,6 +412,71 @@
     renderCache.filmHoles = holes;
   }
 
+  function populateCollisionIndex() {
+    const sortedEnemies = collisionIndex.enemies;
+    sortedEnemies.length = enemies.length;
+    let maxEnemyRadius = 0;
+    for (let index = 0; index < enemies.length; index += 1) {
+      const enemy = enemies[index];
+      sortedEnemies[index] = enemy;
+      if (enemy.radius > maxEnemyRadius) maxEnemyRadius = enemy.radius;
+    }
+    sortedEnemies.sort((a, b) => a.x - b.x);
+    collisionIndex.maxEnemyRadius = maxEnemyRadius;
+  }
+
+  function findFirstCollisionCandidate(minimumX) {
+    const sortedEnemies = collisionIndex.enemies;
+    let low = 0;
+    let high = sortedEnemies.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (sortedEnemies[middle].x < minimumX) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  }
+
+  function acquireProjectile() {
+    return projectilePool.pop() || {};
+  }
+
+  function recycleProjectileAt(index) {
+    const projectile = projectiles[index];
+    const last = projectiles.pop();
+    if (index < projectiles.length) projectiles[index] = last;
+    if (projectilePool.length < MAX_PROJECTILE_POOL_SIZE) projectilePool.push(projectile);
+  }
+
+  function recycleAllProjectiles() {
+    const room = MAX_PROJECTILE_POOL_SIZE - projectilePool.length;
+    const start = Math.max(0, projectiles.length - room);
+    for (let index = start; index < projectiles.length; index += 1) {
+      projectilePool.push(projectiles[index]);
+    }
+    projectiles.length = 0;
+  }
+
+  function acquireParticle() {
+    return particlePool.pop() || {};
+  }
+
+  function recycleParticleAt(index) {
+    const particle = particles[index];
+    const last = particles.pop();
+    if (index < particles.length) particles[index] = last;
+    if (particlePool.length < MAX_PARTICLE_POOL_SIZE) particlePool.push(particle);
+  }
+
+  function recycleAllParticles() {
+    const room = MAX_PARTICLE_POOL_SIZE - particlePool.length;
+    const start = Math.max(0, particles.length - room);
+    for (let index = start; index < particles.length; index += 1) {
+      particlePool.push(particles[index]);
+    }
+    particles.length = 0;
+  }
+
   function resizeCanvas() {
     const rect = canvas.getBoundingClientRect();
     const hadWorld = world.width > 0 && world.height > 0;
@@ -351,7 +485,7 @@
 
     world.width = Math.max(1, rect.width);
     world.height = Math.max(1, rect.height);
-    world.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    world.dpr = Math.min(window.devicePixelRatio || 1, qualitySettings.maxDpr);
     world.bounds = getPlayBounds();
 
     const { left, right, top, bottom } = world.bounds;
@@ -392,7 +526,14 @@
     }
 
     world.backgroundStars = Array.from(
-      { length: Math.round(clamp(world.width / 28, 18, 58)) },
+      {
+        length: Math.max(
+          8,
+          Math.round(
+            clamp(world.width / 28, 18, 58) * qualitySettings.backgroundStarMultiplier,
+          ),
+        ),
+      },
       () => ({
         x: Math.random() * world.width,
         y: Math.random() * world.height,
@@ -524,10 +665,10 @@
     lastRenderedMissionDanger = null;
 
     enemies.length = 0;
-    projectiles.length = 0;
+    recycleAllProjectiles();
     pickups.length = 0;
     powerups.length = 0;
-    particles.length = 0;
+    recycleAllParticles();
     floatingTexts.length = 0;
 
     const { left, right, top, bottom } = world.bounds;
@@ -786,6 +927,34 @@
     canvas.focus({ preventScroll: true });
   }
 
+  function applyQuality(level, persist = true, announceChange = true) {
+    qualityLevel = QUALITY_LEVELS[level] ? level : "high";
+    qualitySettings = QUALITY_LEVELS[qualityLevel];
+    if (persist) saveValue(QUALITY_KEY, qualityLevel);
+    if (document.documentElement?.dataset) {
+      document.documentElement.dataset.gameQuality = qualityLevel;
+    }
+    ui.qualityButton.textContent = `QUALITY: ${qualitySettings.label}`;
+    ui.qualityButton.setAttribute(
+      "aria-label",
+      `Visual quality ${qualitySettings.label.toLowerCase()}. Activate for the next quality level.`,
+    );
+    if (world.width > 0) resizeCanvas();
+
+    if (announceChange) {
+      const message = `${qualitySettings.label} QUALITY SELECTED`;
+      if (gameState === "running") setBanner(message, 1.4, false);
+      announce(message.toLowerCase());
+      canvas.focus({ preventScroll: true });
+    }
+  }
+
+  function cycleQuality() {
+    const currentIndex = QUALITY_ORDER.indexOf(qualityLevel);
+    const nextLevel = QUALITY_ORDER[(currentIndex + 1) % QUALITY_ORDER.length];
+    applyQuality(nextLevel);
+  }
+
   function enemyDefinition(kind) {
     const definitions = {
       standard: { radius: 23, speed: 1, hp: 1, color: "#6d5747", score: 34 },
@@ -823,6 +992,8 @@
       phase: Math.random() * Math.PI * 2,
       hitFlash: 0,
       blastMarked: false,
+      collisionStamp: 0,
+      destroyed: false,
     });
   }
 
@@ -1106,6 +1277,28 @@
     playCue("miss");
   }
 
+  function emitRecommendationRow(directionX, directionY, color, speed, projectileRadius) {
+    const startX = player.x;
+    const startY = player.y - player.drawHeight * 0.08;
+    const perpendicularX = -directionY;
+    const perpendicularY = directionX;
+    const rowSpacing = projectileRadius * 1.8;
+    const rowCenter = (starRowSize - 1) / 2;
+
+    for (let index = 0; index < starRowSize; index += 1) {
+      const rowOffset = (index - rowCenter) * rowSpacing;
+      const projectile = acquireProjectile();
+      projectile.x = startX + perpendicularX * rowOffset;
+      projectile.y = startY + perpendicularY * rowOffset;
+      projectile.vx = directionX * speed;
+      projectile.vy = directionY * speed;
+      projectile.radius = projectileRadius;
+      projectile.color = color;
+      projectile.rotation = Math.random() * STAR_ROTATION_PERIOD;
+      projectiles.push(projectile);
+    }
+  }
+
   function launchRecommendation(aimX, aimY, color = COLORS.goldBright) {
     const startX = player.x;
     const startY = player.y - player.drawHeight * 0.08;
@@ -1114,27 +1307,13 @@
     const length = magnitude(dx, dy);
     if (length < 1) return false;
 
-    const directionX = dx / length;
-    const directionY = dy / length;
-    const perpendicularX = -directionY;
-    const perpendicularY = directionX;
-    const speed = currentProjectileSpeed();
-    const projectileRadius = currentProjectileRadius();
-    const rowSpacing = projectileRadius * 1.8;
-    const rowCenter = (starRowSize - 1) / 2;
-
-    for (let index = 0; index < starRowSize; index += 1) {
-      const rowOffset = (index - rowCenter) * rowSpacing;
-      projectiles.push({
-        x: startX + perpendicularX * rowOffset,
-        y: startY + perpendicularY * rowOffset,
-        vx: directionX * speed,
-        vy: directionY * speed,
-        radius: projectileRadius,
-        color,
-        rotation: Math.random() * Math.PI,
-      });
-    }
+    emitRecommendationRow(
+      dx / length,
+      dy / length,
+      color,
+      currentProjectileSpeed(),
+      currentProjectileRadius(),
+    );
     return true;
   }
 
@@ -1153,14 +1332,17 @@
   }
 
   function fireSuperStars() {
-    const startY = player.y - player.drawHeight * 0.08;
-    const radius = Math.max(world.width, world.height) + scaleWorld(200);
-    for (let i = 0; i < 10; i += 1) {
-      const angle = superVolleyAngle + (i / 10) * Math.PI * 2;
-      launchRecommendation(
-        player.x + Math.cos(angle) * radius,
-        startY + Math.sin(angle) * radius,
+    const rotationCosine = Math.cos(superVolleyAngle);
+    const rotationSine = Math.sin(superVolleyAngle);
+    const speed = currentProjectileSpeed();
+    const projectileRadius = currentProjectileRadius();
+    for (const direction of SUPER_STAR_DIRECTIONS) {
+      emitRecommendationRow(
+        direction.x * rotationCosine - direction.y * rotationSine,
+        direction.x * rotationSine + direction.y * rotationCosine,
         COLORS.super,
+        speed,
+        projectileRadius,
       );
     }
     superVolleyAngle = (superVolleyAngle + Math.PI / 10) % (Math.PI * 2);
@@ -1196,22 +1378,23 @@
   }
 
   function addParticles(x, y, color, count = 10, speed = 120) {
-    const actualCount = reducedMotion ? Math.ceil(count * 0.35) : count;
+    const motionMultiplier = reducedMotion ? 0.35 : 1;
+    const actualCount = Math.ceil(count * motionMultiplier * qualitySettings.particleMultiplier);
     for (let i = 0; i < actualCount; i += 1) {
       const angle = Math.random() * Math.PI * 2;
       const velocity = randomBetween(speed * 0.35, speed) * world.gameScale;
       const maxLife = randomBetween(0.34, 0.78);
-      particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        life: maxLife,
-        maxLife,
-        size: randomBetween(2, 6) * world.gameScale,
-        color,
-        star: Math.random() < 0.24,
-      });
+      const particle = acquireParticle();
+      particle.x = x;
+      particle.y = y;
+      particle.vx = Math.cos(angle) * velocity;
+      particle.vy = Math.sin(angle) * velocity;
+      particle.life = maxLife;
+      particle.maxLife = maxLife;
+      particle.size = randomBetween(2, 6) * world.gameScale;
+      particle.color = color;
+      particle.star = Math.random() < 0.24;
+      particles.push(particle);
     }
   }
 
@@ -1714,6 +1897,9 @@
 
   function updateProjectiles(dt) {
     const offscreenMargin = scaleWorld(30);
+    let destroyedEnemies = false;
+    populateCollisionIndex();
+
     for (let i = projectiles.length - 1; i >= 0; i -= 1) {
       const projectile = projectiles[i];
       const previousX = projectile.x;
@@ -1721,6 +1907,9 @@
       projectile.x += projectile.vx * dt;
       projectile.y += projectile.vy * dt;
       projectile.rotation += dt * 10;
+      if (projectile.rotation >= STAR_ROTATION_PERIOD) {
+        projectile.rotation -= STAR_ROTATION_PERIOD;
+      }
       const segmentMinX = Math.min(previousX, projectile.x);
       const segmentMaxX = Math.max(previousX, projectile.x);
       const segmentMinY = Math.min(previousY, projectile.y);
@@ -1732,12 +1921,20 @@
         projectile.y < -offscreenMargin ||
         projectile.y > world.height + offscreenMargin
       ) {
-        projectiles.splice(i, 1);
+        recycleProjectileAt(i);
         continue;
       }
 
-      for (let j = enemies.length - 1; j >= 0; j -= 1) {
-        const enemy = enemies[j];
+      const queryPadding = projectile.radius + collisionIndex.maxEnemyRadius;
+      const minimumX = segmentMinX - queryPadding;
+      const maximumX = segmentMaxX + queryPadding;
+      const sortedEnemies = collisionIndex.enemies;
+      const firstCandidate = findFirstCollisionCandidate(minimumX);
+
+      for (let candidateIndex = firstCandidate; candidateIndex < sortedEnemies.length; candidateIndex += 1) {
+        const enemy = sortedEnemies[candidateIndex];
+        if (enemy.x > maximumX) break;
+        if (enemy.destroyed) continue;
         const hitDistance = projectile.radius + enemy.radius;
         if (
           enemy.x + hitDistance < segmentMinX
@@ -1747,29 +1944,41 @@
         ) {
           continue;
         }
-        if (
-          segmentIntersectsCircle(
-            previousX,
-            previousY,
-            projectile.x,
-            projectile.y,
-            enemy.x,
-            enemy.y,
-            hitDistance,
-          )
-        ) {
-          projectiles.splice(i, 1);
-          enemy.hp -= 1;
-          enemy.hitFlash = 0.12;
-          addParticles(projectile.x, projectile.y, projectile.color, 6, 90);
-
-          if (enemy.hp <= 0) {
-            enemies.splice(j, 1);
-            registerDestroy(enemy);
-          }
-          break;
+        if (!segmentIntersectsCircle(
+          previousX,
+          previousY,
+          projectile.x,
+          projectile.y,
+          enemy.x,
+          enemy.y,
+          hitDistance,
+        )) {
+          continue;
         }
+
+        recycleProjectileAt(i);
+        enemy.hp -= 1;
+        enemy.hitFlash = 0.12;
+        addParticles(projectile.x, projectile.y, projectile.color, 6, 90);
+
+        if (enemy.hp <= 0) {
+          enemy.destroyed = true;
+          destroyedEnemies = true;
+          registerDestroy(enemy);
+        }
+        break;
       }
+    }
+
+    if (destroyedEnemies) {
+      let writeIndex = 0;
+      for (let readIndex = 0; readIndex < enemies.length; readIndex += 1) {
+        const enemy = enemies[readIndex];
+        if (enemy.destroyed) continue;
+        enemies[writeIndex] = enemy;
+        writeIndex += 1;
+      }
+      enemies.length = writeIndex;
     }
   }
 
@@ -1872,7 +2081,7 @@
       const particle = particles[i];
       particle.life -= dt;
       if (particle.life <= 0) {
-        particles.splice(i, 1);
+        recycleParticleAt(i);
         continue;
       }
       particle.x += particle.vx * dt;
@@ -2073,7 +2282,7 @@
     ctx.strokeStyle = "#ff6d52";
     ctx.lineWidth = scaleWorld(7);
     ctx.shadowColor = "#ff3f24";
-    ctx.shadowBlur = scaleWorld(16);
+    ctx.shadowBlur = scaleWorld(16) * qualitySettings.projectileGlow;
     ctx.beginPath();
 
     if (warning.edge === "top" || warning.edge === "bottom") {
@@ -2108,39 +2317,315 @@
     return width;
   }
 
-  function drawCenteredEmoji(emoji, x, y, fontSize) {
+  function getStarPath(points, innerRatio) {
+    if (typeof Path2D !== "function") return null;
+    const key = `${points}:${innerRatio.toFixed(4)}`;
+    let path = renderCache.starPaths.get(key);
+    if (path) return path;
+
+    path = new Path2D();
+    for (let i = 0; i < points * 2; i += 1) {
+      const radius = i % 2 === 0 ? 1 : innerRatio;
+      const angle = -Math.PI / 2 + (i * Math.PI) / points;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      if (i === 0) path.moveTo(x, y);
+      else path.lineTo(x, y);
+    }
+    path.closePath();
+    renderCache.starPaths.set(key, path);
+    return path;
+  }
+
+  function createRasterCanvas(width, height) {
+    if (typeof document.createElement !== "function") return null;
+    const rasterCanvas = document.createElement("canvas");
+    if (!rasterCanvas || typeof rasterCanvas.getContext !== "function") return null;
+    rasterCanvas.width = width;
+    rasterCanvas.height = height;
+    const rasterContext = rasterCanvas.getContext("2d");
+    return rasterContext ? { canvas: rasterCanvas, context: rasterContext } : null;
+  }
+
+  function getProjectileSprite(projectile) {
+    if (typeof Path2D !== "function" || typeof ctx.drawImage !== "function") return null;
+
+    const outerRadius = projectile.radius + scaleWorld(2);
+    const innerRatio = projectile.radius * 0.44 / outerRadius;
+    const glow = scaleWorld(12) * qualitySettings.projectileGlow;
+    const frameCount = qualitySettings.projectileFrames;
+    const rotationPeriod = STAR_ROTATION_PERIOD;
+    const key = [
+      outerRadius.toFixed(3),
+      innerRatio.toFixed(4),
+      glow.toFixed(3),
+      projectile.color,
+      world.dpr,
+      frameCount,
+    ].join(":");
+    const cached = renderCache.projectileSprites.get(key);
+    if (cached) return cached;
+
+    const logicalSize = Math.ceil((outerRadius + glow * 2 + 3) * 2);
+    const framePixelSize = Math.max(1, Math.ceil(logicalSize * world.dpr));
+    const frameLogicalSize = framePixelSize / world.dpr;
+    const columns = Math.min(4, frameCount);
+    const rows = Math.ceil(frameCount / columns);
+    const raster = createRasterCanvas(framePixelSize * columns, framePixelSize * rows);
+    const path = getStarPath(5, innerRatio);
+    if (!raster || !path) return null;
+
+    for (let frame = 0; frame < frameCount; frame += 1) {
+      const frameOffsetX = (frame % columns) * framePixelSize;
+      const frameOffsetY = Math.floor(frame / columns) * framePixelSize;
+      raster.context.setTransform(
+        world.dpr,
+        0,
+        0,
+        world.dpr,
+        frameOffsetX,
+        frameOffsetY,
+      );
+      raster.context.translate(frameLogicalSize / 2, frameLogicalSize / 2);
+      raster.context.rotate((frame / frameCount) * rotationPeriod);
+      raster.context.scale(outerRadius, outerRadius);
+      raster.context.fillStyle = projectile.color;
+      raster.context.shadowColor = projectile.color;
+      raster.context.shadowBlur = glow;
+      raster.context.fill(path);
+    }
+
+    const sprite = {
+      canvas: raster.canvas,
+      frameCount,
+      columns,
+      framePixelSize,
+      frameLogicalSize,
+      rotationPeriod,
+      rotationFrameScale: frameCount / rotationPeriod,
+    };
+    if (renderCache.projectileSprites.size >= 28) renderCache.projectileSprites.clear();
+    renderCache.projectileSprites.set(key, sprite);
+    return sprite;
+  }
+
+  function getEmojiBounds(emoji, font, fontSize) {
+    const cacheKey = `${emoji}\u0000${font}`;
+    let bounds = renderCache.emojiMetrics.get(cacheKey);
+    if (bounds) return bounds;
+
     ctx.save();
-    const font = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
     ctx.font = font;
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
+    const metrics = ctx.measureText(emoji);
+    ctx.restore();
+    const left = Number.isFinite(metrics.actualBoundingBoxLeft)
+      ? metrics.actualBoundingBoxLeft
+      : 0;
+    const right = Number.isFinite(metrics.actualBoundingBoxRight)
+      ? metrics.actualBoundingBoxRight
+      : metrics.width;
+    const ascent = Number.isFinite(metrics.actualBoundingBoxAscent)
+      ? metrics.actualBoundingBoxAscent
+      : fontSize * 0.8;
+    const descent = Number.isFinite(metrics.actualBoundingBoxDescent)
+      ? metrics.actualBoundingBoxDescent
+      : fontSize * 0.2;
+    bounds = {
+      left,
+      right,
+      ascent,
+      descent,
+      x: -(right - left) / 2,
+      y: (ascent - descent) / 2,
+    };
+    renderCache.emojiMetrics.set(cacheKey, bounds);
+    return bounds;
+  }
 
-    const cacheKey = `${emoji}\u0000${font}`;
-    let bounds = renderCache.emojiMetrics.get(cacheKey);
-    if (!bounds) {
-      const metrics = ctx.measureText(emoji);
-      const left = Number.isFinite(metrics.actualBoundingBoxLeft)
-        ? metrics.actualBoundingBoxLeft
-        : 0;
-      const right = Number.isFinite(metrics.actualBoundingBoxRight)
-        ? metrics.actualBoundingBoxRight
-        : metrics.width;
-      const ascent = Number.isFinite(metrics.actualBoundingBoxAscent)
-        ? metrics.actualBoundingBoxAscent
-        : fontSize * 0.8;
-      const descent = Number.isFinite(metrics.actualBoundingBoxDescent)
-        ? metrics.actualBoundingBoxDescent
-        : fontSize * 0.2;
-      bounds = {
-        x: -(right - left) / 2,
-        y: (ascent - descent) / 2,
-      };
-      renderCache.emojiMetrics.set(cacheKey, bounds);
+  function getEmojiSprite(emoji, fontSize, font, bounds, preferredFallbackColor = null) {
+    if (typeof ctx.drawImage !== "function") return null;
+    const fallbackColor = preferredFallbackColor
+      || (typeof ctx.fillStyle === "string" ? ctx.fillStyle : "#fff0c4");
+    const cacheKey = `${emoji}\u0000${font}\u0000${fallbackColor}\u0000${world.dpr}`;
+    const cached = renderCache.emojiSprites.get(cacheKey);
+    if (cached) return cached;
+
+    const logicalSize = Math.ceil(Math.max(
+      fontSize * 1.8,
+      bounds.left + bounds.right + 8,
+      bounds.ascent + bounds.descent + 8,
+    ));
+    const pixelSize = Math.max(1, Math.ceil(logicalSize * world.dpr));
+    const raster = createRasterCanvas(pixelSize, pixelSize);
+    if (!raster) return null;
+
+    const actualLogicalSize = pixelSize / world.dpr;
+    raster.context.setTransform(world.dpr, 0, 0, world.dpr, 0, 0);
+    raster.context.font = font;
+    raster.context.textAlign = "left";
+    raster.context.textBaseline = "alphabetic";
+    raster.context.fillStyle = fallbackColor;
+    raster.context.fillText(
+      emoji,
+      actualLogicalSize / 2 + bounds.x,
+      actualLogicalSize / 2 + bounds.y,
+    );
+
+    const sprite = { canvas: raster.canvas, logicalSize: actualLogicalSize };
+    if (renderCache.emojiSprites.size >= 24) renderCache.emojiSprites.clear();
+    renderCache.emojiSprites.set(cacheKey, sprite);
+    return sprite;
+  }
+
+  function drawCenteredEmoji(emoji, x, y, fontSize) {
+    const font = `${fontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+    const bounds = getEmojiBounds(emoji, font, fontSize);
+    const sprite = getEmojiSprite(emoji, fontSize, font, bounds);
+    if (sprite) {
+      ctx.drawImage(
+        sprite.canvas,
+        x - sprite.logicalSize / 2,
+        y - sprite.logicalSize / 2,
+        sprite.logicalSize,
+        sprite.logicalSize,
+      );
+      return;
     }
 
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
     ctx.fillText(emoji, x + bounds.x, y + bounds.y);
     ctx.restore();
   }
+
+  function getEnemySprite(enemy) {
+    if (typeof ctx.drawImage !== "function") return null;
+
+    const fillColor = enemy.hitFlash > 0 ? COLORS.goldBright : enemy.color;
+    const outlineColor = enemy.mode === "rush"
+      ? "#ff6f55"
+      : enemy.kind === "fast"
+        ? "#ff8b72"
+        : enemy.kind === "heavy"
+          ? "#c99cdc"
+          : "#ad8b72";
+    const frameCount = enemy.mode === "rush" ? 1 : qualitySettings.enemyFrames;
+    const key = [
+      enemy.radius.toFixed(3),
+      enemy.kind,
+      enemy.mode,
+      fillColor,
+      outlineColor,
+      enemy.hp,
+      enemy.maxHp,
+      world.dpr,
+      frameCount,
+    ].join(":");
+    const cached = renderCache.enemySprites.get(key);
+    if (cached) return cached;
+
+    const halfSize = Math.ceil(enemy.radius + scaleWorld(48));
+    const logicalSize = halfSize * 2;
+    const framePixelSize = Math.max(1, Math.ceil(logicalSize * world.dpr));
+    const frameLogicalSize = framePixelSize / world.dpr;
+    const columns = Math.min(4, frameCount);
+    const rows = Math.ceil(frameCount / columns);
+    const raster = createRasterCanvas(framePixelSize * columns, framePixelSize * rows);
+    if (!raster) return null;
+
+    const emojiFontSize = Math.round(enemy.radius * 1.68);
+    const emojiFont = `${emojiFontSize}px "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+    const emojiBounds = getEmojiBounds("🗑️", emojiFont, emojiFontSize);
+    const emojiSprite = getEmojiSprite(
+      "🗑️",
+      emojiFontSize,
+      emojiFont,
+      emojiBounds,
+      fillColor,
+    );
+
+    for (let frame = 0; frame < frameCount; frame += 1) {
+      const frameOffsetX = (frame % columns) * framePixelSize;
+      const frameOffsetY = Math.floor(frame / columns) * framePixelSize;
+      const rotation = frameCount === 1
+        ? 0
+        : -0.07 + (frame / (frameCount - 1)) * 0.14;
+      const spriteContext = raster.context;
+      spriteContext.setTransform(
+        world.dpr,
+        0,
+        0,
+        world.dpr,
+        frameOffsetX,
+        frameOffsetY,
+      );
+      spriteContext.translate(frameLogicalSize / 2, frameLogicalSize / 2);
+      spriteContext.rotate(rotation);
+
+      spriteContext.fillStyle = fillColor;
+      spriteContext.globalAlpha = 0.72;
+      spriteContext.beginPath();
+      spriteContext.arc(0, 0, enemy.radius + scaleWorld(7), 0, Math.PI * 2);
+      spriteContext.fill();
+      spriteContext.globalAlpha = 1;
+
+      spriteContext.strokeStyle = outlineColor;
+      spriteContext.lineWidth = scaleWorld(enemy.kind === "heavy" ? 4 : 2);
+      spriteContext.beginPath();
+      spriteContext.arc(0, 0, enemy.radius + scaleWorld(3), 0, Math.PI * 2);
+      spriteContext.stroke();
+
+      if (emojiSprite) {
+        spriteContext.drawImage(
+          emojiSprite.canvas,
+          -emojiSprite.logicalSize / 2,
+          -emojiSprite.logicalSize / 2,
+          emojiSprite.logicalSize,
+          emojiSprite.logicalSize,
+        );
+      } else {
+        spriteContext.font = emojiFont;
+        spriteContext.textAlign = "left";
+        spriteContext.textBaseline = "alphabetic";
+        spriteContext.fillStyle = fillColor;
+        spriteContext.fillText("🗑️", emojiBounds.x, emojiBounds.y);
+      }
+
+      if (enemy.maxHp > 1) {
+        const barWidth = enemy.radius * 1.6;
+        spriteContext.fillStyle = "rgba(18, 12, 8, 0.82)";
+        spriteContext.fillRect(
+          -barWidth / 2,
+          enemy.radius + scaleWorld(10),
+          barWidth,
+          scaleWorld(5),
+        );
+        spriteContext.fillStyle = COLORS.goldBright;
+        spriteContext.fillRect(
+          -barWidth / 2,
+          enemy.radius + scaleWorld(10),
+          barWidth * (enemy.hp / enemy.maxHp),
+          scaleWorld(5),
+        );
+      }
+    }
+
+    const sprite = {
+      canvas: raster.canvas,
+      columns,
+      frameCount,
+      framePixelSize,
+      frameLogicalSize,
+    };
+    if (renderCache.enemySprites.size >= 32) renderCache.enemySprites.clear();
+    renderCache.enemySprites.set(key, sprite);
+    return sprite;
+  }
+
   function drawPlayer(time) {
     const movementTilt = clamp(player.vx / Math.max(1, player.speed), -1, 1) * 0.055;
     const bob = player.moving
@@ -2163,9 +2648,10 @@
       ctx.save();
       ctx.strokeStyle = COLORS.speed;
       ctx.shadowColor = COLORS.speed;
-      ctx.shadowBlur = scaleWorld(14);
+      ctx.shadowBlur = scaleWorld(14) * qualitySettings.projectileGlow;
       ctx.lineCap = "round";
-      for (let i = -2; i <= 2; i += 1) {
+      const trailRadius = (qualitySettings.speedTrailLines - 1) / 2;
+      for (let i = -trailRadius; i <= trailRadius; i += 1) {
         const sideOffset = i * scaleWorld(9);
         ctx.globalAlpha = 0.58 - Math.abs(i) * 0.08;
         ctx.lineWidth = scaleWorld(i === 0 ? 4 : 2);
@@ -2185,18 +2671,22 @@
 
     const auraRadius = player.drawHeight * (blastReady ? 0.62 : 0.5);
     const playerVisualOffset = scaleWorld(8);
-    const aura = ctx.createRadialGradient(
-      0,
-      -playerVisualOffset,
-      scaleWorld(4),
-      0,
-      -playerVisualOffset,
-      auraRadius,
-    );
-    aura.addColorStop(0, blastReady ? "rgba(255, 244, 185, 0.92)" : "rgba(255, 218, 107, 0.58)");
-    aura.addColorStop(0.42, blastReady ? "rgba(255, 196, 41, 0.54)" : "rgba(229, 164, 8, 0.25)");
-    aura.addColorStop(1, "rgba(229, 164, 8, 0)");
-    ctx.fillStyle = aura;
+    if (qualitySettings.playerAura === "gradient") {
+      const aura = ctx.createRadialGradient(
+        0,
+        -playerVisualOffset,
+        scaleWorld(4),
+        0,
+        -playerVisualOffset,
+        auraRadius,
+      );
+      aura.addColorStop(0, blastReady ? "rgba(255, 244, 185, 0.92)" : "rgba(255, 218, 107, 0.58)");
+      aura.addColorStop(0.42, blastReady ? "rgba(255, 196, 41, 0.54)" : "rgba(229, 164, 8, 0.25)");
+      aura.addColorStop(1, "rgba(229, 164, 8, 0)");
+      ctx.fillStyle = aura;
+    } else {
+      ctx.fillStyle = blastReady ? "rgba(255, 211, 96, 0.34)" : "rgba(229, 164, 8, 0.18)";
+    }
     ctx.beginPath();
     ctx.arc(0, -playerVisualOffset, auraRadius, 0, Math.PI * 2);
     ctx.fill();
@@ -2207,7 +2697,7 @@
       ctx.strokeStyle = COLORS.goldBright;
       ctx.lineWidth = scaleWorld(4);
       ctx.shadowColor = COLORS.goldBright;
-      ctx.shadowBlur = scaleWorld(24);
+      ctx.shadowBlur = scaleWorld(24) * qualitySettings.projectileGlow;
       ctx.beginPath();
       ctx.arc(0, -playerVisualOffset, player.drawHeight * 0.52, 0, Math.PI * 2);
       ctx.stroke();
@@ -2247,7 +2737,7 @@
       ctx.strokeStyle = COLORS.shield;
       ctx.lineWidth = scaleWorld(4);
       ctx.shadowColor = COLORS.shield;
-      ctx.shadowBlur = scaleWorld(22);
+      ctx.shadowBlur = scaleWorld(22) * qualitySettings.projectileGlow;
       ctx.beginPath();
       ctx.arc(0, -playerVisualOffset, shieldRadius, 0, Math.PI * 2);
       ctx.stroke();
@@ -2255,7 +2745,7 @@
       ctx.fillStyle = COLORS.shield;
       ctx.fill();
       ctx.globalAlpha = shieldFade;
-      ctx.shadowBlur = scaleWorld(10);
+      ctx.shadowBlur = scaleWorld(10) * qualitySettings.projectileGlow;
       for (let i = 0; i < shieldHits; i += 1) {
         const angle = -Math.PI * 0.74 + i * 0.2;
         ctx.beginPath();
@@ -2274,12 +2764,13 @@
 
     if (superStarsTime > 0) {
       const orbitRadius = player.drawHeight * 0.61;
+      const orbitStarCount = qualitySettings.superOrbitStars;
       ctx.save();
       ctx.globalAlpha = 0.5 + (Math.sin(time * 9) + 1) * 0.14;
       ctx.shadowColor = COLORS.super;
-      ctx.shadowBlur = scaleWorld(12);
-      for (let i = 0; i < 10; i += 1) {
-        const angle = time * 1.8 + (i / 10) * Math.PI * 2;
+      ctx.shadowBlur = scaleWorld(12) * qualitySettings.projectileGlow;
+      for (let i = 0; i < orbitStarCount; i += 1) {
+        const angle = time * 1.8 + (i / orbitStarCount) * Math.PI * 2;
         drawStar(
           Math.cos(angle) * orbitRadius,
           -playerVisualOffset + Math.sin(angle) * orbitRadius,
@@ -2298,7 +2789,7 @@
       ctx.save();
       ctx.globalAlpha = 0.82 + (Math.sin(time * 7) + 1) * 0.08;
       ctx.shadowColor = COLORS.magnet;
-      ctx.shadowBlur = scaleWorld(18);
+      ctx.shadowBlur = scaleWorld(18) * qualitySettings.projectileGlow;
       drawCenteredEmoji("🧲", badgeX, badgeY, Math.max(10, scaleWorld(25)));
       ctx.restore();
     }
@@ -2335,8 +2826,28 @@
         || enemy.y < -margin
         || enemy.y > world.height + margin
       ) continue;
+      const drawY = enemy.y + Math.sin(enemy.phase) * scaleWorld(2.4);
+      const sprite = getEnemySprite(enemy);
+      if (sprite) {
+        const tilt = enemy.mode === "rush" ? 0 : Math.sin(enemy.phase * 0.7) * 0.07;
+        const frame = sprite.frameCount === 1
+          ? 0
+          : Math.round(((tilt + 0.07) / 0.14) * (sprite.frameCount - 1));
+        ctx.drawImage(
+          sprite.canvas,
+          (frame % sprite.columns) * sprite.framePixelSize,
+          Math.floor(frame / sprite.columns) * sprite.framePixelSize,
+          sprite.framePixelSize,
+          sprite.framePixelSize,
+          enemy.x - sprite.frameLogicalSize / 2,
+          drawY - sprite.frameLogicalSize / 2,
+          sprite.frameLogicalSize,
+          sprite.frameLogicalSize,
+        );
+        continue;
+      }
       ctx.save();
-      ctx.translate(enemy.x, enemy.y + Math.sin(enemy.phase) * scaleWorld(2.4));
+      ctx.translate(enemy.x, drawY);
       ctx.rotate(enemy.mode === "rush" ? 0 : Math.sin(enemy.phase * 0.7) * 0.07);
 
       ctx.fillStyle = enemy.hitFlash > 0 ? COLORS.goldBright : enemy.color;
@@ -2386,11 +2897,31 @@
         || projectile.y < -margin
         || projectile.y > world.height + margin
       ) continue;
+      const sprite = getProjectileSprite(projectile);
+      if (sprite) {
+        const normalizedRotation = projectile.rotation < sprite.rotationPeriod
+          ? projectile.rotation
+          : projectile.rotation % sprite.rotationPeriod;
+        let frame = Math.round(normalizedRotation * sprite.rotationFrameScale);
+        if (frame === sprite.frameCount) frame = 0;
+        ctx.drawImage(
+          sprite.canvas,
+          (frame % sprite.columns) * sprite.framePixelSize,
+          Math.floor(frame / sprite.columns) * sprite.framePixelSize,
+          sprite.framePixelSize,
+          sprite.framePixelSize,
+          projectile.x - sprite.frameLogicalSize / 2,
+          projectile.y - sprite.frameLogicalSize / 2,
+          sprite.frameLogicalSize,
+          sprite.frameLogicalSize,
+        );
+        continue;
+      }
       ctx.save();
       ctx.translate(projectile.x, projectile.y);
       ctx.rotate(projectile.rotation);
       ctx.shadowColor = projectile.color;
-      ctx.shadowBlur = scaleWorld(12);
+      ctx.shadowBlur = scaleWorld(12) * qualitySettings.projectileGlow;
       drawStar(0, 0, projectile.radius + scaleWorld(2), projectile.radius * 0.44, 5, projectile.color);
       ctx.restore();
     }
@@ -2403,26 +2934,28 @@
       const danger = progress < 0.34;
 
       ctx.save();
-      const beamRadius = scaleWorld(95);
-      const beam = ctx.createRadialGradient(
-        pickup.x,
-        pickup.y,
-        scaleWorld(5),
-        pickup.x,
-        pickup.y,
-        beamRadius,
-      );
-      beam.addColorStop(0, danger ? "rgba(255, 105, 72, 0.27)" : "rgba(255, 211, 96, 0.27)");
-      beam.addColorStop(1, "rgba(229, 164, 8, 0)");
-      ctx.fillStyle = beam;
-      ctx.beginPath();
-      ctx.arc(pickup.x, pickup.y, beamRadius, 0, Math.PI * 2);
-      ctx.fill();
+      if (qualitySettings.pickupBeams) {
+        const beamRadius = scaleWorld(95);
+        const beam = ctx.createRadialGradient(
+          pickup.x,
+          pickup.y,
+          scaleWorld(5),
+          pickup.x,
+          pickup.y,
+          beamRadius,
+        );
+        beam.addColorStop(0, danger ? "rgba(255, 105, 72, 0.27)" : "rgba(255, 211, 96, 0.27)");
+        beam.addColorStop(1, "rgba(229, 164, 8, 0)");
+        ctx.fillStyle = beam;
+        ctx.beginPath();
+        ctx.arc(pickup.x, pickup.y, beamRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.translate(pickup.x, pickup.y);
       ctx.scale(pulse, pulse);
       ctx.shadowColor = danger ? "#ff5a3b" : COLORS.goldBright;
-      ctx.shadowBlur = scaleWorld(22);
+      ctx.shadowBlur = scaleWorld(22) * qualitySettings.projectileGlow;
       ctx.fillStyle = danger ? "rgba(210, 75, 53, 0.42)" : "rgba(229, 164, 8, 0.4)";
       ctx.beginPath();
       ctx.arc(0, 0, pickup.radius + scaleWorld(10), 0, Math.PI * 2);
@@ -2453,26 +2986,28 @@
       const progress = clamp(powerup.ttl / powerup.totalTtl, 0, 1);
 
       ctx.save();
-      const beamRadius = scaleWorld(108);
-      const beam = ctx.createRadialGradient(
-        powerup.x,
-        powerup.y,
-        scaleWorld(5),
-        powerup.x,
-        powerup.y,
-        beamRadius,
-      );
-      beam.addColorStop(0, `${definition.color}55`);
-      beam.addColorStop(1, `${definition.color}00`);
-      ctx.fillStyle = beam;
-      ctx.beginPath();
-      ctx.arc(powerup.x, powerup.y, beamRadius, 0, Math.PI * 2);
-      ctx.fill();
+      if (qualitySettings.pickupBeams) {
+        const beamRadius = scaleWorld(108);
+        const beam = ctx.createRadialGradient(
+          powerup.x,
+          powerup.y,
+          scaleWorld(5),
+          powerup.x,
+          powerup.y,
+          beamRadius,
+        );
+        beam.addColorStop(0, `${definition.color}55`);
+        beam.addColorStop(1, `${definition.color}00`);
+        ctx.fillStyle = beam;
+        ctx.beginPath();
+        ctx.arc(powerup.x, powerup.y, beamRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.translate(powerup.x, powerup.y);
       ctx.scale(pulse, pulse);
       ctx.shadowColor = definition.color;
-      ctx.shadowBlur = scaleWorld(24);
+      ctx.shadowBlur = scaleWorld(24) * qualitySettings.projectileGlow;
       ctx.fillStyle = "rgba(18, 12, 8, 0.92)";
       ctx.beginPath();
       ctx.arc(0, 0, powerup.radius + scaleWorld(8), 0, Math.PI * 2);
@@ -2702,7 +3237,7 @@
     ctx.strokeStyle = COLORS.goldBright;
     ctx.lineWidth = Math.max(scaleWorld(4), scaleWorld(18) * (1 - progress));
     ctx.shadowColor = COLORS.goldBright;
-    ctx.shadowBlur = scaleWorld(28);
+    ctx.shadowBlur = scaleWorld(28) * qualitySettings.projectileGlow;
     ctx.beginPath();
     ctx.arc(blast.x, blast.y, blast.radius, 0, Math.PI * 2);
     ctx.stroke();
@@ -2715,7 +3250,10 @@
   }
 
   function drawParticles() {
-    for (const particle of particles) {
+    ctx.save();
+    const stride = qualitySettings.particleDrawStride;
+    for (let index = 0; index < particles.length; index += stride) {
+      const particle = particles[index];
       const margin = particle.size + scaleWorld(16);
       if (
         particle.x < -margin
@@ -2724,9 +3262,8 @@
         || particle.y > world.height + margin
       ) continue;
       const alpha = clamp(particle.life / particle.maxLife, 0, 1);
-      ctx.save();
       ctx.globalAlpha = alpha;
-      if (particle.star) {
+      if (particle.star && qualityLevel !== "low") {
         drawStar(
           particle.x,
           particle.y,
@@ -2741,45 +3278,31 @@
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.restore();
     }
+    ctx.restore();
   }
 
   function drawFloatingTexts() {
+    ctx.save();
+    ctx.strokeStyle = COLORS.ink;
+    ctx.lineWidth = Math.max(1.5, scaleWorld(4));
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     for (const text of floatingTexts) {
       const alpha = clamp(text.life / text.maxLife, 0, 1);
-      ctx.save();
       ctx.globalAlpha = alpha;
       ctx.fillStyle = text.color;
-      ctx.strokeStyle = COLORS.ink;
-      ctx.lineWidth = Math.max(1.5, scaleWorld(4));
       ctx.font = `800 ${text.size}px "Futura Web", sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
       ctx.strokeText(text.text, text.x, text.y);
       ctx.fillText(text.text, text.x, text.y);
-      ctx.restore();
     }
+    ctx.restore();
   }
 
   function drawStar(x, y, outerRadius, innerRadius, points, color) {
     if (typeof Path2D === "function" && outerRadius > 0) {
       const innerRatio = innerRadius / outerRadius;
-      const key = `${points}:${innerRatio.toFixed(4)}`;
-      let path = renderCache.starPaths.get(key);
-      if (!path) {
-        path = new Path2D();
-        for (let i = 0; i < points * 2; i += 1) {
-          const radius = i % 2 === 0 ? 1 : innerRatio;
-          const angle = -Math.PI / 2 + (i * Math.PI) / points;
-          const px = Math.cos(angle) * radius;
-          const py = Math.sin(angle) * radius;
-          if (i === 0) path.moveTo(px, py);
-          else path.lineTo(px, py);
-        }
-        path.closePath();
-        renderCache.starPaths.set(key, path);
-      }
+      const path = getStarPath(points, innerRatio);
 
       ctx.save();
       ctx.translate(x, y);
@@ -2927,6 +3450,7 @@
   ui.resetCancelButton.addEventListener("click", cancelResetConfirmation);
   ui.resetConfirmButton.addEventListener("click", confirmResetGame);
   ui.movementButton.addEventListener("click", toggleMovementMode);
+  ui.qualityButton.addEventListener("click", cycleQuality);
   ui.pauseButton.addEventListener("click", () => togglePause());
   ui.soundButton.addEventListener("click", toggleSound);
   ui.judgmentButton.addEventListener("pointerdown", (event) => {
@@ -2965,6 +3489,7 @@
 
   ui.soundButton.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
   ui.soundButton.setAttribute("aria-pressed", soundOn ? "false" : "true");
+  applyQuality(qualityLevel, false, false);
   resizeCanvas();
   updateMovementModeUi();
   updateInterface(true);
@@ -2972,6 +3497,8 @@
     document.fonts.ready.then(() => {
       renderCache.textWidths.clear();
       renderCache.emojiMetrics.clear();
+      renderCache.emojiSprites.clear();
+      renderCache.enemySprites.clear();
     });
   }
   window.requestAnimationFrame(frame);

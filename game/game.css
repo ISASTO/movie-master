@@ -172,6 +172,20 @@ canvas:focus-visible {
   animation: screen-flash 500ms ease-out;
 }
 
+html[data-game-quality="medium"] .screen-texture {
+  background: radial-gradient(circle at center, transparent 46%, rgba(4, 2, 1, 0.45) 100%);
+}
+
+html[data-game-quality="low"] .screen-texture {
+  display: none;
+}
+
+html[data-game-quality="low"] .hud,
+html[data-game-quality="low"] .game-instructions {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .game-bar {
   position: absolute;
   z-index: 12;
@@ -257,6 +271,10 @@ canvas:focus-visible {
 
 .game-actions .movement-button {
   min-width: 102px;
+}
+
+.game-actions .quality-button {
+  min-width: 116px;
 }
 
 .hud {
@@ -925,6 +943,31 @@ canvas:focus-visible {
     --play-top: 198px;
   }
 
+  .game-identity h1 {
+    overflow: hidden;
+    font-size: clamp(0.86rem, 2vw, 1.08rem);
+    text-overflow: ellipsis;
+  }
+
+  .game-actions {
+    gap: 4px;
+  }
+
+  .game-actions button,
+  .game-actions a {
+    min-width: 58px;
+    padding-inline: 7px;
+    font-size: 0.54rem;
+  }
+
+  .game-actions .movement-button {
+    min-width: 88px;
+  }
+
+  .game-actions .quality-button {
+    min-width: 96px;
+  }
+
   .hud {
     grid-template-columns: 0.75fr 0.75fr 1fr 0.6fr;
   }
@@ -996,6 +1039,10 @@ canvas:focus-visible {
 
   .game-actions .movement-button {
     display: none;
+  }
+
+  .game-actions .quality-button {
+    min-width: 78px;
   }
 
   .hud {
@@ -1489,6 +1536,10 @@ canvas:focus-visible {
   .game-actions a {
     padding-inline: 4px;
     font-size: 0.43rem;
+  }
+
+  .game-actions .quality-button {
+    min-width: 68px;
   }
 
   .game-overlay {
