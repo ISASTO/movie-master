@@ -449,6 +449,29 @@
     ui.finalScore,
     ui.finalLongestStreak,
   ];
+  const fittedStatDisplays = [
+    ui.statMode,
+    ui.statGameTime,
+    ui.statScore,
+    ui.statLongestStreak,
+    ui.statPopcornCollected,
+    ui.statPopcornMissed,
+    ui.statGarbageDestroyed,
+    ui.statDestroyedByStars,
+    ui.statDestroyedByBlasts,
+    ui.statStarsFired,
+    ui.statStarsHit,
+    ui.statStarAccuracy,
+    ui.statHitsTaken,
+    ui.statShieldBlocks,
+    ui.statBlastsUsed,
+    ui.statMovingTime,
+    ui.statPeakGarbage,
+    ui.statPowerupShield,
+    ui.statPowerupSpeed,
+    ui.statPowerupSuper,
+    ui.statPowerupMagnet,
+  ];
 
   function formatScore(value) {
     return scoreFormatter.format(Math.floor(Math.max(0, value)));
@@ -489,6 +512,10 @@
 
   function fitAllNumberDisplays() {
     for (const element of fittedNumberDisplays) fitNumberToWidth(element);
+  }
+
+  function fitAllStatDisplays() {
+    for (const element of fittedStatDisplays) fitNumberToWidth(element);
   }
 
   function magnitude(x, y) {
@@ -815,6 +842,7 @@
 
     mouseTarget.active = false;
     fitAllNumberDisplays();
+    fitAllStatDisplays();
   }
 
   function resetGame() {
@@ -997,6 +1025,7 @@
     if (gameState !== "gameover") return;
     ui.gameoverOverlay.hidden = true;
     ui.statsOverlay.hidden = false;
+    fitAllStatDisplays();
     ui.statsCloseButton.focus({ preventScroll: true });
     announce("Game stats.");
   }
@@ -3952,6 +3981,7 @@
       renderCache.emojiSprites.clear();
       renderCache.enemySprites.clear();
       fitAllNumberDisplays();
+      fitAllStatDisplays();
     });
   }
   window.requestAnimationFrame(frame);
