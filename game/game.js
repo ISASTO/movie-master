@@ -4232,8 +4232,9 @@
     activateBlast();
   });
   ui.judgmentButton.addEventListener("click", () => activateBlast());
-  canvas.addEventListener("pointerdown", () => {
+  canvas.addEventListener("pointerdown", (event) => {
     canvas.focus({ preventScroll: true });
+    if (event.button === 0 && event.pointerType !== "touch") activateBlast();
   });
 
   ui.joystick.addEventListener("pointerdown", (event) => {
