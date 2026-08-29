@@ -9,7 +9,7 @@
     <title>MOVIE MASTER vs GARBAGE</title>
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./game.css?v=20260829-hardcore-popcorn">
-    <script src="./game.js?v=20260829-hardcore-popcorn" defer></script>
+    <script src="./game.js?v=20260829-click-instructions" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -120,12 +120,12 @@
               <p><b>COLLECT THE POPCORN.</b> Every 10 in a row makes his recommendation stars faster and larger. Every 20 also makes the Movie Master move faster. At streaks of 100, 200, 300, and 400, every shot gains another star. At 500, a second Blockbuster Blast bar unlocks. In Normal Mode, miss one and more garbage arrives. In Hardcore Mode, miss one and the game ends.</p>
               <p><b>COLLECT POWER-UPS.</b> Grab Shields, Super Speed, Super Stars, and the Magnet when they appear.</p>
               <p><b>DO NOT TOUCH GARBAGE.</b> Each hit costs a star. Reach zero stars and you lose. In Hardcore Mode, one unshielded hit ends the game.</p>
-              <p><b>BLOCKBUSTER BLAST.</b> Collect popcorn to charge it. At 100%, press Space or the gold button to clear the screen.</p>
+              <p><b>BLOCKBUSTER BLAST.</b> Collect popcorn to charge it. At 100%, press Space, click anywhere in the playable area, or use the gold button to clear the screen.</p>
             </div>
             <div class="controls-line" aria-label="Controls">
               <span><b>MOVE</b> <i id="start-move-copy">FOLLOW THE MOUSE</i></span>
               <span><b>SHOOT</b> <i>AUTOMATIC WHILE MOVING</i></span>
-              <span><b>BLAST</b> SPACE / GOLD BUTTON AT 100%</span>
+              <span><b>BLAST</b> SPACE / CLICK / GOLD BUTTON AT 100%</span>
             </div>
             <div class="run-actions">
               <button class="primary-button" id="start-button" type="button">
@@ -237,7 +237,7 @@
       </div>
 
       <div class="game-instructions" aria-hidden="true">
-        <span class="desktop-instructions" id="desktop-instructions">FOLLOW THE MOUSE TO MOVE &nbsp;•&nbsp; COLLECT POPCORN &nbsp;•&nbsp; SPACE FOR BLOCKBUSTER BLAST</span>
+        <span class="desktop-instructions" id="desktop-instructions">FOLLOW THE MOUSE TO MOVE &nbsp;•&nbsp; COLLECT POPCORN &nbsp;•&nbsp; SPACE OR CLICK FOR BLOCKBUSTER BLAST</span>
         <span class="mobile-instructions" id="mobile-instructions">KEEP MOVING &nbsp;•&nbsp; COLLECT POPCORN &nbsp;•&nbsp; USE THE GOLD BUTTON WHEN READY</span>
       </div>
     </main>

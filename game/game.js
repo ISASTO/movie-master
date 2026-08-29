@@ -1239,7 +1239,7 @@
     );
     ui.startMoveCopy.textContent = usingMouse ? "FOLLOW THE MOUSE" : "WASD / ARROWS";
     const movementInstruction = usingMouse ? "FOLLOW THE MOUSE TO MOVE" : "WASD / ARROWS TO MOVE";
-    ui.desktopInstructions.textContent = `${movementInstruction} • AUTOMATIC SHOOTING • COLLECT POWER-UPS • SPACE FOR BLOCKBUSTER BLAST`;
+    ui.desktopInstructions.textContent = `${movementInstruction} • AUTOMATIC SHOOTING • COLLECT POWER-UPS • SPACE OR CLICK FOR BLOCKBUSTER BLAST`;
     ui.mobileInstructions.textContent = "KEEP MOVING • COLLECT POPCORN & POWER-UPS • USE THE GOLD BUTTON WHEN READY";
   }
 
@@ -2750,7 +2750,7 @@
     const fullyCharged = mastery >= 0.999;
     if (fullyCharged && !blastReadyAnnounced && gameState === "running") {
       blastReadyAnnounced = true;
-      setBanner("BLOCKBUSTER BLAST READY — PRESS SPACE", 2.2, false);
+      setBanner("BLOCKBUSTER BLAST READY — PRESS SPACE OR CLICK", 2.2, false);
       showCombo("BLOCKBUSTER BLAST READY");
       announce("Blockbuster Blast is ready.");
     } else if (!fullyCharged) {
