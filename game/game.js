@@ -16,17 +16,25 @@
     masteryPercent: $("mastery-percent"),
     masteryTrack: $("mastery-track"),
     masteryFill: $("mastery-fill"),
+    reserveMasteryTrack: $("reserve-mastery-track"),
+    reserveMasteryFill: $("reserve-mastery-fill"),
+    blastMeter: $("mastery-track")?.closest?.(".blast-meter") || $("mastery-track")?.parentElement?.parentElement,
     missionBanner: $("mission-banner"),
     startOverlay: $("start-overlay"),
     pauseOverlay: $("pause-overlay"),
     resetConfirmOverlay: $("reset-confirm-overlay"),
     gameoverOverlay: $("gameover-overlay"),
+    statsOverlay: $("stats-overlay"),
     startButton: $("start-button"),
+    startModeButton: $("start-mode-button"),
     resumeButton: $("resume-button"),
     resetButton: $("reset-button"),
     resetCancelButton: $("reset-cancel-button"),
     resetConfirmButton: $("reset-confirm-button"),
     restartButton: $("restart-button"),
+    statsButton: $("stats-button"),
+    statsCloseButton: $("stats-close-button"),
+    gameoverModeButton: $("gameover-mode-button"),
     movementButton: $("movement-button"),
     qualityButton: $("quality-button"),
     pauseButton: $("pause-button"),
@@ -44,6 +52,27 @@
     startMoveCopy: $("start-move-copy"),
     desktopInstructions: $("desktop-instructions"),
     mobileInstructions: $("mobile-instructions"),
+    statMode: $("stat-mode"),
+    statGameTime: $("stat-game-time"),
+    statScore: $("stat-score"),
+    statLongestStreak: $("stat-longest-streak"),
+    statPopcornCollected: $("stat-popcorn-collected"),
+    statPopcornMissed: $("stat-popcorn-missed"),
+    statGarbageDestroyed: $("stat-garbage-destroyed"),
+    statDestroyedByStars: $("stat-destroyed-by-stars"),
+    statDestroyedByBlasts: $("stat-destroyed-by-blasts"),
+    statStarsFired: $("stat-stars-fired"),
+    statStarsHit: $("stat-stars-hit"),
+    statStarAccuracy: $("stat-star-accuracy"),
+    statHitsTaken: $("stat-hits-taken"),
+    statShieldBlocks: $("stat-shield-blocks"),
+    statBlastsUsed: $("stat-blasts-used"),
+    statMovingTime: $("stat-moving-time"),
+    statPeakGarbage: $("stat-peak-garbage"),
+    statPowerupShield: $("stat-powerup-shield"),
+    statPowerupSpeed: $("stat-powerup-speed"),
+    statPowerupSuper: $("stat-powerup-super"),
+    statPowerupMagnet: $("stat-powerup-magnet"),
   };
 
   const COLORS = {
@@ -65,6 +94,9 @@
   const LEGACY_SCORE_KEY = "movie-master-vs-garbage-high-score-v1";
   const SCORE_KEY = "movie-master-vs-garbage-high-score-easy-v1";
   const STREAK_SCORE_KEY = "movie-master-vs-garbage-best-streak-v1";
+  const HARDCORE_SCORE_KEY = "movie-master-vs-garbage-high-score-hardcore-v1";
+  const HARDCORE_STREAK_SCORE_KEY = "movie-master-vs-garbage-best-streak-hardcore-v1";
+  const GAME_MODE_KEY = "movie-master-vs-garbage-mode-v1";
   const MAX_LIVES = 5;
   const POWERUP_DURATION = 15;
   const SHIELD_HITS = 3;
@@ -74,9 +106,16 @@
   const GAMEPAD_TRIGGER_THRESHOLD = 0.5;
   const GAMEPAD_BLAST_BUTTONS = [0, 1, 2, 3, 7];
   const GAMEPAD_PAUSE_BUTTON = 9;
+  const GAMEPAD_RUMBLE = {
+    blast: { duration: 90, weakMagnitude: 0.2, strongMagnitude: 0.34 },
+    hit: { duration: 130, weakMagnitude: 0.3, strongMagnitude: 0.5 },
+    shield: { duration: 70, weakMagnitude: 0.16, strongMagnitude: 0.26 },
+  };
   const POPCORN_LIFETIME_MULTIPLIER = 1.25;
   const MAX_PURSUIT_LEAD_FRACTION = 0.42;
   const MAX_RECOMMENDATION_LEAD_FRACTION = 0.55;
+  const DUAL_BLAST_STREAK = 500;
+  const POPCORN_SAFE_BORDER = 26;
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
   const MAX_GAME_SCALE = 2;
@@ -211,8 +250,15 @@
   let lastFrame = performance.now();
   let elapsed = 0;
   let score = 0;
-  let bestScore = readNumber(SCORE_KEY, readNumber(LEGACY_SCORE_KEY, 0));
-  let bestStreak = readNumber(STREAK_SCORE_KEY, 0);
+  let hardcoreMode = readString(GAME_MODE_KEY, "normal") === "hardcore";
+  let bestScore = readNumber(
+    hardcoreMode ? HARDCORE_SCORE_KEY : SCORE_KEY,
+    hardcoreMode ? 0 : readNumber(LEGACY_SCORE_KEY, 0),
+  );
+  let bestStreak = readNumber(
+    hardcoreMode ? HARDCORE_STREAK_SCORE_KEY : STREAK_SCORE_KEY,
+    0,
+  );
   let difficultyLevel = 1;
   let mastery = 0;
   let spawnTimer = 0;
@@ -225,6 +271,7 @@
   let recommendationPower = 0;
   let movementPower = 0;
   let starRowSize = 1;
+  let dualBlastUnlocked = false;
   let shieldTime = 0;
   let shieldHits = 0;
   let speedTime = 0;
@@ -248,6 +295,7 @@
   let lastRenderedLives = -1;
   let lastRenderedStreak = -1;
   let lastRenderedMastery = -1;
+  let lastRenderedReserveMastery = -1;
   let lastRenderedBlastReady = null;
   let lastRenderedMissionMessage = null;
   let lastRenderedMissionDanger = null;
@@ -260,6 +308,7 @@
   let activeGamepadIndex = null;
   let gamepadBlastPressed = false;
   let gamepadPausePressed = false;
+  let runStats = createRunStats();
 
   if (movementMode !== "mouse" && movementMode !== "keys" && movementMode !== "touch") {
     movementMode = coarsePointer ? "touch" : "mouse";
@@ -288,6 +337,86 @@
     } catch {
       // The game remains playable if browser storage is unavailable.
     }
+  }
+
+  function currentScoreKey() {
+    return hardcoreMode ? HARDCORE_SCORE_KEY : SCORE_KEY;
+  }
+
+  function currentStreakScoreKey() {
+    return hardcoreMode ? HARDCORE_STREAK_SCORE_KEY : STREAK_SCORE_KEY;
+  }
+
+  function loadCurrentModeRecords() {
+    bestScore = readNumber(
+      currentScoreKey(),
+      hardcoreMode ? 0 : readNumber(LEGACY_SCORE_KEY, 0),
+    );
+    bestStreak = readNumber(currentStreakScoreKey(), 0);
+    lastRenderedBest = -1;
+    lastRenderedBestStreak = -1;
+  }
+
+  function maximumLives() {
+    return hardcoreMode ? 1 : MAX_LIVES;
+  }
+
+  function maximumBlastCharge() {
+    return dualBlastUnlocked ? 2 : 1;
+  }
+
+  function addBlastCharge(amount) {
+    mastery = clamp(mastery + amount, 0, maximumBlastCharge());
+  }
+
+  function createRunStats() {
+    return {
+      mode: hardcoreMode ? "HARDCORE" : "NORMAL",
+      popcornMissed: 0,
+      garbageDestroyed: 0,
+      destroyedByStars: 0,
+      destroyedByBlasts: 0,
+      starsFired: 0,
+      starsHit: 0,
+      hitsTaken: 0,
+      shieldBlocks: 0,
+      blastsUsed: 0,
+      bestCombo: 0,
+      movingTime: 0,
+      peakGarbage: 0,
+      powerups: { shield: 0, speed: 0, super: 0, magnet: 0 },
+    };
+  }
+
+  function formatDuration(seconds) {
+    const totalSeconds = Math.max(0, Math.floor(seconds));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainder = totalSeconds % 60;
+    return hours > 0
+      ? `${hours}:${String(minutes).padStart(2, "0")}:${String(remainder).padStart(2, "0")}`
+      : `${minutes}:${String(remainder).padStart(2, "0")}`;
+  }
+
+  function updateGameModeUi() {
+    const enabled = hardcoreMode;
+    const label = `HARDCORE MODE: ${enabled ? "ON" : "OFF"}`;
+    for (const button of [ui.startModeButton, ui.gameoverModeButton]) {
+      button.textContent = label;
+      button.setAttribute("aria-pressed", enabled ? "true" : "false");
+    }
+    document.documentElement?.classList.toggle("hardcore-mode", enabled);
+  }
+
+  function toggleHardcoreMode() {
+    if (gameState === "running" || gameState === "paused") return;
+    hardcoreMode = !hardcoreMode;
+    saveValue(GAME_MODE_KEY, hardcoreMode ? "hardcore" : "normal");
+    loadCurrentModeRecords();
+    if (gameState === "ready") player.lives = maximumLives();
+    updateGameModeUi();
+    updateInterface(true);
+    announce(`Hardcore mode ${hardcoreMode ? "on" : "off"}.`);
   }
 
   function clamp(value, min, max) {
@@ -703,6 +832,7 @@
     recommendationPower = 0;
     movementPower = 0;
     starRowSize = 1;
+    dualBlastUnlocked = false;
     shieldTime = 0;
     shieldHits = 0;
     speedTime = 0;
@@ -726,9 +856,11 @@
     lastRenderedLives = -1;
     lastRenderedStreak = -1;
     lastRenderedMastery = -1;
+    lastRenderedReserveMastery = -1;
     lastRenderedBlastReady = null;
     lastRenderedMissionMessage = null;
     lastRenderedMissionDanger = null;
+    runStats = createRunStats();
 
     enemies.length = 0;
     recycleAllProjectiles();
@@ -742,7 +874,7 @@
     player.y = (top + bottom) / 2;
     player.vx = 0;
     player.vy = 0;
-    player.lives = MAX_LIVES;
+    player.lives = maximumLives();
     player.invulnerable = 0;
     player.bob = 0;
     player.moving = false;
@@ -769,6 +901,7 @@
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = true;
+    ui.statsOverlay.hidden = true;
     ui.pauseButton.disabled = false;
     ui.pauseButton.textContent = "PAUSE";
     lastFrame = performance.now();
@@ -785,11 +918,11 @@
 
     if (scoreRecord) {
       bestScore = finalScore;
-      saveValue(SCORE_KEY, bestScore);
+      saveValue(currentScoreKey(), bestScore);
     }
     if (streakRecord) {
       bestStreak = longestStreak;
-      saveValue(STREAK_SCORE_KEY, bestStreak);
+      saveValue(currentStreakScoreKey(), bestStreak);
     }
 
     return { finalScore, scoreRecord, streakRecord };
@@ -812,10 +945,12 @@
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = false;
+    ui.statsOverlay.hidden = true;
     fitNumberToWidth(ui.finalScore);
     fitNumberToWidth(ui.finalLongestStreak);
     ui.pauseButton.disabled = true;
     resetJoystick();
+    renderGameStats(records.finalScore);
     updateInterface(true);
     announce(
       records.scoreRecord
@@ -825,6 +960,53 @@
           : "Game over.",
     );
     playCue("gameover");
+  }
+
+  function renderGameStats(finalScore = Math.floor(score)) {
+    const accuracy = runStats.starsFired > 0
+      ? Math.round((runStats.starsHit / runStats.starsFired) * 1000) / 10
+      : 0;
+    const movingPercent = elapsed > 0
+      ? Math.round((runStats.movingTime / elapsed) * 100)
+      : 0;
+
+    ui.statMode.textContent = runStats.mode;
+    ui.statGameTime.textContent = formatDuration(elapsed);
+    ui.statScore.textContent = formatScore(finalScore);
+    ui.statLongestStreak.textContent = formatScore(longestStreak);
+    ui.statPopcornCollected.textContent = formatScore(popcornCollected);
+    ui.statPopcornMissed.textContent = formatScore(runStats.popcornMissed);
+    ui.statGarbageDestroyed.textContent = formatScore(runStats.garbageDestroyed);
+    ui.statDestroyedByStars.textContent = formatScore(runStats.destroyedByStars);
+    ui.statDestroyedByBlasts.textContent = formatScore(runStats.destroyedByBlasts);
+    ui.statStarsFired.textContent = formatScore(runStats.starsFired);
+    ui.statStarsHit.textContent = formatScore(runStats.starsHit);
+    ui.statStarAccuracy.textContent = `${accuracy}%`;
+    ui.statHitsTaken.textContent = formatScore(runStats.hitsTaken);
+    ui.statShieldBlocks.textContent = formatScore(runStats.shieldBlocks);
+    ui.statBlastsUsed.textContent = formatScore(runStats.blastsUsed);
+    ui.statMovingTime.textContent = `${formatDuration(runStats.movingTime)} (${movingPercent}%)`;
+    ui.statPeakGarbage.textContent = formatScore(runStats.peakGarbage);
+    ui.statPowerupShield.textContent = formatScore(runStats.powerups.shield);
+    ui.statPowerupSpeed.textContent = formatScore(runStats.powerups.speed);
+    ui.statPowerupSuper.textContent = formatScore(runStats.powerups.super);
+    ui.statPowerupMagnet.textContent = formatScore(runStats.powerups.magnet);
+  }
+
+  function openGameStats() {
+    if (gameState !== "gameover") return;
+    ui.gameoverOverlay.hidden = true;
+    ui.statsOverlay.hidden = false;
+    ui.statsCloseButton.focus({ preventScroll: true });
+    announce("Game stats.");
+  }
+
+  function closeGameStats() {
+    if (gameState !== "gameover" || ui.statsOverlay.hidden) return;
+    ui.statsOverlay.hidden = true;
+    ui.gameoverOverlay.hidden = false;
+    ui.statsButton.focus({ preventScroll: true });
+    announce("Game over.");
   }
 
   function openResetConfirmation() {
@@ -1071,6 +1253,7 @@
       collisionStamp: 0,
       destroyed: false,
     });
+    runStats.peakGarbage = Math.max(runStats.peakGarbage, enemies.length);
   }
 
   function spawnEnemy(forceKind = null) {
@@ -1189,15 +1372,17 @@
   }
 
   function choosePopcornPosition(radius) {
-    const { left, right, top, bottom } = world.bounds;
+    const { left, right, top, bottom } = world.playerBounds;
     const width = right - left;
     const height = bottom - top;
     const requiredDistance = Math.min(Math.hypot(width, height) * 0.33, scaleWorld(280));
-    const spawnInset = scaleWorld(42);
-    const minX = left + spawnInset;
-    const maxX = right - spawnInset;
-    const minY = top + spawnInset;
-    const maxY = bottom - spawnInset;
+    const spawnInset = scaleWorld(POPCORN_SAFE_BORDER);
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    const minX = Math.min(centerX, left + spawnInset);
+    const maxX = Math.max(centerX, right - spawnInset);
+    const minY = Math.min(centerY, top + spawnInset);
+    const maxY = Math.max(centerY, bottom - spawnInset);
     const enemyClearance = scaleWorld(70);
     let best = null;
     let bestClearance = -Infinity;
@@ -1303,6 +1488,7 @@
     const definition = POWERUP_TYPES[powerup.type];
     powerups.splice(index, 1);
     powerupSpawnTimer = randomBetween(8, 13);
+    runStats.powerups[powerup.type] += 1;
 
     let message = "";
     let announcement = "";
@@ -1338,6 +1524,7 @@
   function missPopcorn() {
     popcornChain = 0;
     mastery = Math.max(0, mastery - 0.1);
+    runStats.popcornMissed += 1;
     popcornSpawnTimer = 0.55;
     const surgeCount = Math.min(9, 3 + Math.ceil(difficultyLevel * 0.75));
 
@@ -1372,6 +1559,7 @@
       projectile.color = color;
       projectile.rotation = Math.random() * STAR_ROTATION_PERIOD;
       projectiles.push(projectile);
+      runStats.starsFired += 1;
     }
   }
 
@@ -1514,15 +1702,15 @@
     const comboMultiplier = 1 + Math.min(1.5, Math.floor(killCombo / 6) * 0.5);
     const points = Math.round(enemy.scoreValue * comboMultiplier * (fromBlast ? 0.64 : 1));
     score += points;
-    mastery = clamp(mastery + (fromBlast ? 0.006 : 0.018), 0, 1);
+    addBlastCharge(fromBlast ? 0.006 : 0.018);
+    runStats.garbageDestroyed += 1;
+    runStats.bestCombo = Math.max(runStats.bestCombo, killCombo);
+    if (fromBlast) runStats.destroyedByBlasts += 1;
+    else runStats.destroyedByStars += 1;
 
     addParticles(enemy.x, enemy.y, COLORS.goldBright, enemy.kind === "heavy" ? 20 : 11, 165);
     addParticles(enemy.x, enemy.y, enemy.color, 7, 105);
     addFloatingText(enemy.x, enemy.y - enemy.radius, `+${points}`, COLORS.goldLight);
-
-    if (!fromBlast && killCombo >= 6 && killCombo % 6 === 0) {
-      showCombo(`${comboMultiplier.toFixed(1)}× SMASH HIT STREAK`);
-    }
 
     if (!fromBlast) playCue("destroy");
   }
@@ -1542,33 +1730,47 @@
     const unlockedRowSize = Math.min(5, 1 + Math.floor(popcornChain / 100));
     const rowUpgraded = unlockedRowSize > starRowSize;
     if (rowUpgraded) starRowSize = unlockedRowSize;
+    const dualBlastUpgraded = !dualBlastUnlocked && popcornChain >= DUAL_BLAST_STREAK;
+    if (dualBlastUpgraded) dualBlastUnlocked = true;
 
-    const message = rowUpgraded
-      ? `${popcornChain} POPCORNS IN A ROW — ${starRowSize}-STAR ROWS UNLOCKED`
-      : movementUpgraded
-        ? `${popcornChain} POPCORNS IN A ROW — STARS + MOVEMENT FASTER`
-        : `${popcornChain} POPCORNS IN A ROW — FASTER, LARGER STARS`;
-    showCombo(
-      rowUpgraded
-        ? `${starRowSize}-STAR ROWS UNLOCKED`
+    const message = dualBlastUpgraded
+      ? `${popcornChain} POPCORNS IN A ROW — SECOND BLAST BAR UNLOCKED`
+      : rowUpgraded
+        ? `${popcornChain} POPCORNS IN A ROW — ${starRowSize}-STAR ROWS UNLOCKED`
         : movementUpgraded
-          ? "STARS + MOVEMENT UPGRADED"
-          : "RECOMMENDATION STARS UPGRADED",
+          ? `${popcornChain} POPCORNS IN A ROW — STARS + MOVEMENT FASTER`
+          : `${popcornChain} POPCORNS IN A ROW — FASTER, LARGER STARS`;
+    showCombo(
+      dualBlastUpgraded
+        ? "SECOND BLAST BAR UNLOCKED"
+        : rowUpgraded
+          ? `${starRowSize}-STAR ROWS UNLOCKED`
+          : movementUpgraded
+            ? "STARS + MOVEMENT UPGRADED"
+            : "RECOMMENDATION STARS UPGRADED",
     );
     setBanner(message, 2.4, false);
     addFloatingText(
       pickup.x,
       pickup.y - scaleWorld(38),
-      rowUpgraded ? `★ × ${starRowSize}` : movementUpgraded ? "★ + SPEED ★" : "★ UPGRADE ★",
+      dualBlastUpgraded
+        ? "BLAST × 2"
+        : rowUpgraded
+          ? `★ × ${starRowSize}`
+          : movementUpgraded
+            ? "★ + SPEED ★"
+            : "★ UPGRADE ★",
       COLORS.goldBright,
       true,
     );
     announce(
-      rowUpgraded
-        ? `${popcornChain} popcorns in a row. Every shot now fires a row of ${starRowSize} stars.`
-        : movementUpgraded
-          ? `${popcornChain} popcorns in a row. Recommendation stars and movement speed upgraded.`
-          : `${popcornChain} popcorns in a row. Recommendation stars upgraded.`,
+      dualBlastUpgraded
+        ? `${popcornChain} popcorns in a row. A second Blockbuster Blast bar is unlocked.`
+        : rowUpgraded
+          ? `${popcornChain} popcorns in a row. Every shot now fires a row of ${starRowSize} stars.`
+          : movementUpgraded
+            ? `${popcornChain} popcorns in a row. Recommendation stars and movement speed upgraded.`
+            : `${popcornChain} popcorns in a row. Recommendation stars upgraded.`,
     );
     playCue("advance");
   }
@@ -1583,9 +1785,11 @@
 
     const points = 300 + Math.min(500, Math.max(0, popcornChain - 1) * 75);
     score += points;
-    mastery = clamp(mastery + 0.22, 0, 1);
+    addBlastCharge(0.22);
 
-    const restored = popcornCollected % 6 === 0 && player.lives < MAX_LIVES;
+    const restored = !hardcoreMode
+      && popcornCollected % 6 === 0
+      && player.lives < maximumLives();
     if (restored) player.lives += 1;
 
     addParticles(pickup.x, pickup.y, COLORS.cream, 18, 165);
@@ -1623,6 +1827,7 @@
 
     if (shieldTime > 0 && shieldHits > 0) {
       shieldHits -= 1;
+      runStats.shieldBlocks += 1;
       player.invulnerable = 0.24;
       shakeTime = reducedMotion ? 0.04 : 0.15;
       shakePower = reducedMotion ? 1 : 4;
@@ -1639,11 +1844,13 @@
       }
 
       playCue("destroy");
+      vibrateGamepad("shield");
       updateInterface(true);
       return;
     }
 
-    player.lives -= 1;
+    player.lives = Math.max(0, player.lives - 1);
+    runStats.hitsTaken += 1;
     player.invulnerable = 1.18;
     player.stationaryTime = 0;
     mastery = Math.max(0, mastery - 0.18);
@@ -1657,6 +1864,7 @@
     addFloatingText(player.x, player.y - scaleWorld(54), "GARBAGE 🗑️", "#ff806b", true);
     setBanner("GARBAGE TOUCHED THE MOVIE MASTER", 1.7, true);
     playCue("hit");
+    vibrateGamepad("hit");
 
     if (enemy) {
       const dx = player.x - enemy.x;
@@ -1675,8 +1883,10 @@
   function activateBlast() {
     if (gameState !== "running" || mastery < 0.999 || blast) return;
 
-    mastery = 0;
-    blastReadyAnnounced = false;
+    mastery = Math.max(0, mastery - 1);
+    const anotherBlastReady = mastery >= 0.999;
+    blastReadyAnnounced = anotherBlastReady;
+    runStats.blastsUsed += 1;
     blast = {
       x: player.x,
       y: player.y,
@@ -1691,9 +1901,18 @@
     shakePower = reducedMotion ? 2 : 9;
     triggerFlash();
     showCombo("BLOCKBUSTER BLAST");
-    setBanner("BLOCKBUSTER BLAST", 1.15, false);
-    announce("Blockbuster Blast activated.");
+    setBanner(
+      anotherBlastReady ? "BLOCKBUSTER BLAST — ANOTHER BLAST READY" : "BLOCKBUSTER BLAST",
+      1.15,
+      false,
+    );
+    announce(
+      anotherBlastReady
+        ? "Blockbuster Blast activated. Another blast is ready."
+        : "Blockbuster Blast activated.",
+    );
     playCue("blast");
+    vibrateGamepad("blast");
     updateInterface(true);
   }
 
@@ -1723,6 +1942,7 @@
     }
 
     updateMovement(dt);
+    if (player.moving) runStats.movingTime += dt;
 
     spawnTimer -= dt;
     if (spawnTimer <= 0) {
@@ -1974,6 +2194,40 @@
     return selected;
   }
 
+  function vibrateGamepad(cue) {
+    const settings = GAMEPAD_RUMBLE[cue];
+    const gamepad = chooseActiveGamepad();
+    if (!settings || !gamepad) return;
+
+    const primaryActuator = gamepad.vibrationActuator;
+    const fallbackActuator = gamepad.hapticActuators?.[0];
+
+    try {
+      let result = null;
+      if (typeof primaryActuator?.playEffect === "function") {
+        result = primaryActuator.playEffect("dual-rumble", {
+          startDelay: 0,
+          duration: settings.duration,
+          weakMagnitude: settings.weakMagnitude,
+          strongMagnitude: settings.strongMagnitude,
+        });
+      } else {
+        const pulseActuator = typeof primaryActuator?.pulse === "function"
+          ? primaryActuator
+          : fallbackActuator;
+        if (typeof pulseActuator?.pulse === "function") {
+          result = pulseActuator.pulse(
+            Math.max(settings.weakMagnitude, settings.strongMagnitude),
+            settings.duration,
+          );
+        }
+      }
+      if (typeof result?.catch === "function") result.catch(() => {});
+    } catch {
+      // Haptics are optional and must never interrupt gameplay.
+    }
+  }
+
   function pollGamepad() {
     const gamepad = chooseActiveGamepad();
     if (!gamepad) {
@@ -2067,6 +2321,7 @@
         }
 
         recycleProjectileAt(i);
+        runStats.starsHit += 1;
         enemy.hp -= 1;
         enemy.hitFlash = 0.12;
         addParticles(projectile.x, projectile.y, projectile.color, 6, 90);
@@ -2214,7 +2469,10 @@
     const roundedScore = Math.floor(score);
     const liveBest = Math.max(bestScore, roundedScore);
     const liveBestStreak = Math.max(bestStreak, longestStreak);
-    const masteryPercent = Math.round(mastery * 100);
+    const masteryPercent = Math.round(Math.min(1, mastery) * 100);
+    const reserveMasteryPercent = dualBlastUnlocked
+      ? Math.round(clamp(mastery - 1, 0, 1) * 100)
+      : 0;
 
     if (force || roundedScore !== lastRenderedScore) {
       setFittedNumber(ui.score, formatScore(roundedScore));
@@ -2235,9 +2493,14 @@
 
     if (force || player.lives !== lastRenderedLives) {
       const remainingLives = Math.max(0, player.lives);
-      ui.lives.textContent = "★".repeat(remainingLives) + "☆".repeat(MAX_LIVES - remainingLives);
-      ui.lives.setAttribute("aria-label", `${player.lives} of ${MAX_LIVES} lives remaining`);
-      ui.lives.classList.toggle("danger", player.lives === 1);
+      const modeMaximumLives = maximumLives();
+      ui.lives.textContent = "★".repeat(remainingLives)
+        + "☆".repeat(Math.max(0, modeMaximumLives - remainingLives));
+      ui.lives.setAttribute(
+        "aria-label",
+        `${player.lives} of ${modeMaximumLives} ${modeMaximumLives === 1 ? "life" : "lives"} remaining`,
+      );
+      ui.lives.classList.toggle("danger", modeMaximumLives > 1 && player.lives === 1);
       lastRenderedLives = player.lives;
     }
 
@@ -2249,11 +2512,28 @@
 
     const pickup = pickups[0];
 
-    if (force || masteryPercent !== lastRenderedMastery) {
-      ui.masteryPercent.textContent = `${masteryPercent}%`;
+    const dualBlastPresentationChanged = ui.reserveMasteryTrack.hidden === dualBlastUnlocked;
+    if (dualBlastPresentationChanged) {
+      ui.reserveMasteryTrack.hidden = !dualBlastUnlocked;
+      ui.blastMeter?.classList.toggle("is-dual", dualBlastUnlocked);
+    }
+
+    if (
+      force
+      || dualBlastPresentationChanged
+      || masteryPercent !== lastRenderedMastery
+      || reserveMasteryPercent !== lastRenderedReserveMastery
+    ) {
+      ui.masteryPercent.textContent = dualBlastUnlocked
+        ? `${masteryPercent}% + ${reserveMasteryPercent}%`
+        : `${masteryPercent}%`;
       ui.masteryFill.style.width = `${masteryPercent}%`;
       ui.masteryTrack.setAttribute("aria-valuenow", String(masteryPercent));
+      ui.reserveMasteryFill.style.width = `${reserveMasteryPercent}%`;
+      ui.reserveMasteryTrack.setAttribute("aria-valuenow", String(reserveMasteryPercent));
+      ui.reserveMasteryTrack.classList.toggle("is-ready", reserveMasteryPercent >= 100);
       lastRenderedMastery = masteryPercent;
+      lastRenderedReserveMastery = reserveMasteryPercent;
     }
 
     const fullyCharged = mastery >= 0.999;
@@ -3499,6 +3779,13 @@
       }
     } else if (
       event.code === "Escape"
+      && gameState === "gameover"
+      && !ui.statsOverlay.hidden
+    ) {
+      event.preventDefault();
+      closeGameStats();
+    } else if (
+      event.code === "Escape"
       && gameState === "paused"
       && !ui.resetConfirmOverlay.hidden
     ) {
@@ -3509,7 +3796,10 @@
         event.preventDefault();
         togglePause();
       }
-    } else if (event.code === "Enter" && (gameState === "ready" || gameState === "gameover")) {
+    } else if (
+      event.code === "Enter"
+      && (gameState === "ready" || (gameState === "gameover" && ui.statsOverlay.hidden))
+    ) {
       event.preventDefault();
       startGame();
     }
@@ -3557,7 +3847,11 @@
   });
 
   ui.startButton.addEventListener("click", startGame);
+  ui.startModeButton.addEventListener("click", toggleHardcoreMode);
   ui.restartButton.addEventListener("click", startGame);
+  ui.statsButton.addEventListener("click", openGameStats);
+  ui.statsCloseButton.addEventListener("click", closeGameStats);
+  ui.gameoverModeButton.addEventListener("click", toggleHardcoreMode);
   ui.resumeButton.addEventListener("click", () => togglePause());
   ui.resetButton.addEventListener("click", openResetConfirmation);
   ui.resetCancelButton.addEventListener("click", cancelResetConfirmation);
@@ -3602,6 +3896,8 @@
 
   ui.soundButton.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
   ui.soundButton.setAttribute("aria-pressed", soundOn ? "false" : "true");
+  player.lives = maximumLives();
+  updateGameModeUi();
   applyQuality(qualityLevel, false, false);
   resizeCanvas();
   updateMovementModeUi();

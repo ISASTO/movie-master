@@ -8,8 +8,8 @@
     <meta name="description" content="Help the Movie Master save the world from garbage 🗑️.">
     <title>MOVIE MASTER vs GARBAGE</title>
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./game.css?v=20260829-static-pause">
-    <script src="./game.js?v=20260829-straight-stars" defer></script>
+    <link rel="stylesheet" href="./game.css?v=20260829-hardcore-stats">
+    <script src="./game.js?v=20260829-hardcore-stats" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -65,16 +65,30 @@
             <span>BLOCKBUSTER BLAST</span>
             <strong id="mastery-percent">0%</strong>
           </div>
-          <div
-            class="blast-track"
-            role="progressbar"
-            aria-label="Blockbuster Blast charge"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-valuenow="0"
-            id="mastery-track"
-          >
-            <span id="mastery-fill"></span>
+          <div class="blast-tracks">
+            <div
+              class="blast-track"
+              role="progressbar"
+              aria-label="Blockbuster Blast primary charge"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              id="mastery-track"
+            >
+              <span id="mastery-fill"></span>
+            </div>
+            <div
+              class="blast-track blast-track-reserve"
+              role="progressbar"
+              aria-label="Blockbuster Blast reserve charge"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              id="reserve-mastery-track"
+              hidden
+            >
+              <span id="reserve-mastery-fill"></span>
+            </div>
           </div>
         </div>
       </section>
@@ -103,7 +117,7 @@
             <p class="poster-deck">Help! The Movie Master is being attacked by garbage🗑!</p>
             <div class="rules">
               <p><b>KEEP MOVING.</b> The Movie Master shoots his recommendation stars automatically while he is in motion.</p>
-              <p><b>COLLECT THE POPCORN.</b> Every 10 in a row makes his recommendation stars faster and larger. Every 20 also makes the Movie Master move faster. At streaks of 100, 200, 300, and 400, every shot gains another star. Miss one and more garbage arrives.</p>
+              <p><b>COLLECT THE POPCORN.</b> Every 10 in a row makes his recommendation stars faster and larger. Every 20 also makes the Movie Master move faster. At streaks of 100, 200, 300, and 400, every shot gains another star. At 500, a second Blockbuster Blast bar unlocks. Miss one and more garbage arrives.</p>
               <p><b>COLLECT POWER-UPS.</b> Grab Shields, Super Speed, Super Stars, and the Magnet when they appear.</p>
               <p><b>DO NOT TOUCH GARBAGE.</b> Each hit costs a star. Reach zero stars and you lose.</p>
               <p><b>BLOCKBUSTER BLAST.</b> Collect popcorn to charge it. At 100%, press Space or the gold button to clear the screen.</p>
@@ -113,9 +127,14 @@
               <span><b>SHOOT</b> <i>AUTOMATIC WHILE MOVING</i></span>
               <span><b>BLAST</b> SPACE / GOLD BUTTON AT 100%</span>
             </div>
-            <button class="primary-button" id="start-button" type="button">
-              START THE GAME
-            </button>
+            <div class="run-actions">
+              <button class="primary-button" id="start-button" type="button">
+                START THE GAME
+              </button>
+              <button class="secondary-button mode-toggle" id="start-mode-button" type="button">
+                HARDCORE MODE: OFF
+              </button>
+            </div>
             <p class="start-best">BEST SCORE <strong class="fit-number" id="start-best">0</strong></p>
           </div>
         </section>
@@ -159,7 +178,49 @@
               <strong class="fit-number" id="final-longest-streak">0</strong>
             </div>
           </div>
-          <button class="primary-button" id="restart-button" type="button">TRY AGAIN</button>
+          <div class="run-actions">
+            <button class="primary-button" id="restart-button" type="button">TRY AGAIN</button>
+            <button class="secondary-button" id="stats-button" type="button">GAME STATS</button>
+            <button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">
+              HARDCORE MODE: OFF
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <div class="game-overlay stats-overlay" id="stats-overlay" hidden>
+        <section class="game-stats-panel" aria-labelledby="stats-title">
+          <p class="poster-kicker">FULL RUN REPORT</p>
+          <h2 id="stats-title">GAME STATS</h2>
+          <dl class="stats-grid">
+            <div><dt>MODE</dt><dd id="stat-mode">NORMAL</dd></div>
+            <div><dt>GAME TIME</dt><dd id="stat-game-time">0:00</dd></div>
+            <div><dt>FINAL SCORE</dt><dd id="stat-score">0</dd></div>
+            <div><dt>LONGEST STREAK</dt><dd id="stat-longest-streak">0</dd></div>
+            <div><dt>POPCORN COLLECTED</dt><dd id="stat-popcorn-collected">0</dd></div>
+            <div><dt>POPCORN MISSED</dt><dd id="stat-popcorn-missed">0</dd></div>
+            <div><dt>GARBAGE DESTROYED</dt><dd id="stat-garbage-destroyed">0</dd></div>
+            <div><dt>DESTROYED BY STARS</dt><dd id="stat-destroyed-by-stars">0</dd></div>
+            <div><dt>DESTROYED BY BLASTS</dt><dd id="stat-destroyed-by-blasts">0</dd></div>
+            <div><dt>STARS FIRED</dt><dd id="stat-stars-fired">0</dd></div>
+            <div><dt>STARS HIT</dt><dd id="stat-stars-hit">0</dd></div>
+            <div><dt>STAR ACCURACY</dt><dd id="stat-star-accuracy">0%</dd></div>
+            <div><dt>HITS TAKEN</dt><dd id="stat-hits-taken">0</dd></div>
+            <div><dt>SHIELD BLOCKS</dt><dd id="stat-shield-blocks">0</dd></div>
+            <div><dt>BLASTS USED</dt><dd id="stat-blasts-used">0</dd></div>
+            <div><dt>TIME SPENT MOVING</dt><dd id="stat-moving-time">0:00</dd></div>
+            <div><dt>PEAK GARBAGE ON SCREEN</dt><dd id="stat-peak-garbage">0</dd></div>
+          </dl>
+
+          <h3>POWER-UPS USED</h3>
+          <dl class="stats-grid stats-powerups">
+            <div><dt>SHIELD</dt><dd id="stat-powerup-shield">0</dd></div>
+            <div><dt>SUPER SPEED</dt><dd id="stat-powerup-speed">0</dd></div>
+            <div><dt>SUPER STARS</dt><dd id="stat-powerup-super">0</dd></div>
+            <div><dt>MAGNET</dt><dd id="stat-powerup-magnet">0</dd></div>
+          </dl>
+
+          <button class="primary-button" id="stats-close-button" type="button">BACK</button>
         </section>
       </div>
 
