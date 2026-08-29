@@ -705,15 +705,47 @@ html[data-game-quality="low"] .game-instructions {
 .intermission-panel,
 .gameover-panel {
   padding: clamp(32px, 5vw, 64px);
-  border-block: 3px solid var(--gold);
   background: rgba(17, 9, 5, 0.9);
   text-align: center;
   box-shadow: 0 18px 70px rgba(0, 0, 0, 0.58);
 }
 
 .intermission-panel {
+  position: relative;
   width: min(1160px, calc(100vw - 32px));
   padding-inline: clamp(16px, 4vw, 56px);
+  border: 0;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(229, 164, 8, 0.055), transparent 58%),
+    rgba(17, 9, 5, 0.9);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 211, 96, 0.08),
+    0 18px 70px rgba(0, 0, 0, 0.58);
+}
+
+.intermission-panel::before,
+.intermission-panel::after {
+  position: absolute;
+  right: 6%;
+  left: 6%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 211, 96, 0.5) 18%,
+    rgba(255, 211, 96, 0.5) 82%,
+    transparent
+  );
+  content: "";
+  pointer-events: none;
+}
+
+.intermission-panel::before {
+  top: 0;
+}
+
+.intermission-panel::after {
+  bottom: 0;
 }
 
 .gameover-panel {
@@ -819,6 +851,14 @@ html[data-game-quality="low"] .game-instructions {
   letter-spacing: 0.055em;
   line-height: 1;
   text-overflow: ellipsis;
+}
+
+strong.fit-number {
+  display: inline-block;
+  max-width: 100%;
+  text-overflow: clip;
+  vertical-align: bottom;
+  white-space: nowrap;
 }
 
 .touch-controls {

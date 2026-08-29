@@ -75,6 +75,9 @@
   const GAMEPAD_BLAST_BUTTONS = [0, 1, 2, 3, 7];
   const GAMEPAD_PAUSE_BUTTON = 9;
   const POPCORN_LIFETIME_MULTIPLIER = 1.25;
+  const MAX_PURSUIT_LEAD_FRACTION = 0.42;
+  const MAX_RECOMMENDATION_LEAD_FRACTION = 0.55;
+  const PROJECTILE_HOMING_RESPONSE = 7.5;
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
   const MAX_GAME_SCALE = 2;
@@ -308,9 +311,56 @@
   }
 
   const scoreFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+  const fittedNumberLengths = new WeakMap();
+  const fittedNumberDisplays = [
+    ui.score,
+    ui.best,
+    ui.streak,
+    ui.bestStreak,
+    ui.startBest,
+    ui.finalScore,
+    ui.finalLongestStreak,
+  ];
 
   function formatScore(value) {
     return scoreFormatter.format(Math.floor(Math.max(0, value)));
+  }
+
+  function fitNumberToWidth(element) {
+    if (!element) return;
+
+    element.style.fontSize = "";
+    const availableWidth = element.clientWidth;
+    const naturalWidth = element.scrollWidth;
+
+    if (!(availableWidth > 0) || !(naturalWidth > availableWidth)) {
+      fittedNumberLengths.set(element, element.textContent.length);
+      return;
+    }
+
+    const baseFontSize = Number.parseFloat(window.getComputedStyle(element).fontSize);
+    if (!(baseFontSize > 0)) return;
+
+    let fittedSize = Math.max(0.1, baseFontSize * (availableWidth / naturalWidth) * 0.98);
+    element.style.fontSize = `${fittedSize}px`;
+
+    const remainingOverflow = element.scrollWidth / Math.max(1, element.clientWidth);
+    if (remainingOverflow > 1) {
+      fittedSize = Math.max(0.1, (fittedSize / remainingOverflow) * 0.98);
+      element.style.fontSize = `${fittedSize}px`;
+    }
+
+    fittedNumberLengths.set(element, element.textContent.length);
+  }
+
+  function setFittedNumber(element, value) {
+    const text = String(value);
+    if (element.textContent !== text) element.textContent = text;
+    if (fittedNumberLengths.get(element) !== text.length) fitNumberToWidth(element);
+  }
+
+  function fitAllNumberDisplays() {
+    for (const element of fittedNumberDisplays) fitNumberToWidth(element);
   }
 
   function magnitude(x, y) {
@@ -321,6 +371,22 @@
     const dx = a.x - b.x;
     const dy = a.y - b.y;
     return dx * dx + dy * dy;
+  }
+
+  function cappedLeadTime(
+    originX,
+    originY,
+    targetX,
+    targetY,
+    velocityX,
+    velocityY,
+    preferredLead,
+    maximumLeadFraction,
+  ) {
+    const distance = magnitude(targetX - originX, targetY - originY);
+    const targetSpeed = magnitude(velocityX || 0, velocityY || 0);
+    if (distance < 1 || targetSpeed < 1) return 0;
+    return Math.min(preferredLead, (distance * maximumLeadFraction) / targetSpeed);
   }
 
   function getPlayBounds() {
@@ -445,12 +511,14 @@
     const projectile = projectiles[index];
     const last = projectiles.pop();
     if (index < projectiles.length) projectiles[index] = last;
+    projectile.target = null;
     if (projectilePool.length < MAX_PROJECTILE_POOL_SIZE) projectilePool.push(projectile);
   }
 
   function recycleAllProjectiles() {
     const room = MAX_PROJECTILE_POOL_SIZE - projectilePool.length;
     const start = Math.max(0, projectiles.length - room);
+    for (const projectile of projectiles) projectile.target = null;
     for (let index = start; index < projectiles.length; index += 1) {
       projectilePool.push(projectiles[index]);
     }
@@ -620,6 +688,7 @@
     }
 
     mouseTarget.active = false;
+    fitAllNumberDisplays();
   }
 
   function resetGame() {
@@ -730,8 +799,8 @@
     gameState = "gameover";
     const records = saveRunRecords();
 
-    ui.finalScore.textContent = formatScore(records.finalScore);
-    ui.finalLongestStreak.textContent = String(longestStreak);
+    setFittedNumber(ui.finalScore, formatScore(records.finalScore));
+    setFittedNumber(ui.finalLongestStreak, longestStreak);
     ui.gameoverTitle.textContent = records.scoreRecord
       ? "NEW BEST SCORE"
       : records.streakRecord
@@ -740,6 +809,8 @@
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = false;
+    fitNumberToWidth(ui.finalScore);
+    fitNumberToWidth(ui.finalLongestStreak);
     ui.pauseButton.disabled = true;
     resetJoystick();
     updateInterface(true);
@@ -1277,7 +1348,14 @@
     playCue("miss");
   }
 
-  function emitRecommendationRow(directionX, directionY, color, speed, projectileRadius) {
+  function emitRecommendationRow(
+    directionX,
+    directionY,
+    color,
+    speed,
+    projectileRadius,
+    target = null,
+  ) {
     const startX = player.x;
     const startY = player.y - player.drawHeight * 0.08;
     const perpendicularX = -directionY;
@@ -1295,11 +1373,12 @@
       projectile.radius = projectileRadius;
       projectile.color = color;
       projectile.rotation = Math.random() * STAR_ROTATION_PERIOD;
+      projectile.target = target;
       projectiles.push(projectile);
     }
   }
 
-  function launchRecommendation(aimX, aimY, color = COLORS.goldBright) {
+  function launchRecommendation(aimX, aimY, color = COLORS.goldBright, target = null) {
     const startX = player.x;
     const startY = player.y - player.drawHeight * 0.08;
     const dx = aimX - startX;
@@ -1313,6 +1392,7 @@
       color,
       currentProjectileSpeed(),
       currentProjectileRadius(),
+      target,
     );
     return true;
   }
@@ -1355,12 +1435,19 @@
     const maxRange = scaleWorld(560) * rangeUpgrade;
     const maxRangeSquared = maxRange * maxRange;
     let target = null;
-    let nearest = maxRangeSquared;
+    let targetDistanceSquared = maxRangeSquared;
+    let bestThreatScore = maxRangeSquared;
 
     for (const enemy of enemies) {
+      if (enemy.destroyed) continue;
       const candidateDistance = distanceSquared(player, enemy);
-      if (candidateDistance < nearest) {
-        nearest = candidateDistance;
+      if (candidateDistance > maxRangeSquared) continue;
+      const threatWeight = (enemy.kind === "fast" ? 1.35 : 1)
+        * (enemy.mode === "rush" ? 1.12 : 1);
+      const threatScore = candidateDistance / (threatWeight * threatWeight);
+      if (threatScore < bestThreatScore) {
+        bestThreatScore = threatScore;
+        targetDistanceSquared = candidateDistance;
         target = enemy;
       }
     }
@@ -1368,13 +1455,26 @@
     if (!target) return false;
 
     const closeThreatDistance = scaleWorld(CLOSE_THREAT_RADIUS);
-    const closeThreat = nearest <= closeThreatDistance * closeThreatDistance;
+    const closeThreat = targetDistanceSquared <= closeThreatDistance * closeThreatDistance;
     if (!player.moving && !closeThreat) return false;
 
-    const lead = closeThreat ? 0 : target.mode === "rush" ? 0.11 : target.kind === "fast" ? 0.18 : 0.08;
+    const preferredLead = target.mode === "rush" ? 0.11 : target.kind === "fast" ? 0.18 : 0.08;
+    const lead = closeThreat
+      ? 0
+      : cappedLeadTime(
+        player.x,
+        player.y,
+        target.x,
+        target.y,
+        target.vx,
+        target.vy,
+        preferredLead,
+        MAX_RECOMMENDATION_LEAD_FRACTION,
+      );
     const aimX = target.x + (target.vx || 0) * lead;
     const aimY = target.y + (target.vy || 0) * lead;
-    return launchRecommendation(aimX, aimY);
+    const projectileTarget = target.kind === "fast" ? target : null;
+    return launchRecommendation(aimX, aimY, COLORS.goldBright, projectileTarget);
   }
 
   function addParticles(x, y, color, count = 10, speed = 120) {
@@ -1412,6 +1512,7 @@
   }
 
   function registerDestroy(enemy, fromBlast = false) {
+    enemy.destroyed = true;
     const activeCombo = comboTimer > 0;
     killCombo = activeCombo ? killCombo + 1 : 1;
     comboTimer = 1.65;
@@ -1514,6 +1615,7 @@
     if (player.invulnerable > 0) {
       const overlappingEnemy = enemies[enemyIndex];
       if (overlappingEnemy) {
+        overlappingEnemy.destroyed = true;
         enemies.splice(enemyIndex, 1);
         addParticles(overlappingEnemy.x, overlappingEnemy.y, overlappingEnemy.color, 5, 90);
       }
@@ -1521,6 +1623,7 @@
     }
 
     const enemy = enemies[enemyIndex];
+    if (enemy) enemy.destroyed = true;
     enemies.splice(enemyIndex, 1);
 
     if (shieldTime > 0 && shieldHits > 0) {
@@ -1755,21 +1858,33 @@
           enemy.y < world.bounds.top - scaleWorld(90) ||
           enemy.y > world.bounds.bottom + scaleWorld(90)
         ) {
+          enemy.destroyed = true;
           enemies.splice(i, 1);
           continue;
         }
       } else {
         const directDx = player.x - enemy.x;
         const directDy = player.y - enemy.y;
+        const directDistance = magnitude(directDx, directDy);
         const closeThreatDistance = scaleWorld(CLOSE_THREAT_RADIUS);
-        const isCloseThreat = directDx * directDx + directDy * directDy <= closeThreatDistance * closeThreatDistance;
+        const isCloseThreat = directDistance <= closeThreatDistance;
+        const preferredPrediction = enemy.kind === "fast"
+          ? 0.23
+          : enemy.kind === "heavy"
+            ? 0.04
+            : 0.11;
         const prediction = isCloseThreat
           ? 0
-          : enemy.kind === "fast"
-            ? 0.23
-            : enemy.kind === "heavy"
-              ? 0.04
-              : 0.11;
+          : cappedLeadTime(
+            enemy.x,
+            enemy.y,
+            player.x,
+            player.y,
+            player.vx,
+            player.vy,
+            preferredPrediction,
+            MAX_PURSUIT_LEAD_FRACTION,
+          );
         const targetX = player.x + player.vx * prediction;
         const targetY = player.y + player.vy * prediction;
         const dx = targetX - enemy.x;
@@ -1895,6 +2010,31 @@
     gamepadPausePressed = pausePressed;
   }
 
+  function steerProjectileTowardTarget(projectile, dt) {
+    const target = projectile.target;
+    if (!target || target.destroyed || target.hp <= 0) {
+      projectile.target = null;
+      return;
+    }
+
+    const dx = target.x - projectile.x;
+    const dy = target.y - projectile.y;
+    const distance = magnitude(dx, dy);
+    const speed = magnitude(projectile.vx, projectile.vy);
+    if (distance < 1 || speed < 1) return;
+
+    const steering = Math.min(1, PROJECTILE_HOMING_RESPONSE * dt);
+    const currentX = projectile.vx / speed;
+    const currentY = projectile.vy / speed;
+    const desiredX = dx / distance;
+    const desiredY = dy / distance;
+    const blendedX = currentX + (desiredX - currentX) * steering;
+    const blendedY = currentY + (desiredY - currentY) * steering;
+    const blendedLength = magnitude(blendedX, blendedY) || 1;
+    projectile.vx = (blendedX / blendedLength) * speed;
+    projectile.vy = (blendedY / blendedLength) * speed;
+  }
+
   function updateProjectiles(dt) {
     const offscreenMargin = scaleWorld(30);
     let destroyedEnemies = false;
@@ -1904,6 +2044,7 @@
       const projectile = projectiles[i];
       const previousX = projectile.x;
       const previousY = projectile.y;
+      if (projectile.target) steerProjectileTowardTarget(projectile, dt);
       projectile.x += projectile.vx * dt;
       projectile.y += projectile.vy * dt;
       projectile.rotation += dt * 10;
@@ -2107,18 +2248,18 @@
     const masteryPercent = Math.round(mastery * 100);
 
     if (force || roundedScore !== lastRenderedScore) {
-      ui.score.textContent = formatScore(roundedScore);
+      setFittedNumber(ui.score, formatScore(roundedScore));
       lastRenderedScore = roundedScore;
     }
 
     if (force || liveBest !== lastRenderedBest) {
-      ui.best.textContent = formatScore(liveBest);
-      ui.startBest.textContent = formatScore(bestScore);
+      setFittedNumber(ui.best, formatScore(liveBest));
+      setFittedNumber(ui.startBest, formatScore(bestScore));
       lastRenderedBest = liveBest;
     }
 
     if (force || liveBestStreak !== lastRenderedBestStreak) {
-      ui.bestStreak.textContent = String(liveBestStreak);
+      setFittedNumber(ui.bestStreak, liveBestStreak);
       ui.bestStreak.setAttribute("aria-label", `Best popcorn streak: ${liveBestStreak}`);
       lastRenderedBestStreak = liveBestStreak;
     }
@@ -2132,7 +2273,7 @@
     }
 
     if (force || popcornChain !== lastRenderedStreak) {
-      ui.streak.textContent = String(popcornChain);
+      setFittedNumber(ui.streak, popcornChain);
       ui.streak.setAttribute("aria-label", `Current popcorn streak: ${popcornChain}`);
       lastRenderedStreak = popcornChain;
     }
@@ -3499,6 +3640,7 @@
       renderCache.emojiMetrics.clear();
       renderCache.emojiSprites.clear();
       renderCache.enemySprites.clear();
+      fitAllNumberDisplays();
     });
   }
   window.requestAnimationFrame(frame);
