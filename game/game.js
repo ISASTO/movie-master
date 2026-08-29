@@ -109,7 +109,7 @@
   const GAMEPAD_RUMBLE = {
     blast: { duration: 130, weakMagnitude: 0.3, strongMagnitude: 0.5 },
     hit: { duration: 130, weakMagnitude: 0.3, strongMagnitude: 0.5 },
-    shield: { duration: 85, weakMagnitude: 0.2, strongMagnitude: 0.38 },
+    shield: { duration: 110, weakMagnitude: 0.28, strongMagnitude: 0.46 },
   };
   const POPCORN_LIFETIME_MULTIPLIER = 1.25;
   const MAX_PURSUIT_LEAD_FRACTION = 0.42;
