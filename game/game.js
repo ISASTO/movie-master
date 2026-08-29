@@ -199,6 +199,7 @@
   };
 
   const renderCache = {
+    generation: 0,
     backgroundGradient: null,
     backgroundRays: null,
     backgroundGrid: null,
@@ -209,7 +210,18 @@
     emojiSprites: new Map(),
     textWidths: new Map(),
     emojiMetrics: new Map(),
+    powerupStatusLayout: null,
   };
+  const powerupStatusItems = [
+    { type: "shield", color: COLORS.shield, text: "", textWidth: 0, width: 0, tenths: -1, hits: -1 },
+    { type: "speed", color: COLORS.speed, text: "", textWidth: 0, width: 0, tenths: -1, hits: -1 },
+    { type: "super", color: COLORS.super, text: "", textWidth: 0, width: 0, tenths: -1, hits: -1 },
+    { type: "magnet", color: COLORS.magnet, text: "", textWidth: 0, width: 0, tenths: -1, hits: -1 },
+  ];
+  const powerupStatusRows = Array.from(
+    { length: powerupStatusItems.length },
+    () => ({ start: 0, end: 0, width: 0 }),
+  );
 
   const player = {
     x: 0,
@@ -243,6 +255,7 @@
     enemies: [],
     maxEnemyRadius: 0,
   };
+  const compareEnemiesByX = (a, b) => a.x - b.x;
   const MAX_PROJECTILE_POOL_SIZE = 1800;
   const MAX_PARTICLE_POOL_SIZE = 2400;
 
@@ -299,6 +312,7 @@
   let lastRenderedBlastReady = null;
   let lastRenderedMissionMessage = null;
   let lastRenderedMissionDanger = null;
+  let lastRenderedPickupTenths = -1;
   let audioContext = null;
   let soundOn = readString(SOUND_KEY, "on") !== "off";
   let movementMode = coarsePointer ? "touch" : readString(MOVEMENT_KEY, "mouse");
@@ -592,12 +606,39 @@
   }
 
   function rebuildRenderCache() {
+    renderCache.generation += 1;
     renderCache.textWidths.clear();
     renderCache.emojiMetrics.clear();
     renderCache.projectileSprites.clear();
     renderCache.enemySprites.clear();
     renderCache.emojiSprites.clear();
+    for (let index = 0; index < projectilePool.length; index += 1) {
+      projectilePool[index].renderSprite = null;
+    }
+    for (let index = 0; index < projectiles.length; index += 1) {
+      projectiles[index].renderSprite = null;
+    }
+    for (let index = 0; index < enemies.length; index += 1) {
+      enemies[index].renderSprite = null;
+    }
     renderCache.backgroundGradient = createBackgroundGradient();
+    const shortViewport = world.height <= 500;
+    const fontSize = clamp(world.width * 0.012, shortViewport ? 9 : 10, shortViewport ? 11 : 13);
+    const iconSize = fontSize * (shortViewport ? 1.08 : 1.18);
+    const iconGap = shortViewport ? 4 : 6;
+    const horizontalPadding = shortViewport ? 7 : 10;
+    const verticalPadding = shortViewport ? 5 : 7;
+    renderCache.powerupStatusLayout = {
+      shortViewport,
+      fontSize,
+      iconSize,
+      iconGap,
+      horizontalPadding,
+      height: Math.max(fontSize, iconSize) + verticalPadding * 2,
+      gap: shortViewport ? 4 : 6,
+      availableWidth: Math.max(1, world.bounds.right - world.bounds.left),
+      font: `800 ${fontSize}px "Futura Web", sans-serif`,
+    };
 
     if (typeof Path2D !== "function") {
       renderCache.backgroundRays = null;
@@ -642,20 +683,8 @@
       sortedEnemies[index] = enemy;
       if (enemy.radius > maxEnemyRadius) maxEnemyRadius = enemy.radius;
     }
-    sortedEnemies.sort((a, b) => a.x - b.x);
+    sortedEnemies.sort(compareEnemiesByX);
     collisionIndex.maxEnemyRadius = maxEnemyRadius;
-  }
-
-  function findFirstCollisionCandidate(minimumX) {
-    const sortedEnemies = collisionIndex.enemies;
-    let low = 0;
-    let high = sortedEnemies.length;
-    while (low < high) {
-      const middle = (low + high) >>> 1;
-      if (sortedEnemies[middle].x < minimumX) low = middle + 1;
-      else high = middle;
-    }
-    return low;
   }
 
   function acquireProjectile() {
@@ -686,6 +715,7 @@
     const particle = particles[index];
     const last = particles.pop();
     if (index < particles.length) particles[index] = last;
+    particle.renderStarPath = null;
     if (particlePool.length < MAX_PARTICLE_POOL_SIZE) particlePool.push(particle);
   }
 
@@ -693,7 +723,9 @@
     const room = MAX_PARTICLE_POOL_SIZE - particlePool.length;
     const start = Math.max(0, particles.length - room);
     for (let index = start; index < particles.length; index += 1) {
-      particlePool.push(particles[index]);
+      const particle = particles[index];
+      particle.renderStarPath = null;
+      particlePool.push(particle);
     }
     particles.length = 0;
   }
@@ -888,6 +920,7 @@
     lastRenderedBlastReady = null;
     lastRenderedMissionMessage = null;
     lastRenderedMissionDanger = null;
+    lastRenderedPickupTenths = -1;
     runStats = createRunStats();
 
     enemies.length = 0;
@@ -1281,6 +1314,10 @@
       blastMarked: false,
       collisionStamp: 0,
       destroyed: false,
+      renderSprite: null,
+      renderSpriteGeneration: -1,
+      renderSpriteHp: -1,
+      renderSpriteHit: false,
     });
     runStats.peakGarbage = Math.max(runStats.peakGarbage, enemies.length);
   }
@@ -1391,13 +1428,20 @@
       }));
   }
 
-  function isPopcornBlockedByTouchControls(x, y, radius) {
-    return getTouchControlExclusionZones(radius).some((zone) => (
-      x >= zone.left &&
-      x <= zone.right &&
-      y >= zone.top &&
-      y <= zone.bottom
-    ));
+  function isPopcornBlockedByTouchControls(x, y, radius, exclusionZones = null) {
+    const zones = exclusionZones || getTouchControlExclusionZones(radius);
+    for (let index = 0; index < zones.length; index += 1) {
+      const zone = zones[index];
+      if (
+        x >= zone.left
+        && x <= zone.right
+        && y >= zone.top
+        && y <= zone.bottom
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function choosePopcornPosition(radius) {
@@ -1405,6 +1449,7 @@
     const width = right - left;
     const height = bottom - top;
     const requiredDistance = Math.min(Math.hypot(width, height) * 0.33, scaleWorld(280));
+    const requiredDistanceSquared = requiredDistance * requiredDistance;
     const spawnInset = scaleWorld(POPCORN_SAFE_BORDER);
     const centerX = (left + right) / 2;
     const centerY = (top + bottom) / 2;
@@ -1413,29 +1458,37 @@
     const minY = Math.min(centerY, top + spawnInset);
     const maxY = Math.max(centerY, bottom - spawnInset);
     const enemyClearance = scaleWorld(70);
+    const enemyClearanceSquared = enemyClearance * enemyClearance;
+    const exclusionZones = getTouchControlExclusionZones(radius);
     let best = null;
-    let bestClearance = -Infinity;
+    let bestClearanceSquared = -Infinity;
 
     const consider = (x, y) => {
-      if (isPopcornBlockedByTouchControls(x, y, radius)) return false;
+      if (isPopcornBlockedByTouchControls(x, y, radius, exclusionZones)) return false;
 
-      const playerDistance = Math.hypot(x - player.x, y - player.y);
-      let nearestClearance = playerDistance;
+      const playerDx = x - player.x;
+      const playerDy = y - player.y;
+      const playerDistanceSquared = playerDx * playerDx + playerDy * playerDy;
+      let nearestClearanceSquared = playerDistanceSquared;
       let clearsEnemies = true;
 
       for (const enemy of enemies) {
-        const enemyDistance = Math.hypot(x - enemy.x, y - enemy.y);
-        nearestClearance = Math.min(nearestClearance, enemyDistance);
-        if (enemyDistance < enemyClearance) clearsEnemies = false;
+        const enemyDx = x - enemy.x;
+        const enemyDy = y - enemy.y;
+        const enemyDistanceSquared = enemyDx * enemyDx + enemyDy * enemyDy;
+        if (enemyDistanceSquared < nearestClearanceSquared) {
+          nearestClearanceSquared = enemyDistanceSquared;
+        }
+        if (enemyDistanceSquared < enemyClearanceSquared) clearsEnemies = false;
       }
 
-      if (playerDistance >= requiredDistance && clearsEnemies) {
+      if (playerDistanceSquared >= requiredDistanceSquared && clearsEnemies) {
         best = { x, y };
         return true;
       }
 
-      if (nearestClearance > bestClearance) {
-        bestClearance = nearestClearance;
+      if (nearestClearanceSquared > bestClearanceSquared) {
+        bestClearanceSquared = nearestClearanceSquared;
         best = { x, y };
       }
       return false;
@@ -1489,17 +1542,34 @@
     let x = (left + right) / 2;
     let y = (top + bottom) / 2;
     let attempts = 0;
+    let blocked = false;
+    const playerClearance = scaleWorld(170);
+    const playerClearanceSquared = playerClearance * playerClearance;
+    const enemyClearance = scaleWorld(75);
+    const enemyClearanceSquared = enemyClearance * enemyClearance;
+    const pickupClearance = scaleWorld(90);
+    const pickupClearanceSquared = pickupClearance * pickupClearance;
 
     do {
       x = randomBetween(left + horizontalInset, right - horizontalInset);
       y = randomBetween(top + topInset, bottom - bottomInset);
       attempts += 1;
-    } while (
-      attempts < 18 &&
-      (Math.hypot(x - player.x, y - player.y) < scaleWorld(170) ||
-        enemies.some((enemy) => Math.hypot(x - enemy.x, y - enemy.y) < scaleWorld(75)) ||
-        pickups.some((pickup) => Math.hypot(x - pickup.x, y - pickup.y) < scaleWorld(90)))
-    );
+      const playerDx = x - player.x;
+      const playerDy = y - player.y;
+      blocked = playerDx * playerDx + playerDy * playerDy < playerClearanceSquared;
+      for (let index = 0; !blocked && index < enemies.length; index += 1) {
+        const enemy = enemies[index];
+        const dx = x - enemy.x;
+        const dy = y - enemy.y;
+        blocked = dx * dx + dy * dy < enemyClearanceSquared;
+      }
+      for (let index = 0; !blocked && index < pickups.length; index += 1) {
+        const pickup = pickups[index];
+        const dx = x - pickup.x;
+        const dy = y - pickup.y;
+        blocked = dx * dx + dy * dy < pickupClearanceSquared;
+      }
+    } while (attempts < 18 && blocked);
 
     powerups.push({
       type,
@@ -1587,6 +1657,10 @@
       projectile.radius = projectileRadius;
       projectile.color = color;
       projectile.rotation = Math.random() * STAR_ROTATION_PERIOD;
+      projectile.renderSprite = null;
+      projectile.renderSpriteGeneration = -1;
+      projectile.renderSpriteRadius = -1;
+      projectile.renderSpriteColor = "";
       projectiles.push(projectile);
       runStats.starsFired += 1;
     }
@@ -1692,10 +1766,12 @@
   function addParticles(x, y, color, count = 10, speed = 120) {
     const motionMultiplier = reducedMotion ? 0.35 : 1;
     const actualCount = Math.ceil(count * motionMultiplier * qualitySettings.particleMultiplier);
+    const speedMinimum = speed * 0.35;
+    const speedRange = speed - speedMinimum;
     for (let i = 0; i < actualCount; i += 1) {
       const angle = Math.random() * Math.PI * 2;
-      const velocity = randomBetween(speed * 0.35, speed) * world.gameScale;
-      const maxLife = randomBetween(0.34, 0.78);
+      const velocity = (speedMinimum + Math.random() * speedRange) * world.gameScale;
+      const maxLife = 0.34 + Math.random() * (0.78 - 0.34);
       const particle = acquireParticle();
       particle.x = x;
       particle.y = y;
@@ -1703,9 +1779,10 @@
       particle.vy = Math.sin(angle) * velocity;
       particle.life = maxLife;
       particle.maxLife = maxLife;
-      particle.size = randomBetween(2, 6) * world.gameScale;
+      particle.size = (2 + Math.random() * (6 - 2)) * world.gameScale;
       particle.color = color;
       particle.star = Math.random() < 0.24;
+      particle.renderStarPath = null;
       particles.push(particle);
     }
   }
@@ -2035,19 +2112,21 @@
   function updateMovement(dt) {
     let dx = 0;
     let dy = 0;
-    const touchMagnitude = magnitude(touchMove.x, touchMove.y);
+    const touchMagnitudeSquared = touchMove.x * touchMove.x + touchMove.y * touchMove.y;
 
     if (gamepadMove.active) {
       dx = gamepadMove.x;
       dy = gamepadMove.y;
-    } else if (touchMagnitude > 0.08) {
+    } else if (touchMagnitudeSquared > 0.0064) {
       dx = touchMove.x;
       dy = touchMove.y;
     } else if (movementMode === "mouse" && mouseTarget.active) {
       const targetDx = mouseTarget.x - player.x;
       const targetDy = mouseTarget.y - player.y;
-      const targetDistance = magnitude(targetDx, targetDy);
-      if (targetDistance > scaleWorld(9)) {
+      const targetDistanceSquared = targetDx * targetDx + targetDy * targetDy;
+      const stopDistance = scaleWorld(9);
+      if (targetDistanceSquared > stopDistance * stopDistance) {
+        const targetDistance = Math.sqrt(targetDistanceSquared);
         const approachSpeed = Math.min(1, targetDistance / scaleWorld(72));
         dx = (targetDx / targetDistance) * approachSpeed;
         dy = (targetDy / targetDistance) * approachSpeed;
@@ -2059,8 +2138,9 @@
       if (keys.has("ArrowDown") || keys.has("KeyS")) dy += 1;
     }
 
-    const length = magnitude(dx, dy);
-    if (length > 1) {
+    const lengthSquared = dx * dx + dy * dy;
+    if (lengthSquared > 1) {
+      const length = Math.sqrt(lengthSquared);
       dx /= length;
       dy /= length;
     }
@@ -2088,6 +2168,15 @@
   }
 
   function updateEnemies(dt) {
+    const rushMargin = scaleWorld(90);
+    const closeThreatDistance = scaleWorld(CLOSE_THREAT_RADIUS);
+    const closeThreatDistanceSquared = closeThreatDistance * closeThreatDistance;
+    const playerSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
+    const canPredictPlayer = playerSpeed >= 1;
+    const maximumPredictionScale = canPredictPlayer
+      ? MAX_PURSUIT_LEAD_FRACTION / playerSpeed
+      : 0;
+
     for (let i = enemies.length - 1; i >= 0; i -= 1) {
       const enemy = enemies[i];
       enemy.phase += dt * (enemy.kind === "fast" ? 8 : 4.5);
@@ -2097,10 +2186,10 @@
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
         if (
-          enemy.x < world.bounds.left - scaleWorld(90) ||
-          enemy.x > world.bounds.right + scaleWorld(90) ||
-          enemy.y < world.bounds.top - scaleWorld(90) ||
-          enemy.y > world.bounds.bottom + scaleWorld(90)
+          enemy.x < world.bounds.left - rushMargin ||
+          enemy.x > world.bounds.right + rushMargin ||
+          enemy.y < world.bounds.top - rushMargin ||
+          enemy.y > world.bounds.bottom + rushMargin
         ) {
           enemy.destroyed = true;
           enemies.splice(i, 1);
@@ -2109,25 +2198,18 @@
       } else {
         const directDx = player.x - enemy.x;
         const directDy = player.y - enemy.y;
-        const directDistance = magnitude(directDx, directDy);
-        const closeThreatDistance = scaleWorld(CLOSE_THREAT_RADIUS);
-        const isCloseThreat = directDistance <= closeThreatDistance;
+        const directDistanceSquared = directDx * directDx + directDy * directDy;
+        const isCloseThreat = directDistanceSquared <= closeThreatDistanceSquared;
         const preferredPrediction = enemy.kind === "fast"
           ? 0.23
           : enemy.kind === "heavy"
             ? 0.04
             : 0.11;
-        const prediction = isCloseThreat
+        const prediction = isCloseThreat || !canPredictPlayer
           ? 0
-          : cappedLeadTime(
-            enemy.x,
-            enemy.y,
-            player.x,
-            player.y,
-            player.vx,
-            player.vy,
+          : Math.min(
             preferredPrediction,
-            MAX_PURSUIT_LEAD_FRACTION,
+            Math.sqrt(directDistanceSquared) * maximumPredictionScale,
           );
         const targetX = player.x + player.vx * prediction;
         const targetY = player.y + player.vy * prediction;
@@ -2152,15 +2234,16 @@
     const output = target || { x: 0, y: 0, active: false };
     const axisX = Number.isFinite(x) ? clamp(x, -1, 1) : 0;
     const axisY = Number.isFinite(y) ? clamp(y, -1, 1) : 0;
-    const stickMagnitude = magnitude(axisX, axisY);
+    const stickMagnitudeSquared = axisX * axisX + axisY * axisY;
 
-    if (stickMagnitude <= GAMEPAD_DEAD_ZONE) {
+    if (stickMagnitudeSquared <= GAMEPAD_DEAD_ZONE * GAMEPAD_DEAD_ZONE) {
       output.x = 0;
       output.y = 0;
       output.active = false;
       return output;
     }
 
+    const stickMagnitude = Math.sqrt(stickMagnitudeSquared);
     const scaledMagnitude = Math.min(
       1,
       (stickMagnitude - GAMEPAD_DEAD_ZONE) / (1 - GAMEPAD_DEAD_ZONE),
@@ -2180,9 +2263,11 @@
   function hasRelevantGamepadInput(gamepad) {
     const stickX = Number(gamepad?.axes?.[0]) || 0;
     const stickY = Number(gamepad?.axes?.[1]) || 0;
-    return magnitude(stickX, stickY) > GAMEPAD_DEAD_ZONE
-      || GAMEPAD_BLAST_BUTTONS.some((index) => isGamepadButtonPressed(gamepad, index))
-      || isGamepadButtonPressed(gamepad, GAMEPAD_PAUSE_BUTTON);
+    if (stickX * stickX + stickY * stickY > GAMEPAD_DEAD_ZONE * GAMEPAD_DEAD_ZONE) return true;
+    for (let index = 0; index < GAMEPAD_BLAST_BUTTONS.length; index += 1) {
+      if (isGamepadButtonPressed(gamepad, GAMEPAD_BLAST_BUTTONS[index])) return true;
+    }
+    return isGamepadButtonPressed(gamepad, GAMEPAD_PAUSE_BUTTON);
   }
 
   function readConnectedGamepads() {
@@ -2201,14 +2286,20 @@
     const gamepads = readConnectedGamepads();
     let first = null;
     let current = null;
+    let currentEngaged = false;
     let engaged = null;
 
     for (let i = 0; i < gamepads.length; i += 1) {
       const gamepad = gamepads[i];
       if (!gamepad || gamepad.connected === false) continue;
       if (!first) first = gamepad;
-      if (gamepad.index === activeGamepadIndex) current = gamepad;
-      if (!engaged && hasRelevantGamepadInput(gamepad)) engaged = gamepad;
+      const isCurrent = gamepad.index === activeGamepadIndex;
+      const relevant = (!engaged || isCurrent) && hasRelevantGamepadInput(gamepad);
+      if (isCurrent) {
+        current = gamepad;
+        currentEngaged = relevant;
+      }
+      if (!engaged && relevant) engaged = gamepad;
     }
 
     if (!first) {
@@ -2216,7 +2307,7 @@
       return null;
     }
 
-    const selected = engaged && (!current || !hasRelevantGamepadInput(current))
+    const selected = engaged && (!current || !currentEngaged)
       ? engaged
       : current || engaged || first;
     activeGamepadIndex = selected.index;
@@ -2314,9 +2405,12 @@
     normalizeGamepadStick(gamepad.axes?.[0], gamepad.axes?.[1], gamepadMove);
     if (gamepadMove.active) mouseTarget.active = false;
 
-    const blastPressed = GAMEPAD_BLAST_BUTTONS.some(
-      (index) => isGamepadButtonPressed(gamepad, index),
-    );
+    let blastPressed = false;
+    for (let index = 0; index < GAMEPAD_BLAST_BUTTONS.length; index += 1) {
+      if (!isGamepadButtonPressed(gamepad, GAMEPAD_BLAST_BUTTONS[index])) continue;
+      blastPressed = true;
+      break;
+    }
     if (blastPressed && !gamepadBlastPressed) activateBlast(gamepad);
     gamepadBlastPressed = blastPressed;
 
@@ -2333,8 +2427,14 @@
 
   function updateProjectiles(dt) {
     const offscreenMargin = scaleWorld(30);
+    const maximumXBoundary = world.width + offscreenMargin;
+    const maximumYBoundary = world.height + offscreenMargin;
+    const rotationStep = dt * 10;
     let destroyedEnemies = false;
     populateCollisionIndex();
+    const sortedEnemies = collisionIndex.enemies;
+    const sortedEnemyCount = sortedEnemies.length;
+    const maximumEnemyRadius = collisionIndex.maxEnemyRadius;
 
     for (let i = projectiles.length - 1; i >= 0; i -= 1) {
       const projectile = projectiles[i];
@@ -2342,32 +2442,45 @@
       const previousY = projectile.y;
       projectile.x += projectile.vx * dt;
       projectile.y += projectile.vy * dt;
-      projectile.rotation += dt * 10;
+      projectile.rotation += rotationStep;
       if (projectile.rotation >= STAR_ROTATION_PERIOD) {
         projectile.rotation -= STAR_ROTATION_PERIOD;
       }
-      const segmentMinX = Math.min(previousX, projectile.x);
-      const segmentMaxX = Math.max(previousX, projectile.x);
-      const segmentMinY = Math.min(previousY, projectile.y);
-      const segmentMaxY = Math.max(previousY, projectile.y);
+      const currentX = projectile.x;
+      const currentY = projectile.y;
 
       if (
-        projectile.x < -offscreenMargin ||
-        projectile.x > world.width + offscreenMargin ||
-        projectile.y < -offscreenMargin ||
-        projectile.y > world.height + offscreenMargin
+        currentX < -offscreenMargin ||
+        currentX > maximumXBoundary ||
+        currentY < -offscreenMargin ||
+        currentY > maximumYBoundary
       ) {
         recycleProjectileAt(i);
         continue;
       }
 
-      const queryPadding = projectile.radius + collisionIndex.maxEnemyRadius;
+      if (!sortedEnemyCount) continue;
+
+      const segmentMinX = previousX < currentX ? previousX : currentX;
+      const segmentMaxX = previousX > currentX ? previousX : currentX;
+      const segmentMinY = previousY < currentY ? previousY : currentY;
+      const segmentMaxY = previousY > currentY ? previousY : currentY;
+      const segmentX = currentX - previousX;
+      const segmentY = currentY - previousY;
+      const segmentLengthSquared = segmentX * segmentX + segmentY * segmentY;
+
+      const queryPadding = projectile.radius + maximumEnemyRadius;
       const minimumX = segmentMinX - queryPadding;
       const maximumX = segmentMaxX + queryPadding;
-      const sortedEnemies = collisionIndex.enemies;
-      const firstCandidate = findFirstCollisionCandidate(minimumX);
+      let low = 0;
+      let high = sortedEnemyCount;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (sortedEnemies[middle].x < minimumX) low = middle + 1;
+        else high = middle;
+      }
 
-      for (let candidateIndex = firstCandidate; candidateIndex < sortedEnemies.length; candidateIndex += 1) {
+      for (let candidateIndex = low; candidateIndex < sortedEnemyCount; candidateIndex += 1) {
         const enemy = sortedEnemies[candidateIndex];
         if (enemy.x > maximumX) break;
         if (enemy.destroyed) continue;
@@ -2380,15 +2493,20 @@
         ) {
           continue;
         }
-        if (!segmentIntersectsCircle(
-          previousX,
-          previousY,
-          projectile.x,
-          projectile.y,
-          enemy.x,
-          enemy.y,
-          hitDistance,
-        )) {
+        let projection = 0;
+        if (segmentLengthSquared > 0) {
+          projection = (
+            (enemy.x - previousX) * segmentX
+            + (enemy.y - previousY) * segmentY
+          ) / segmentLengthSquared;
+          if (projection < 0) projection = 0;
+          else if (projection > 1) projection = 1;
+        }
+        const closestX = previousX + segmentX * projection;
+        const closestY = previousY + segmentY * projection;
+        const collisionDx = enemy.x - closestX;
+        const collisionDy = enemy.y - closestY;
+        if (collisionDx * collisionDx + collisionDy * collisionDy > hitDistance * hitDistance) {
           continue;
         }
 
@@ -2423,13 +2541,15 @@
     const segmentX = endX - startX;
     const segmentY = endY - startY;
     const segmentLengthSquared = segmentX * segmentX + segmentY * segmentY;
-    const projection = segmentLengthSquared > 0
-      ? clamp(
-        ((circleX - startX) * segmentX + (circleY - startY) * segmentY) / segmentLengthSquared,
-        0,
-        1,
-      )
-      : 0;
+    let projection = 0;
+    if (segmentLengthSquared > 0) {
+      projection = (
+        (circleX - startX) * segmentX
+        + (circleY - startY) * segmentY
+      ) / segmentLengthSquared;
+      if (projection < 0) projection = 0;
+      else if (projection > 1) projection = 1;
+    }
     const closestX = startX + segmentX * projection;
     const closestY = startY + segmentY * projection;
     const dx = circleX - closestX;
@@ -2441,8 +2561,10 @@
     if (magnetTime <= 0) return;
     const dx = player.x - collectible.x;
     const dy = player.y - collectible.y;
-    const distance = magnitude(dx, dy);
-    if (distance < 1 || distance > scaleWorld(MAGNET_RADIUS)) return;
+    const distanceSquared = dx * dx + dy * dy;
+    const maximumDistance = scaleWorld(MAGNET_RADIUS);
+    if (distanceSquared < 1 || distanceSquared > maximumDistance * maximumDistance) return;
+    const distance = Math.sqrt(distanceSquared);
     const pullSpeed = Math.min(scaleWorld(900), scaleWorld(320) + distance * 0.7);
     const step = Math.min(distance, pullSpeed * dt);
     collectible.x += (dx / distance) * step;
@@ -2631,11 +2753,19 @@
     if (bannerTime > 0) {
       message = bannerMessage;
       danger = bannerDanger;
+      lastRenderedPickupTenths = -1;
     } else if (gameState === "running" && pickup && pickup.ttl < 3) {
-      message = `POPCORN EXPIRES IN ${pickup.ttl.toFixed(1)} SECONDS`;
+      const pickupTenths = Math.max(0, Math.floor(pickup.ttl * 10 + 0.5));
+      message = pickupTenths === lastRenderedPickupTenths && lastRenderedMissionDanger
+        ? lastRenderedMissionMessage
+        : `POPCORN EXPIRES IN ${(pickupTenths / 10).toFixed(1)} SECONDS`;
+      lastRenderedPickupTenths = pickupTenths;
       danger = true;
     } else if (gameState === "running" && superStarsTime <= 0 && player.stationaryTime > 0.48 && enemies.length) {
       message = "KEEP MOVING TO CONTINUE SHOOTING";
+      lastRenderedPickupTenths = -1;
+    } else {
+      lastRenderedPickupTenths = -1;
     }
 
     if (
@@ -2702,11 +2832,15 @@
     }
     ctx.restore();
 
-    for (const star of world.backgroundStars) {
+    ctx.fillStyle = COLORS.goldLight;
+    const backgroundStars = world.backgroundStars;
+    for (let index = 0; index < backgroundStars.length; index += 1) {
+      const star = backgroundStars[index];
       const alpha = 0.14 + (Math.sin(time * 1.7 + star.phase) + 1) * 0.11;
-      ctx.fillStyle = `rgba(255, 231, 162, ${alpha})`;
+      ctx.globalAlpha = alpha;
       ctx.fillRect(star.x, star.y, star.size, star.size);
     }
+    ctx.globalAlpha = 1;
 
     ctx.strokeStyle = "rgba(229, 164, 8, 0.13)";
     ctx.lineWidth = 1;
@@ -2781,11 +2915,22 @@
 
   function getStarPath(points, innerRatio) {
     if (typeof Path2D !== "function") return null;
-    const key = `${points}:${innerRatio.toFixed(4)}`;
-    let path = renderCache.starPaths.get(key);
+    let pathsForPointCount = renderCache.starPaths.get(points);
+    if (!pathsForPointCount) {
+      pathsForPointCount = new Map();
+      renderCache.starPaths.set(points, pathsForPointCount);
+    }
+    let path = pathsForPointCount.get(innerRatio);
     if (path) return path;
 
-    path = new Path2D();
+    path = createStarPath(points, innerRatio);
+    pathsForPointCount.set(innerRatio, path);
+    return path;
+  }
+
+  function createStarPath(points, innerRatio) {
+    if (typeof Path2D !== "function") return null;
+    const path = new Path2D();
     for (let i = 0; i < points * 2; i += 1) {
       const radius = i % 2 === 0 ? 1 : innerRatio;
       const angle = -Math.PI / 2 + (i * Math.PI) / points;
@@ -2795,7 +2940,6 @@
       else path.lineTo(x, y);
     }
     path.closePath();
-    renderCache.starPaths.set(key, path);
     return path;
   }
 
@@ -2812,6 +2956,15 @@
   function getProjectileSprite(projectile) {
     if (typeof Path2D !== "function" || typeof ctx.drawImage !== "function") return null;
 
+    if (
+      projectile.renderSprite
+      && projectile.renderSpriteGeneration === renderCache.generation
+      && projectile.renderSpriteRadius === projectile.radius
+      && projectile.renderSpriteColor === projectile.color
+    ) {
+      return projectile.renderSprite;
+    }
+
     const outerRadius = projectile.radius + scaleWorld(2);
     const innerRatio = projectile.radius * 0.44 / outerRadius;
     const glow = scaleWorld(12) * qualitySettings.projectileGlow;
@@ -2826,13 +2979,21 @@
       frameCount,
     ].join(":");
     const cached = renderCache.projectileSprites.get(key);
-    if (cached) return cached;
+    if (cached) {
+      projectile.renderSprite = cached;
+      projectile.renderSpriteGeneration = renderCache.generation;
+      projectile.renderSpriteRadius = projectile.radius;
+      projectile.renderSpriteColor = projectile.color;
+      return cached;
+    }
 
     const logicalSize = Math.ceil((outerRadius + glow * 2 + 3) * 2);
     const framePixelSize = Math.max(1, Math.ceil(logicalSize * world.dpr));
     const frameLogicalSize = framePixelSize / world.dpr;
     const columns = Math.min(4, frameCount);
     const rows = Math.ceil(frameCount / columns);
+    const frameSourceX = new Int32Array(frameCount);
+    const frameSourceY = new Int32Array(frameCount);
     const raster = createRasterCanvas(framePixelSize * columns, framePixelSize * rows);
     const path = getStarPath(5, innerRatio);
     if (!raster || !path) return null;
@@ -2840,6 +3001,8 @@
     for (let frame = 0; frame < frameCount; frame += 1) {
       const frameOffsetX = (frame % columns) * framePixelSize;
       const frameOffsetY = Math.floor(frame / columns) * framePixelSize;
+      frameSourceX[frame] = frameOffsetX;
+      frameSourceY[frame] = frameOffsetY;
       raster.context.setTransform(
         world.dpr,
         0,
@@ -2863,11 +3026,18 @@
       columns,
       framePixelSize,
       frameLogicalSize,
+      frameLogicalHalf: frameLogicalSize / 2,
+      frameSourceX,
+      frameSourceY,
       rotationPeriod,
       rotationFrameScale: frameCount / rotationPeriod,
     };
     if (renderCache.projectileSprites.size >= 28) renderCache.projectileSprites.clear();
     renderCache.projectileSprites.set(key, sprite);
+    projectile.renderSprite = sprite;
+    projectile.renderSpriteGeneration = renderCache.generation;
+    projectile.renderSpriteRadius = projectile.radius;
+    projectile.renderSpriteColor = projectile.color;
     return sprite;
   }
 
@@ -2967,7 +3137,17 @@
   function getEnemySprite(enemy) {
     if (typeof ctx.drawImage !== "function") return null;
 
-    const fillColor = enemy.hitFlash > 0 ? COLORS.goldBright : enemy.color;
+    const hitState = enemy.hitFlash > 0;
+    if (
+      enemy.renderSprite
+      && enemy.renderSpriteGeneration === renderCache.generation
+      && enemy.renderSpriteHp === enemy.hp
+      && enemy.renderSpriteHit === hitState
+    ) {
+      return enemy.renderSprite;
+    }
+
+    const fillColor = hitState ? COLORS.goldBright : enemy.color;
     const outlineColor = enemy.mode === "rush"
       ? "#ff6f55"
       : enemy.kind === "fast"
@@ -2988,7 +3168,13 @@
       frameCount,
     ].join(":");
     const cached = renderCache.enemySprites.get(key);
-    if (cached) return cached;
+    if (cached) {
+      enemy.renderSprite = cached;
+      enemy.renderSpriteGeneration = renderCache.generation;
+      enemy.renderSpriteHp = enemy.hp;
+      enemy.renderSpriteHit = hitState;
+      return cached;
+    }
 
     const halfSize = Math.ceil(enemy.radius + scaleWorld(48));
     const logicalSize = halfSize * 2;
@@ -2996,6 +3182,8 @@
     const frameLogicalSize = framePixelSize / world.dpr;
     const columns = Math.min(4, frameCount);
     const rows = Math.ceil(frameCount / columns);
+    const frameSourceX = new Int32Array(frameCount);
+    const frameSourceY = new Int32Array(frameCount);
     const raster = createRasterCanvas(framePixelSize * columns, framePixelSize * rows);
     if (!raster) return null;
 
@@ -3013,6 +3201,8 @@
     for (let frame = 0; frame < frameCount; frame += 1) {
       const frameOffsetX = (frame % columns) * framePixelSize;
       const frameOffsetY = Math.floor(frame / columns) * framePixelSize;
+      frameSourceX[frame] = frameOffsetX;
+      frameSourceY[frame] = frameOffsetY;
       const rotation = frameCount === 1
         ? 0
         : -0.07 + (frame / (frameCount - 1)) * 0.14;
@@ -3082,9 +3272,16 @@
       frameCount,
       framePixelSize,
       frameLogicalSize,
+      frameLogicalHalf: frameLogicalSize / 2,
+      frameSourceX,
+      frameSourceY,
     };
     if (renderCache.enemySprites.size >= 32) renderCache.enemySprites.clear();
     renderCache.enemySprites.set(key, sprite);
+    enemy.renderSprite = sprite;
+    enemy.renderSpriteGeneration = renderCache.generation;
+    enemy.renderSpriteHp = enemy.hp;
+    enemy.renderSpriteHit = hitState;
     return sprite;
   }
 
@@ -3280,29 +3477,39 @@
   }
 
   function drawEnemies() {
-    for (const enemy of enemies) {
-      const margin = enemy.radius + scaleWorld(45);
+    const cullPadding = scaleWorld(45);
+    const bobDistance = scaleWorld(2.4);
+    const cacheGeneration = renderCache.generation;
+    for (let index = 0; index < enemies.length; index += 1) {
+      const enemy = enemies[index];
+      const margin = enemy.radius + cullPadding;
       if (
         enemy.x < -margin
         || enemy.x > world.width + margin
         || enemy.y < -margin
         || enemy.y > world.height + margin
       ) continue;
-      const drawY = enemy.y + Math.sin(enemy.phase) * scaleWorld(2.4);
-      const sprite = getEnemySprite(enemy);
+      const drawY = enemy.y + Math.sin(enemy.phase) * bobDistance;
+      const hitState = enemy.hitFlash > 0;
+      const sprite = enemy.renderSprite
+        && enemy.renderSpriteGeneration === cacheGeneration
+        && enemy.renderSpriteHp === enemy.hp
+        && enemy.renderSpriteHit === hitState
+        ? enemy.renderSprite
+        : getEnemySprite(enemy);
       if (sprite) {
         const tilt = enemy.mode === "rush" ? 0 : Math.sin(enemy.phase * 0.7) * 0.07;
         const frame = sprite.frameCount === 1
           ? 0
-          : Math.round(((tilt + 0.07) / 0.14) * (sprite.frameCount - 1));
+          : ((((tilt + 0.07) / 0.14) * (sprite.frameCount - 1)) + 0.5) | 0;
         ctx.drawImage(
           sprite.canvas,
-          (frame % sprite.columns) * sprite.framePixelSize,
-          Math.floor(frame / sprite.columns) * sprite.framePixelSize,
+          sprite.frameSourceX[frame],
+          sprite.frameSourceY[frame],
           sprite.framePixelSize,
           sprite.framePixelSize,
-          enemy.x - sprite.frameLogicalSize / 2,
-          drawY - sprite.frameLogicalSize / 2,
+          enemy.x - sprite.frameLogicalHalf,
+          drawY - sprite.frameLogicalHalf,
           sprite.frameLogicalSize,
           sprite.frameLogicalSize,
         );
@@ -3351,29 +3558,37 @@
   }
 
   function drawProjectiles() {
-    for (const projectile of projectiles) {
-      const margin = projectile.radius + scaleWorld(30);
+    const cullPadding = scaleWorld(30);
+    const cacheGeneration = renderCache.generation;
+    for (let index = 0; index < projectiles.length; index += 1) {
+      const projectile = projectiles[index];
+      const margin = projectile.radius + cullPadding;
       if (
         projectile.x < -margin
         || projectile.x > world.width + margin
         || projectile.y < -margin
         || projectile.y > world.height + margin
       ) continue;
-      const sprite = getProjectileSprite(projectile);
+      const sprite = projectile.renderSprite
+        && projectile.renderSpriteGeneration === cacheGeneration
+        && projectile.renderSpriteRadius === projectile.radius
+        && projectile.renderSpriteColor === projectile.color
+        ? projectile.renderSprite
+        : getProjectileSprite(projectile);
       if (sprite) {
         const normalizedRotation = projectile.rotation < sprite.rotationPeriod
           ? projectile.rotation
           : projectile.rotation % sprite.rotationPeriod;
-        let frame = Math.round(normalizedRotation * sprite.rotationFrameScale);
+        let frame = (normalizedRotation * sprite.rotationFrameScale + 0.5) | 0;
         if (frame === sprite.frameCount) frame = 0;
         ctx.drawImage(
           sprite.canvas,
-          (frame % sprite.columns) * sprite.framePixelSize,
-          Math.floor(frame / sprite.columns) * sprite.framePixelSize,
+          sprite.frameSourceX[frame],
+          sprite.frameSourceY[frame],
           sprite.framePixelSize,
           sprite.framePixelSize,
-          projectile.x - sprite.frameLogicalSize / 2,
-          projectile.y - sprite.frameLogicalSize / 2,
+          projectile.x - sprite.frameLogicalHalf,
+          projectile.y - sprite.frameLogicalHalf,
           sprite.frameLogicalSize,
           sprite.frameLogicalSize,
         );
@@ -3601,53 +3816,101 @@
   }
 
   function drawPowerupStatus() {
-    const statuses = [];
+    let statusCount = 0;
     if (shieldTime > 0 && shieldHits > 0) {
-      statuses.push({ type: "shield", text: `SHIELD ${shieldHits} · ${shieldTime.toFixed(1)}s`, color: COLORS.shield });
+      const status = powerupStatusItems[statusCount];
+      const tenths = Math.max(0, Math.floor(shieldTime * 10 + 0.5));
+      if (status.tenths !== tenths || status.hits !== shieldHits) {
+        status.text = `SHIELD ${shieldHits} · ${(tenths / 10).toFixed(1)}s`;
+        status.tenths = tenths;
+        status.hits = shieldHits;
+      }
+      status.type = "shield";
+      status.color = COLORS.shield;
+      statusCount += 1;
     }
     if (speedTime > 0) {
-      statuses.push({ type: "speed", text: `SUPER SPEED · ${speedTime.toFixed(1)}s`, color: COLORS.speed });
+      const status = powerupStatusItems[statusCount];
+      const tenths = Math.max(0, Math.floor(speedTime * 10 + 0.5));
+      if (status.type !== "speed" || status.tenths !== tenths) {
+        status.text = `SUPER SPEED · ${(tenths / 10).toFixed(1)}s`;
+        status.tenths = tenths;
+      }
+      status.type = "speed";
+      status.color = COLORS.speed;
+      status.hits = -1;
+      statusCount += 1;
     }
     if (superStarsTime > 0) {
-      statuses.push({ type: "super", text: `SUPER STARS · ${superStarsTime.toFixed(1)}s`, color: COLORS.super });
+      const status = powerupStatusItems[statusCount];
+      const tenths = Math.max(0, Math.floor(superStarsTime * 10 + 0.5));
+      if (status.type !== "super" || status.tenths !== tenths) {
+        status.text = `SUPER STARS · ${(tenths / 10).toFixed(1)}s`;
+        status.tenths = tenths;
+      }
+      status.type = "super";
+      status.color = COLORS.super;
+      status.hits = -1;
+      statusCount += 1;
     }
     if (magnetTime > 0) {
-      statuses.push({ type: "magnet", text: `MAGNET · ${magnetTime.toFixed(1)}s`, color: COLORS.magnet });
+      const status = powerupStatusItems[statusCount];
+      const tenths = Math.max(0, Math.floor(magnetTime * 10 + 0.5));
+      if (status.type !== "magnet" || status.tenths !== tenths) {
+        status.text = `MAGNET · ${(tenths / 10).toFixed(1)}s`;
+        status.tenths = tenths;
+      }
+      status.type = "magnet";
+      status.color = COLORS.magnet;
+      status.hits = -1;
+      statusCount += 1;
     }
-    if (!statuses.length) return;
+    if (!statusCount) return;
 
-    const shortViewport = world.height <= 500;
-    const fontSize = clamp(world.width * 0.012, shortViewport ? 9 : 10, shortViewport ? 11 : 13);
-    const iconSize = fontSize * (shortViewport ? 1.08 : 1.18);
-    const iconGap = shortViewport ? 4 : 6;
-    const horizontalPadding = shortViewport ? 7 : 10;
-    const verticalPadding = shortViewport ? 5 : 7;
-    const height = Math.max(fontSize, iconSize) + verticalPadding * 2;
-    const gap = shortViewport ? 4 : 6;
-    const availableWidth = Math.max(1, world.bounds.right - world.bounds.left);
-    const statusFont = `800 ${fontSize}px "Futura Web", sans-serif`;
-    const widths = statuses.map((status) => {
+    const layout = renderCache.powerupStatusLayout;
+    const {
+      shortViewport,
+      iconSize,
+      iconGap,
+      horizontalPadding,
+      height,
+      gap,
+      availableWidth,
+      font: statusFont,
+    } = layout;
+    for (let index = 0; index < statusCount; index += 1) {
+      const status = powerupStatusItems[index];
       const textWidth = measureCachedText(status.text, statusFont);
       status.textWidth = textWidth;
-      return Math.min(
+      status.width = Math.min(
         availableWidth,
         horizontalPadding * 2 + iconSize + iconGap + textWidth,
       );
-    });
+    }
 
-    const rows = [];
-    let row = { items: [], width: 0 };
-    statuses.forEach((status, index) => {
-      const width = widths[index];
-      const nextWidth = row.items.length ? row.width + gap + width : width;
-      if (row.items.length && nextWidth > availableWidth) {
-        rows.push(row);
-        row = { items: [], width: 0 };
+    let rowCount = 0;
+    let rowStart = 0;
+    let rowWidth = 0;
+    for (let index = 0; index < statusCount; index += 1) {
+      const width = powerupStatusItems[index].width;
+      const nextWidth = index > rowStart ? rowWidth + gap + width : width;
+      if (index > rowStart && nextWidth > availableWidth) {
+        const completedRow = powerupStatusRows[rowCount];
+        completedRow.start = rowStart;
+        completedRow.end = index;
+        completedRow.width = rowWidth;
+        rowCount += 1;
+        rowStart = index;
+        rowWidth = width;
+      } else {
+        rowWidth = nextWidth;
       }
-      row.items.push({ status, width });
-      row.width += (row.items.length > 1 ? gap : 0) + width;
-    });
-    if (row.items.length) rows.push(row);
+    }
+    const finalRow = powerupStatusRows[rowCount];
+    finalRow.start = rowStart;
+    finalRow.end = statusCount;
+    finalRow.width = rowWidth;
+    rowCount += 1;
 
     ctx.save();
     ctx.font = statusFont;
@@ -3656,9 +3919,12 @@
 
     let y = world.bounds.top + 10;
 
-    rows.forEach((statusRow) => {
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+      const statusRow = powerupStatusRows[rowIndex];
       let x = world.bounds.right - statusRow.width;
-      statusRow.items.forEach(({ status, width }) => {
+      for (let itemIndex = statusRow.start; itemIndex < statusRow.end; itemIndex += 1) {
+        const status = powerupStatusItems[itemIndex];
+        const width = status.width;
         ctx.fillStyle = "rgba(18, 12, 8, 0.9)";
         ctx.fillRect(x, y, width, height);
         ctx.strokeStyle = status.color;
@@ -3685,9 +3951,9 @@
         ctx.restore();
 
         x += width + gap;
-      });
+      }
       y += height + gap;
-    });
+    }
     ctx.restore();
   }
 
@@ -3714,28 +3980,54 @@
   function drawParticles() {
     ctx.save();
     const stride = qualitySettings.particleDrawStride;
+    const cullPadding = scaleWorld(16);
+    const starRadiusPadding = scaleWorld(1.5);
+    let lastColor = null;
     for (let index = 0; index < particles.length; index += stride) {
       const particle = particles[index];
-      const margin = particle.size + scaleWorld(16);
+      const margin = particle.size + cullPadding;
       if (
         particle.x < -margin
         || particle.x > world.width + margin
         || particle.y < -margin
         || particle.y > world.height + margin
       ) continue;
-      const alpha = clamp(particle.life / particle.maxLife, 0, 1);
+      const lifeRatio = particle.life / particle.maxLife;
+      const alpha = lifeRatio <= 0 ? 0 : lifeRatio >= 1 ? 1 : lifeRatio;
       ctx.globalAlpha = alpha;
       if (particle.star && qualityLevel !== "low") {
-        drawStar(
-          particle.x,
-          particle.y,
-          particle.size + scaleWorld(1.5),
-          particle.size * 0.42,
+        const outerRadius = particle.size + starRadiusPadding;
+        const starPath = particle.renderStarPath || createStarPath(
           5,
-          particle.color,
+          (particle.size * 0.42) / outerRadius,
         );
+        particle.renderStarPath = starPath;
+        if (starPath) {
+          if (particle.color !== lastColor) {
+            ctx.fillStyle = particle.color;
+            lastColor = particle.color;
+          }
+          ctx.save();
+          ctx.translate(particle.x, particle.y);
+          ctx.scale(outerRadius, outerRadius);
+          ctx.fill(starPath);
+          ctx.restore();
+        } else {
+          drawStar(
+            particle.x,
+            particle.y,
+            outerRadius,
+            particle.size * 0.42,
+            5,
+            particle.color,
+          );
+          lastColor = particle.color;
+        }
       } else {
-        ctx.fillStyle = particle.color;
+        if (particle.color !== lastColor) {
+          ctx.fillStyle = particle.color;
+          lastColor = particle.color;
+        }
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fill();
@@ -3750,8 +4042,10 @@
     ctx.lineWidth = Math.max(1.5, scaleWorld(4));
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    for (const text of floatingTexts) {
-      const alpha = clamp(text.life / text.maxLife, 0, 1);
+    for (let index = 0; index < floatingTexts.length; index += 1) {
+      const text = floatingTexts[index];
+      const lifeRatio = text.life / text.maxLife;
+      const alpha = lifeRatio <= 0 ? 0 : lifeRatio >= 1 ? 1 : lifeRatio;
       ctx.globalAlpha = alpha;
       ctx.fillStyle = text.color;
       ctx.font = `800 ${text.size}px "Futura Web", sans-serif`;
