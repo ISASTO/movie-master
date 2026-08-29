@@ -682,6 +682,20 @@ html.game-paused .hud {
   min-width: 190px;
 }
 
+.hardcore-warning {
+  margin-top: 14px !important;
+  color: #ff806b;
+  font-size: clamp(0.62rem, 0.85vw, 0.76rem);
+  font-weight: 800;
+  letter-spacing: 0.105em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.hardcore-warning[hidden] {
+  display: none;
+}
+
 .secondary-button {
   border-color: var(--gold);
   background: rgba(18, 12, 8, 0.94);

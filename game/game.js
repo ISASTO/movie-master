@@ -27,6 +27,7 @@
     statsOverlay: $("stats-overlay"),
     startButton: $("start-button"),
     startModeButton: $("start-mode-button"),
+    startHardcoreWarning: $("start-hardcore-warning"),
     resumeButton: $("resume-button"),
     resetButton: $("reset-button"),
     resetCancelButton: $("reset-cancel-button"),
@@ -35,6 +36,7 @@
     statsButton: $("stats-button"),
     statsCloseButton: $("stats-close-button"),
     gameoverModeButton: $("gameover-mode-button"),
+    gameoverHardcoreWarning: $("gameover-hardcore-warning"),
     movementButton: $("movement-button"),
     qualityButton: $("quality-button"),
     pauseButton: $("pause-button"),
@@ -418,6 +420,9 @@
     for (const button of [ui.startModeButton, ui.gameoverModeButton]) {
       button.textContent = label;
       button.setAttribute("aria-pressed", enabled ? "true" : "false");
+    }
+    for (const warning of [ui.startHardcoreWarning, ui.gameoverHardcoreWarning]) {
+      warning.hidden = !enabled;
     }
     document.documentElement?.classList.toggle("hardcore-mode", enabled);
   }
@@ -989,7 +994,7 @@
     return { finalScore, scoreRecord, streakRecord };
   }
 
-  function endGame() {
+  function endGame(reason = "garbage") {
     if (gameState === "gameover") return;
 
     gameState = "gameover";
@@ -998,11 +1003,14 @@
 
     setFittedNumber(ui.finalScore, formatScore(records.finalScore));
     setFittedNumber(ui.finalLongestStreak, longestStreak);
-    ui.gameoverTitle.textContent = records.scoreRecord
-      ? "NEW BEST SCORE"
-      : records.streakRecord
-        ? "NEW BEST STREAK"
-        : "OVERWHELMED BY GARBAGE 🗑️";
+    const missedPopcorn = reason === "missed-popcorn";
+    ui.gameoverTitle.textContent = missedPopcorn
+      ? "YOU MISSED A POPCORN"
+      : records.scoreRecord
+        ? "NEW BEST SCORE"
+        : records.streakRecord
+          ? "NEW BEST STREAK"
+          : "OVERWHELMED BY GARBAGE 🗑️";
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = false;
@@ -1014,11 +1022,13 @@
     renderGameStats(records.finalScore);
     updateInterface(true);
     announce(
-      records.scoreRecord
-        ? "New best score."
-        : records.streakRecord
-          ? "New best streak."
-          : "Game over.",
+      missedPopcorn
+        ? "You missed a popcorn. Game over."
+        : records.scoreRecord
+          ? "New best score."
+          : records.streakRecord
+            ? "New best streak."
+            : "Game over.",
     );
     playCue("gameover");
   }
@@ -1624,6 +1634,12 @@
     popcornChain = 0;
     mastery = Math.max(0, mastery - 0.1);
     runStats.popcornMissed += 1;
+
+    if (hardcoreMode) {
+      endGame("missed-popcorn");
+      return;
+    }
+
     popcornSpawnTimer = 0.55;
     const surgeCount = Math.min(9, 3 + Math.ceil(difficultyLevel * 0.75));
 
@@ -2099,6 +2115,7 @@
 
     updatePowerups(dt);
     updatePickups(dt);
+    if (gameState !== "running") return;
     updateEnemies(dt);
     updateProjectiles(dt);
     updateBlast(dt);
