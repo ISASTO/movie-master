@@ -107,9 +107,9 @@
   const GAMEPAD_BLAST_BUTTONS = [0, 1, 2, 3, 7];
   const GAMEPAD_PAUSE_BUTTON = 9;
   const GAMEPAD_RUMBLE = {
-    blast: { duration: 90, weakMagnitude: 0.2, strongMagnitude: 0.34 },
+    blast: { duration: 130, weakMagnitude: 0.3, strongMagnitude: 0.5 },
     hit: { duration: 130, weakMagnitude: 0.3, strongMagnitude: 0.5 },
-    shield: { duration: 70, weakMagnitude: 0.16, strongMagnitude: 0.26 },
+    shield: { duration: 85, weakMagnitude: 0.2, strongMagnitude: 0.38 },
   };
   const POPCORN_LIFETIME_MULTIPLIER = 1.25;
   const MAX_PURSUIT_LEAD_FRACTION = 0.42;
@@ -1880,7 +1880,7 @@
     if (player.lives <= 0) endGame();
   }
 
-  function activateBlast() {
+  function activateBlast(sourceGamepad = null) {
     if (gameState !== "running" || mastery < 0.999 || blast) return;
 
     mastery = Math.max(0, mastery - 1);
@@ -1912,7 +1912,7 @@
         : "Blockbuster Blast activated.",
     );
     playCue("blast");
-    vibrateGamepad("blast");
+    vibrateGamepad("blast", sourceGamepad);
     updateInterface(true);
   }
 
@@ -2194,38 +2194,81 @@
     return selected;
   }
 
-  function vibrateGamepad(cue) {
-    const settings = GAMEPAD_RUMBLE[cue];
-    const gamepad = chooseActiveGamepad();
-    if (!settings || !gamepad) return;
-
-    const primaryActuator = gamepad.vibrationActuator;
-    const fallbackActuator = gamepad.hapticActuators?.[0];
-
+  function supportsGamepadHapticEffect(actuator, effectType) {
     try {
-      let result = null;
-      if (typeof primaryActuator?.playEffect === "function") {
-        result = primaryActuator.playEffect("dual-rumble", {
+      if (typeof actuator?.canPlayEffectType === "function") {
+        return Boolean(actuator.canPlayEffectType(effectType));
+      }
+      if (typeof actuator?.effects?.includes === "function") {
+        return actuator.effects.includes(effectType);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function playGamepadHaptic(actuator, settings) {
+    if (!actuator) return false;
+
+    if (
+      typeof actuator.playEffect === "function"
+      && supportsGamepadHapticEffect(actuator, "dual-rumble")
+    ) {
+      try {
+        await actuator.playEffect("dual-rumble", {
           startDelay: 0,
           duration: settings.duration,
           weakMagnitude: settings.weakMagnitude,
           strongMagnitude: settings.strongMagnitude,
         });
-      } else {
-        const pulseActuator = typeof primaryActuator?.pulse === "function"
-          ? primaryActuator
-          : fallbackActuator;
-        if (typeof pulseActuator?.pulse === "function") {
-          result = pulseActuator.pulse(
-            Math.max(settings.weakMagnitude, settings.strongMagnitude),
-            settings.duration,
-          );
-        }
+        return true;
+      } catch {
+        // Try the legacy pulse API or another actuator exposed by the browser.
       }
-      if (typeof result?.catch === "function") result.catch(() => {});
-    } catch {
-      // Haptics are optional and must never interrupt gameplay.
     }
+
+    if (typeof actuator.pulse === "function") {
+      try {
+        const result = await actuator.pulse(
+          Math.max(settings.weakMagnitude, settings.strongMagnitude),
+          settings.duration,
+        );
+        return result !== false;
+      } catch {
+        // Try the next actuator, if the browser exposes one.
+      }
+    }
+
+    return false;
+  }
+
+  function vibrateGamepad(cue, sourceGamepad = null) {
+    const settings = GAMEPAD_RUMBLE[cue];
+    if (!settings) return;
+
+    const sourceIsGamepad = sourceGamepad
+      && Number.isInteger(sourceGamepad.index)
+      && sourceGamepad.connected !== false;
+    const gamepad = sourceIsGamepad ? sourceGamepad : chooseActiveGamepad();
+    if (!gamepad) return;
+
+    const actuators = [];
+    const addActuator = (actuator) => {
+      if (actuator && !actuators.includes(actuator)) actuators.push(actuator);
+    };
+    addActuator(gamepad.vibrationActuator);
+    const legacyActuators = gamepad.hapticActuators;
+    for (let index = 0; index < (legacyActuators?.length || 0); index += 1) {
+      addActuator(legacyActuators[index]);
+    }
+    if (actuators.length === 0) return;
+
+    void (async () => {
+      for (const actuator of actuators) {
+        if (await playGamepadHaptic(actuator, settings)) return;
+      }
+    })();
   }
 
   function pollGamepad() {
@@ -2245,7 +2288,7 @@
     const blastPressed = GAMEPAD_BLAST_BUTTONS.some(
       (index) => isGamepadButtonPressed(gamepad, index),
     );
-    if (blastPressed && !gamepadBlastPressed) activateBlast();
+    if (blastPressed && !gamepadBlastPressed) activateBlast(gamepad);
     gamepadBlastPressed = blastPressed;
 
     const pausePressed = isGamepadButtonPressed(gamepad, GAMEPAD_PAUSE_BUTTON);
@@ -3865,7 +3908,7 @@
     event.stopPropagation();
     activateBlast();
   });
-  ui.judgmentButton.addEventListener("click", activateBlast);
+  ui.judgmentButton.addEventListener("click", () => activateBlast());
   canvas.addEventListener("pointerdown", () => {
     canvas.focus({ preventScroll: true });
   });
