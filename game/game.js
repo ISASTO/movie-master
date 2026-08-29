@@ -1470,19 +1470,38 @@
     const enemyClearance = scaleWorld(70);
     const enemyClearanceSquared = enemyClearance * enemyClearance;
     const exclusionZones = getTouchControlExclusionZones(radius);
-    let best = null;
+    const playerX = player.x;
+    const playerY = player.y;
+    const enemyCount = enemies.length;
+    let hasBest = false;
+    let bestX = 0;
+    let bestY = 0;
     let bestClearanceSquared = -Infinity;
 
-    const consider = (x, y) => {
-      if (isPopcornBlockedByTouchControls(x, y, radius, exclusionZones)) return false;
+    for (let candidateIndex = 0; candidateIndex < 95; candidateIndex += 1) {
+      let x;
+      let y;
+      if (candidateIndex < 32) {
+        x = randomBetween(minX, maxX);
+        y = randomBetween(minY, maxY);
+      } else {
+        const gridIndex = candidateIndex - 32;
+        const row = (gridIndex / 9) | 0;
+        const column = gridIndex % 9;
+        x = minX + ((maxX - minX) * (column + 0.5)) / 9;
+        y = minY + ((maxY - minY) * (row + 0.5)) / 7;
+      }
 
-      const playerDx = x - player.x;
-      const playerDy = y - player.y;
+      if (isPopcornBlockedByTouchControls(x, y, radius, exclusionZones)) continue;
+
+      const playerDx = x - playerX;
+      const playerDy = y - playerY;
       const playerDistanceSquared = playerDx * playerDx + playerDy * playerDy;
       let nearestClearanceSquared = playerDistanceSquared;
       let clearsEnemies = true;
 
-      for (const enemy of enemies) {
+      for (let index = 0; index < enemyCount; index += 1) {
+        const enemy = enemies[index];
         const enemyDx = x - enemy.x;
         const enemyDy = y - enemy.y;
         const enemyDistanceSquared = enemyDx * enemyDx + enemyDy * enemyDy;
@@ -1493,30 +1512,18 @@
       }
 
       if (playerDistanceSquared >= requiredDistanceSquared && clearsEnemies) {
-        best = { x, y };
-        return true;
+        return { x, y };
       }
 
       if (nearestClearanceSquared > bestClearanceSquared) {
         bestClearanceSquared = nearestClearanceSquared;
-        best = { x, y };
-      }
-      return false;
-    };
-
-    for (let attempt = 0; attempt < 32; attempt += 1) {
-      if (consider(randomBetween(minX, maxX), randomBetween(minY, maxY))) return best;
-    }
-
-    for (let row = 0; row < 7; row += 1) {
-      const y = minY + ((maxY - minY) * (row + 0.5)) / 7;
-      for (let column = 0; column < 9; column += 1) {
-        const x = minX + ((maxX - minX) * (column + 0.5)) / 9;
-        if (consider(x, y)) return best;
+        hasBest = true;
+        bestX = x;
+        bestY = y;
       }
     }
 
-    return best;
+    return hasBest ? { x: bestX, y: bestY } : null;
   }
 
   function spawnPopcorn() {
@@ -2443,6 +2450,8 @@
   }
 
   function updateProjectiles(dt) {
+    if (!projectiles.length) return;
+
     const offscreenMargin = scaleWorld(30);
     const maximumXBoundary = world.width + offscreenMargin;
     const maximumYBoundary = world.height + offscreenMargin;
