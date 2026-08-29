@@ -700,6 +700,25 @@ html[data-game-quality="low"] .game-instructions {
 
 .intermission-overlay {
   inset: var(--play-top) 0 var(--play-bottom);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 28px,
+    #000 calc(100% - 28px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 28px,
+    #000 calc(100% - 28px),
+    transparent 100%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  backdrop-filter: none;
 }
 
 .intermission-panel,
@@ -712,40 +731,28 @@ html[data-game-quality="low"] .game-instructions {
 
 .intermission-panel {
   position: relative;
+  isolation: isolate;
   width: min(1160px, calc(100vw - 32px));
   padding-inline: clamp(16px, 4vw, 56px);
   border: 0;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(229, 164, 8, 0.055), transparent 58%),
-    rgba(17, 9, 5, 0.9);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 211, 96, 0.08),
-    0 18px 70px rgba(0, 0, 0, 0.58);
-}
-
-.intermission-panel::before,
-.intermission-panel::after {
-  position: absolute;
-  right: 6%;
-  left: 6%;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 211, 96, 0.5) 18%,
-    rgba(255, 211, 96, 0.5) 82%,
-    transparent
-  );
-  content: "";
-  pointer-events: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .intermission-panel::before {
-  top: 0;
-}
-
-.intermission-panel::after {
-  bottom: 0;
+  position: absolute;
+  z-index: -1;
+  inset: -18% -4%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(17, 9, 5, 0.97) 0,
+    rgba(17, 9, 5, 0.9) 52%,
+    rgba(17, 9, 5, 0.58) 72%,
+    rgba(17, 9, 5, 0.22) 86%,
+    transparent 100%
+  );
+  content: "";
+  pointer-events: none;
 }
 
 .gameover-panel {
