@@ -203,6 +203,10 @@ html[data-game-quality="low"] .game-instructions {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
+html.game-paused .game-bar {
+  z-index: 42;
+}
+
 .game-identity {
   min-width: 0;
 }
@@ -290,6 +294,10 @@ html[data-game-quality="low"] .game-instructions {
   background: rgba(16, 9, 5, 0.9);
   box-shadow: 7px 7px 0 rgba(64, 29, 6, 0.48);
   backdrop-filter: blur(7px);
+}
+
+html.game-paused .hud {
+  z-index: 40;
 }
 
 .hud-stat,
@@ -699,25 +707,22 @@ html[data-game-quality="low"] .game-instructions {
 }
 
 .intermission-overlay {
-  inset: var(--play-top) 0 var(--play-bottom);
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 28px,
-    #000 calc(100% - 28px),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent 0,
-    #000 28px,
-    #000 calc(100% - 28px),
-    transparent 100%
-  );
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
+  inset: 0;
+  padding-top: calc(var(--play-top) + 18px);
+  padding-bottom: calc(var(--play-bottom) + 18px);
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.012) 0,
+      rgba(255, 255, 255, 0.012) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    repeating-conic-gradient(
+      from -7deg at 50% 56%,
+      #171004 0 8deg,
+      #090503 8deg 16deg
+    );
   backdrop-filter: none;
 }
 
@@ -731,28 +736,11 @@ html[data-game-quality="low"] .game-instructions {
 
 .intermission-panel {
   position: relative;
-  isolation: isolate;
   width: min(1160px, calc(100vw - 32px));
   padding-inline: clamp(16px, 4vw, 56px);
   border: 0;
   background: transparent;
   box-shadow: none;
-}
-
-.intermission-panel::before {
-  position: absolute;
-  z-index: -1;
-  inset: -18% -4%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(17, 9, 5, 0.97) 0,
-    rgba(17, 9, 5, 0.9) 52%,
-    rgba(17, 9, 5, 0.58) 72%,
-    rgba(17, 9, 5, 0.22) 86%,
-    transparent 100%
-  );
-  content: "";
-  pointer-events: none;
 }
 
 .gameover-panel {

@@ -759,10 +759,15 @@
     updateInterface(true);
   }
 
+  function setPausePresentation(active) {
+    document.documentElement?.classList.toggle("game-paused", active);
+  }
+
   function startGame() {
     ensureAudio();
     resetGame();
     gameState = "running";
+    setPausePresentation(false);
     ui.startOverlay.hidden = true;
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
@@ -797,6 +802,7 @@
     if (gameState === "gameover") return;
 
     gameState = "gameover";
+    setPausePresentation(false);
     const records = saveRunRecords();
 
     setFittedNumber(ui.finalScore, formatScore(records.finalScore));
@@ -849,6 +855,7 @@
   function togglePause(forcePause = false) {
     if (gameState === "running") {
       gameState = "paused";
+      setPausePresentation(true);
       ui.resetConfirmOverlay.hidden = true;
       ui.pauseOverlay.hidden = false;
       ui.pauseButton.textContent = "RESUME";
@@ -859,6 +866,7 @@
 
     if (gameState === "paused" && !forcePause) {
       gameState = "running";
+      setPausePresentation(false);
       ui.pauseOverlay.hidden = true;
       ui.resetConfirmOverlay.hidden = true;
       ui.pauseButton.textContent = "PAUSE";
@@ -3496,10 +3504,13 @@
     lastFrame = now;
     pollGamepad();
 
-    if (gameState === "running") update(dt);
-    else player.bob += dt * 2;
-
-    draw(now);
+    if (gameState === "running") {
+      update(dt);
+      draw(now);
+    } else if (gameState !== "paused") {
+      player.bob += dt * 2;
+      draw(now);
+    }
     window.requestAnimationFrame(frame);
   }
 
