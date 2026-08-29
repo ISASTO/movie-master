@@ -77,7 +77,6 @@
   const POPCORN_LIFETIME_MULTIPLIER = 1.25;
   const MAX_PURSUIT_LEAD_FRACTION = 0.42;
   const MAX_RECOMMENDATION_LEAD_FRACTION = 0.55;
-  const PROJECTILE_HOMING_RESPONSE = 7.5;
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
   const MAX_GAME_SCALE = 2;
@@ -511,14 +510,12 @@
     const projectile = projectiles[index];
     const last = projectiles.pop();
     if (index < projectiles.length) projectiles[index] = last;
-    projectile.target = null;
     if (projectilePool.length < MAX_PROJECTILE_POOL_SIZE) projectilePool.push(projectile);
   }
 
   function recycleAllProjectiles() {
     const room = MAX_PROJECTILE_POOL_SIZE - projectilePool.length;
     const start = Math.max(0, projectiles.length - room);
-    for (const projectile of projectiles) projectile.target = null;
     for (let index = start; index < projectiles.length; index += 1) {
       projectilePool.push(projectiles[index]);
     }
@@ -1356,14 +1353,7 @@
     playCue("miss");
   }
 
-  function emitRecommendationRow(
-    directionX,
-    directionY,
-    color,
-    speed,
-    projectileRadius,
-    target = null,
-  ) {
+  function emitRecommendationRow(directionX, directionY, color, speed, projectileRadius) {
     const startX = player.x;
     const startY = player.y - player.drawHeight * 0.08;
     const perpendicularX = -directionY;
@@ -1381,12 +1371,11 @@
       projectile.radius = projectileRadius;
       projectile.color = color;
       projectile.rotation = Math.random() * STAR_ROTATION_PERIOD;
-      projectile.target = target;
       projectiles.push(projectile);
     }
   }
 
-  function launchRecommendation(aimX, aimY, color = COLORS.goldBright, target = null) {
+  function launchRecommendation(aimX, aimY, color = COLORS.goldBright) {
     const startX = player.x;
     const startY = player.y - player.drawHeight * 0.08;
     const dx = aimX - startX;
@@ -1400,7 +1389,6 @@
       color,
       currentProjectileSpeed(),
       currentProjectileRadius(),
-      target,
     );
     return true;
   }
@@ -1481,8 +1469,7 @@
       );
     const aimX = target.x + (target.vx || 0) * lead;
     const aimY = target.y + (target.vy || 0) * lead;
-    const projectileTarget = target.kind === "fast" ? target : null;
-    return launchRecommendation(aimX, aimY, COLORS.goldBright, projectileTarget);
+    return launchRecommendation(aimX, aimY);
   }
 
   function addParticles(x, y, color, count = 10, speed = 120) {
@@ -2018,31 +2005,6 @@
     gamepadPausePressed = pausePressed;
   }
 
-  function steerProjectileTowardTarget(projectile, dt) {
-    const target = projectile.target;
-    if (!target || target.destroyed || target.hp <= 0) {
-      projectile.target = null;
-      return;
-    }
-
-    const dx = target.x - projectile.x;
-    const dy = target.y - projectile.y;
-    const distance = magnitude(dx, dy);
-    const speed = magnitude(projectile.vx, projectile.vy);
-    if (distance < 1 || speed < 1) return;
-
-    const steering = Math.min(1, PROJECTILE_HOMING_RESPONSE * dt);
-    const currentX = projectile.vx / speed;
-    const currentY = projectile.vy / speed;
-    const desiredX = dx / distance;
-    const desiredY = dy / distance;
-    const blendedX = currentX + (desiredX - currentX) * steering;
-    const blendedY = currentY + (desiredY - currentY) * steering;
-    const blendedLength = magnitude(blendedX, blendedY) || 1;
-    projectile.vx = (blendedX / blendedLength) * speed;
-    projectile.vy = (blendedY / blendedLength) * speed;
-  }
-
   function updateProjectiles(dt) {
     const offscreenMargin = scaleWorld(30);
     let destroyedEnemies = false;
@@ -2052,7 +2014,6 @@
       const projectile = projectiles[i];
       const previousX = projectile.x;
       const previousY = projectile.y;
-      if (projectile.target) steerProjectileTowardTarget(projectile, dt);
       projectile.x += projectile.vx * dt;
       projectile.y += projectile.vy * dt;
       projectile.rotation += dt * 10;
