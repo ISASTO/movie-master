@@ -1791,20 +1791,24 @@
     const actualCount = Math.ceil(count * motionMultiplier * qualitySettings.particleMultiplier);
     const speedMinimum = speed * 0.35;
     const speedRange = speed - speedMinimum;
+    const gameScale = world.gameScale;
+    const random = Math.random;
+    const cosine = Math.cos;
+    const sine = Math.sin;
     for (let i = 0; i < actualCount; i += 1) {
-      const angle = Math.random() * Math.PI * 2;
-      const velocity = (speedMinimum + Math.random() * speedRange) * world.gameScale;
-      const maxLife = 0.34 + Math.random() * (0.78 - 0.34);
+      const angle = random() * Math.PI * 2;
+      const velocity = (speedMinimum + random() * speedRange) * gameScale;
+      const maxLife = 0.34 + random() * (0.78 - 0.34);
       const particle = acquireParticle();
       particle.x = x;
       particle.y = y;
-      particle.vx = Math.cos(angle) * velocity;
-      particle.vy = Math.sin(angle) * velocity;
+      particle.vx = cosine(angle) * velocity;
+      particle.vy = sine(angle) * velocity;
       particle.life = maxLife;
       particle.maxLife = maxLife;
-      particle.size = (2 + Math.random() * (6 - 2)) * world.gameScale;
+      particle.size = (2 + random() * (6 - 2)) * gameScale;
       particle.color = color;
-      particle.star = Math.random() < 0.24;
+      particle.star = random() < 0.24;
       particle.renderStarPath = null;
       particles.push(particle);
     }
@@ -2200,6 +2204,15 @@
     const maximumPredictionScale = canPredictPlayer
       ? MAX_PURSUIT_LEAD_FRACTION / playerSpeed
       : 0;
+    const predictionCapScale = canPredictPlayer
+      ? playerSpeed / MAX_PURSUIT_LEAD_FRACTION
+      : 0;
+    const fastPredictionCap = 0.23 * predictionCapScale;
+    const heavyPredictionCap = 0.04 * predictionCapScale;
+    const standardPredictionCap = 0.11 * predictionCapScale;
+    const fastPredictionCapSquared = fastPredictionCap * fastPredictionCap;
+    const heavyPredictionCapSquared = heavyPredictionCap * heavyPredictionCap;
+    const standardPredictionCapSquared = standardPredictionCap * standardPredictionCap;
 
     for (let i = enemies.length - 1; i >= 0; i -= 1) {
       const enemy = enemies[i];
@@ -2229,12 +2242,16 @@
           : enemy.kind === "heavy"
             ? 0.04
             : 0.11;
+        const predictionCapSquared = enemy.kind === "fast"
+          ? fastPredictionCapSquared
+          : enemy.kind === "heavy"
+            ? heavyPredictionCapSquared
+            : standardPredictionCapSquared;
         const prediction = isCloseThreat || !canPredictPlayer
           ? 0
-          : Math.min(
-            preferredPrediction,
-            Math.sqrt(directDistanceSquared) * maximumPredictionScale,
-          );
+          : directDistanceSquared >= predictionCapSquared
+            ? preferredPrediction
+            : Math.sqrt(directDistanceSquared) * maximumPredictionScale;
         const targetX = player.x + player.vx * prediction;
         const targetY = player.y + player.vy * prediction;
         const dx = targetX - enemy.x;
@@ -2955,10 +2972,14 @@
   }
 
   function createStarPath(points, innerRatio) {
+    return createSizedStarPath(points, 1, innerRatio);
+  }
+
+  function createSizedStarPath(points, outerRadius, innerRadius) {
     if (typeof Path2D !== "function") return null;
     const path = new Path2D();
     for (let i = 0; i < points * 2; i += 1) {
-      const radius = i % 2 === 0 ? 1 : innerRatio;
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
       const angle = -Math.PI / 2 + (i * Math.PI) / points;
       const x = Math.cos(angle) * radius;
       const y = Math.sin(angle) * radius;
@@ -3602,10 +3623,7 @@
         ? projectile.renderSprite
         : getProjectileSprite(projectile);
       if (sprite) {
-        const normalizedRotation = projectile.rotation < sprite.rotationPeriod
-          ? projectile.rotation
-          : projectile.rotation % sprite.rotationPeriod;
-        let frame = (normalizedRotation * sprite.rotationFrameScale + 0.5) | 0;
+        let frame = (projectile.rotation * sprite.rotationFrameScale + 0.5) | 0;
         if (frame === sprite.frameCount) frame = 0;
         ctx.drawImage(
           sprite.canvas,
@@ -4023,9 +4041,10 @@
       ctx.globalAlpha = alpha;
       if (particle.star && qualityLevel !== "low") {
         const outerRadius = particle.size + starRadiusPadding;
-        const starPath = particle.renderStarPath || createStarPath(
+        const starPath = particle.renderStarPath || createSizedStarPath(
           5,
-          (particle.size * 0.42) / outerRadius,
+          outerRadius,
+          particle.size * 0.42,
         );
         particle.renderStarPath = starPath;
         if (starPath) {
@@ -4035,7 +4054,6 @@
           }
           ctx.save();
           ctx.translate(particle.x, particle.y);
-          ctx.scale(outerRadius, outerRadius);
           ctx.fill(starPath);
           ctx.restore();
         } else {

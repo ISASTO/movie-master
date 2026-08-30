@@ -87,7 +87,7 @@ const hook = String.raw`
         projectile.vy = 0;
         projectile.radius = scaleWorld(9 + (index % 4));
         projectile.color = index % 3 === 0 ? COLORS.super : COLORS.goldBright;
-        projectile.rotation = (index % 80) * 0.071;
+        projectile.rotation = ((index % 80) * 0.071) % STAR_ROTATION_PERIOD;
         projectiles.push(projectile);
       }
     },
@@ -189,6 +189,21 @@ const hook = String.raw`
     acquireTargetsMany(iterations) {
       for (let index = 0; index < iterations; index += 1) {
         fireAutomaticRecommendation();
+        recycleAllProjectiles();
+      }
+    },
+
+    buildSuperstarVolleyScene() {
+      this.buildCollisionScene(0, 0);
+      starRowSize = 5;
+      recommendationPower = 50;
+      superVolleyAngle = 0;
+      runStats = createRunStats();
+    },
+
+    fireSuperStarsMany(iterations) {
+      for (let index = 0; index < iterations; index += 1) {
+        fireSuperStars();
         recycleAllProjectiles();
       }
     },
@@ -537,6 +552,13 @@ const allScenarios = [
     units: 1600,
     setup: () => game.buildEnemyAiScene(240),
     run: () => game.acquireTargetsMany(1600),
+  },
+  {
+    name: "superstar-volley-500",
+    category: "update",
+    units: 600,
+    setup: () => game.buildSuperstarVolleyScene(),
+    run: () => game.fireSuperStarsMany(600),
   },
   {
     name: "crowded-popcorn-placement",
