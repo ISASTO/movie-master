@@ -715,21 +715,24 @@ html.hardcore-mode .hud {
 }
 
 .primary-button:hover,
-.primary-button.controller-selected,
 .secondary-button:hover,
-.secondary-button.controller-selected,
 .blast-button:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translate(-1px, -2px);
   box-shadow: 7px 7px 0 var(--gold-dark);
 }
 
-.primary-button:hover,
-.primary-button.controller-selected,
-.secondary-button:hover,
-.secondary-button.controller-selected {
-  outline: 3px solid #fff;
-  outline-offset: 3px;
+html.controller-input .primary-button.controller-selected,
+html.controller-input .secondary-button.controller-selected {
+  text-decoration-line: underline;
+  text-decoration-color: var(--paper-light);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 7px;
+}
+
+html.controller-input .primary-button.controller-selected:focus-visible,
+html.controller-input .secondary-button.controller-selected:focus-visible {
+  outline: none;
 }
 
 .primary-button:active,

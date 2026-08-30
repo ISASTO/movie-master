@@ -351,6 +351,7 @@
   let gamepadCancelPressed = false;
   let gamepadMenuDirectionActive = false;
   let controllerSelectedButton = null;
+  let controllerInputActive = false;
   let resumeCountdownStartedAt = 0;
   let resumeCountdownStep = "";
   let exitReturnState = "paused";
@@ -1054,7 +1055,16 @@
     controllerSelectedButton?.classList.remove("controller-selected");
     controllerSelectedButton = next;
     controllerSelectedButton?.classList.add("controller-selected");
-    controllerSelectedButton?.focus({ preventScroll: true });
+    if (controllerInputActive) controllerSelectedButton?.focus({ preventScroll: true });
+  }
+
+  function setControllerInputActive(active) {
+    const next = Boolean(active);
+    if (controllerInputActive === next) return;
+    controllerInputActive = next;
+    document.documentElement.classList.toggle("controller-input", next);
+    if (next) controllerSelectedButton?.focus({ preventScroll: true });
+    else controllerSelectedButton?.blur();
   }
 
   function selectDefaultMenuButton() {
@@ -2722,6 +2732,7 @@
   function pollGamepad() {
     const gamepad = chooseActiveGamepad();
     if (!gamepad) {
+      setControllerInputActive(false);
       gamepadMove.x = 0;
       gamepadMove.y = 0;
       gamepadMove.active = false;
@@ -2732,6 +2743,8 @@
       gamepadMenuDirectionActive = false;
       return;
     }
+
+    if (hasRelevantGamepadInput(gamepad)) setControllerInputActive(true);
 
     normalizeGamepadStick(gamepad.axes?.[0], gamepad.axes?.[1], gamepadMove);
     const menuActive = gameState === "ready"
@@ -4519,6 +4532,7 @@
   ]);
 
   window.addEventListener("keydown", (event) => {
+    setControllerInputActive(false);
     if (movementCodes.has(event.code)) {
       keys.add(event.code);
       if (gameState === "running") event.preventDefault();
@@ -4579,10 +4593,16 @@
     gamepadConfirmPressed = false;
     gamepadCancelPressed = false;
     gamepadMenuDirectionActive = false;
+    setControllerInputActive(false);
   });
+
+  window.addEventListener("pointerdown", () => {
+    setControllerInputActive(false);
+  }, { capture: true, passive: true });
 
   window.addEventListener("pointermove", (event) => {
     if (coarsePointer || event.pointerType === "touch") return;
+    setControllerInputActive(false);
     const rect = canvas.getBoundingClientRect();
     const movementBounds = world.playerBounds;
     mouseTarget.x = clamp(event.clientX - rect.left, movementBounds.left, movementBounds.right);
