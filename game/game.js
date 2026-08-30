@@ -140,6 +140,9 @@
   const MAX_RECOMMENDATION_LEAD_FRACTION = 0.55;
   const DUAL_BLAST_STREAK = 500;
   const POPCORN_SAFE_BORDER = 26;
+  const POPCORN_GLOW_RADIUS = 95;
+  const POWERUP_GLOW_RADIUS = 108;
+  const COLLECTIBLE_GLOW_GAP = 8;
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
   const MAX_GAME_SCALE = 2;
@@ -928,6 +931,18 @@
       const powerupInset = scaleWorld(35);
       powerup.x = clamp(powerup.x, left + powerupInset, right - powerupInset);
       powerup.y = clamp(powerup.y, top + powerupInset, bottom - powerupInset);
+    }
+
+    for (let index = pickups.length - 1; index >= 0; index -= 1) {
+      const pickup = pickups[index];
+      if (!isCollectibleGlowBlocked(pickup.x, pickup.y, powerups)) continue;
+      const replacement = choosePopcornPosition(pickup.radius);
+      if (replacement) {
+        pickup.x = replacement.x;
+        pickup.y = replacement.y;
+      } else {
+        pickups.splice(index, 1);
+      }
     }
 
     for (const particle of particles) {
@@ -1788,6 +1803,21 @@
     return false;
   }
 
+  function isCollectibleGlowBlocked(x, y, otherCollectibles) {
+    if (!otherCollectibles.length) return false;
+    const clearance = scaleWorld(
+      POPCORN_GLOW_RADIUS + POWERUP_GLOW_RADIUS + COLLECTIBLE_GLOW_GAP,
+    );
+    const clearanceSquared = clearance * clearance;
+    for (let index = 0; index < otherCollectibles.length; index += 1) {
+      const other = otherCollectibles[index];
+      const dx = x - other.x;
+      const dy = y - other.y;
+      if (dx * dx + dy * dy < clearanceSquared) return true;
+    }
+    return false;
+  }
+
   function choosePopcornPosition(radius) {
     const { left, right, top, bottom } = world.playerBounds;
     const width = right - left;
@@ -1827,6 +1857,7 @@
       }
 
       if (isPopcornBlockedByTouchControls(x, y, radius, exclusionZones)) continue;
+      if (isCollectibleGlowBlocked(x, y, powerups)) continue;
 
       const playerDx = x - playerX;
       const playerDy = y - playerY;
@@ -1898,8 +1929,6 @@
     const playerClearanceSquared = playerClearance * playerClearance;
     const enemyClearance = scaleWorld(75);
     const enemyClearanceSquared = enemyClearance * enemyClearance;
-    const pickupClearance = scaleWorld(90);
-    const pickupClearanceSquared = pickupClearance * pickupClearance;
 
     do {
       x = randomBetween(left + horizontalInset, right - horizontalInset);
@@ -1914,13 +1943,13 @@
         const dy = y - enemy.y;
         blocked = dx * dx + dy * dy < enemyClearanceSquared;
       }
-      for (let index = 0; !blocked && index < pickups.length; index += 1) {
-        const pickup = pickups[index];
-        const dx = x - pickup.x;
-        const dy = y - pickup.y;
-        blocked = dx * dx + dy * dy < pickupClearanceSquared;
-      }
+      if (!blocked) blocked = isCollectibleGlowBlocked(x, y, pickups);
     } while (attempts < 18 && blocked);
+
+    if (isCollectibleGlowBlocked(x, y, pickups)) {
+      powerupSpawnTimer = 0.5;
+      return;
+    }
 
     powerups.push({
       type,
@@ -4052,7 +4081,7 @@
 
       ctx.save();
       if (qualitySettings.pickupBeams) {
-        const beamRadius = scaleWorld(95);
+        const beamRadius = scaleWorld(POPCORN_GLOW_RADIUS);
         const beam = ctx.createRadialGradient(
           pickup.x,
           pickup.y,
@@ -4104,7 +4133,7 @@
 
       ctx.save();
       if (qualitySettings.pickupBeams) {
-        const beamRadius = scaleWorld(108);
+        const beamRadius = scaleWorld(POWERUP_GLOW_RADIUS);
         const beam = ctx.createRadialGradient(
           powerup.x,
           powerup.y,
