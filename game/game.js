@@ -352,6 +352,7 @@
   let gamepadMenuDirectionActive = false;
   let controllerSelectedButton = null;
   let controllerInputActive = false;
+  let backgroundAnimationTime = performance.now() / 1000;
   let resumeCountdownStartedAt = 0;
   let resumeCountdownStep = "";
   let exitReturnState = "paused";
@@ -3185,7 +3186,7 @@
       ctx.translate(randomBetween(-strength, strength), randomBetween(-strength, strength));
     }
 
-    drawBackground(time);
+    drawBackground(backgroundAnimationTime);
     drawRushWarning(time);
     drawPickups(time);
     drawPowerups(time);
@@ -4508,11 +4509,21 @@
     lastFrame = now;
     pollGamepad();
 
+    if (
+      gameState === "running"
+      || gameState === "resuming"
+      || gameState === "ready"
+      || gameState === "gameover"
+    ) {
+      backgroundAnimationTime += dt;
+    }
+
     if (gameState === "running") {
       update(dt);
       draw(now);
     } else if (gameState === "resuming") {
       updateResumeCountdown(now);
+      draw(now);
     } else if (gameState === "ready" || gameState === "gameover") {
       player.bob += dt * 2;
       draw(now);
