@@ -690,7 +690,7 @@ html.hardcore-mode .hud {
 
 .hardcore-warning {
   margin-top: 14px !important;
-  color: #ff806b;
+  color: #ff4e39;
   font-size: clamp(0.62rem, 0.85vw, 0.76rem);
   font-weight: 800;
   letter-spacing: 0.105em;
@@ -700,6 +700,11 @@ html.hardcore-mode .hud {
 
 .hardcore-warning[hidden] {
   display: none;
+}
+
+#start-hardcore-warning[hidden] {
+  display: block;
+  visibility: hidden;
 }
 
 .secondary-button {

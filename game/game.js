@@ -24,6 +24,7 @@
     startOverlay: $("start-overlay"),
     pauseOverlay: $("pause-overlay"),
     resetConfirmOverlay: $("reset-confirm-overlay"),
+    endConfirmOverlay: $("end-confirm-overlay"),
     exitConfirmOverlay: $("exit-confirm-overlay"),
     gameoverOverlay: $("gameover-overlay"),
     statsOverlay: $("stats-overlay"),
@@ -36,6 +37,9 @@
     resetButton: $("reset-button"),
     resetCancelButton: $("reset-cancel-button"),
     resetConfirmButton: $("reset-confirm-button"),
+    endButton: $("end-button"),
+    endCancelButton: $("end-cancel-button"),
+    endConfirmButton: $("end-confirm-button"),
     exitButton: $("exit-button"),
     exitCancelButton: $("exit-cancel-button"),
     exitConfirmButton: $("exit-confirm-button"),
@@ -1039,8 +1043,9 @@
 
   function visibleMenuButtons() {
     if (gameState === "ready") return [ui.startButton, ui.startModeButton];
-    if (gameState === "paused") return [ui.resumeButton, ui.resetButton];
+    if (gameState === "paused") return [ui.resumeButton, ui.resetButton, ui.endButton];
     if (gameState === "reset-confirm") return [ui.resetCancelButton, ui.resetConfirmButton];
+    if (gameState === "end-confirm") return [ui.endCancelButton, ui.endConfirmButton];
     if (gameState === "exit-confirm") return [ui.exitCancelButton, ui.exitConfirmButton];
     if (gameState === "gameover" && !ui.statsOverlay.hidden) return [ui.statsCloseButton];
     if (gameState === "gameover") {
@@ -1123,6 +1128,7 @@
     setPausePresentation(true);
     hideResumeCountdown();
     ui.resetConfirmOverlay.hidden = true;
+    ui.endConfirmOverlay.hidden = true;
     ui.exitConfirmOverlay.hidden = true;
     ui.pauseOverlay.hidden = false;
     ui.pauseButton.textContent = "RESUME";
@@ -1138,6 +1144,7 @@
     setPausePresentation(false);
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
+    ui.endConfirmOverlay.hidden = true;
     ui.exitConfirmOverlay.hidden = true;
     clearControllerSelection();
     resumeCountdownStartedAt = performance.now();
@@ -1186,6 +1193,7 @@
     ui.startOverlay.hidden = true;
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
+    ui.endConfirmOverlay.hidden = true;
     ui.exitConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = true;
     ui.statsOverlay.hidden = true;
@@ -1219,15 +1227,19 @@
     setFittedNumber(ui.finalScore, formatScore(records.finalScore));
     setFittedNumber(ui.finalLongestStreak, longestStreak);
     const missedPopcorn = reason === "missed-popcorn";
-    ui.gameoverTitle.textContent = missedPopcorn
-      ? "YOU MISSED A POPCORN"
-      : records.scoreRecord
-        ? "NEW BEST SCORE"
-        : records.streakRecord
-          ? "NEW BEST STREAK"
-          : "OVERWHELMED BY GARBAGE 🗑️";
+    const manuallyEnded = reason === "manual";
+    ui.gameoverTitle.textContent = manuallyEnded
+      ? "RUN ENDED"
+      : missedPopcorn
+        ? "YOU MISSED A POPCORN"
+        : records.scoreRecord
+          ? "NEW BEST SCORE"
+          : records.streakRecord
+            ? "NEW BEST STREAK"
+            : "OVERWHELMED BY GARBAGE 🗑️";
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
+    ui.endConfirmOverlay.hidden = true;
     ui.exitConfirmOverlay.hidden = true;
     hideResumeCountdown();
     ui.gameoverOverlay.hidden = false;
@@ -1241,13 +1253,15 @@
     updateInterface(true);
     selectDefaultMenuButton();
     announce(
-      missedPopcorn
-        ? "You missed a popcorn. Game over."
-        : records.scoreRecord
-          ? "New best score."
-          : records.streakRecord
-            ? "New best streak."
-            : "Game over.",
+      manuallyEnded
+        ? "Run ended. Results are ready."
+        : missedPopcorn
+          ? "You missed a popcorn. Game over."
+          : records.scoreRecord
+            ? "New best score."
+            : records.streakRecord
+              ? "New best streak."
+              : "Game over.",
     );
     playCue("gameover");
   }
@@ -1363,20 +1377,46 @@
     startGame();
   }
 
+  function openEndConfirmation() {
+    if (gameState !== "paused") return;
+    gameState = "end-confirm";
+    ui.pauseOverlay.hidden = true;
+    ui.endConfirmOverlay.hidden = false;
+    setControllerSelection(ui.endCancelButton);
+    announce("Confirm end game. Your run will end and results will be shown.");
+  }
+
+  function cancelEndConfirmation() {
+    if (gameState !== "end-confirm" || ui.endConfirmOverlay.hidden) return;
+    gameState = "paused";
+    ui.endConfirmOverlay.hidden = true;
+    ui.pauseOverlay.hidden = false;
+    setControllerSelection(ui.endButton);
+    announce("End game cancelled. Intermission.");
+  }
+
+  function confirmEndGame() {
+    if (gameState !== "end-confirm") return;
+    endGame("manual");
+  }
+
   function openExitConfirmation(event) {
     if (gameState === "exit-confirm") {
       event?.preventDefault();
       return;
     }
-    if (!["running", "paused", "resuming", "reset-confirm"].includes(gameState)) return;
+    if (!["running", "paused", "resuming", "reset-confirm", "end-confirm"].includes(gameState)) return;
     event?.preventDefault();
     flushRunRecords();
-    exitReturnState = gameState === "paused" || gameState === "reset-confirm" ? "paused" : "running";
+    exitReturnState = gameState === "paused" || gameState === "reset-confirm" || gameState === "end-confirm"
+      ? "paused"
+      : "running";
     gameState = "exit-confirm";
     setPausePresentation(true);
     hideResumeCountdown();
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
+    ui.endConfirmOverlay.hidden = true;
     ui.exitConfirmOverlay.hidden = false;
     mouseTarget.active = false;
     resetJoystick();
@@ -2751,6 +2791,7 @@
     const menuActive = gameState === "ready"
       || gameState === "paused"
       || gameState === "reset-confirm"
+      || gameState === "end-confirm"
       || gameState === "exit-confirm"
       || gameState === "gameover";
     const menuButtons = menuActive ? visibleMenuButtons() : null;
@@ -2791,6 +2832,7 @@
     const cancelPressed = isGamepadButtonPressed(gamepad, GAMEPAD_CANCEL_BUTTON);
     if (menuActive && cancelPressed && !gamepadCancelPressed) {
       if (gameState === "reset-confirm") cancelResetConfirmation();
+      else if (gameState === "end-confirm") cancelEndConfirmation();
       else if (gameState === "exit-confirm") cancelExitConfirmation();
       else if (gameState === "gameover" && !ui.statsOverlay.hidden) closeGameStats();
       else if (gameState === "paused") beginResumeCountdown();
@@ -4568,6 +4610,13 @@
     ) {
       event.preventDefault();
       cancelResetConfirmation();
+    } else if (
+      event.code === "Escape"
+      && gameState === "end-confirm"
+      && !ui.endConfirmOverlay.hidden
+    ) {
+      event.preventDefault();
+      cancelEndConfirmation();
     } else if (event.code === "Escape" && gameState === "exit-confirm") {
       event.preventDefault();
       cancelExitConfirmation();
@@ -4653,6 +4702,9 @@
   ui.resetButton.addEventListener("click", openResetConfirmation);
   ui.resetCancelButton.addEventListener("click", cancelResetConfirmation);
   ui.resetConfirmButton.addEventListener("click", confirmResetGame);
+  ui.endButton.addEventListener("click", openEndConfirmation);
+  ui.endCancelButton.addEventListener("click", cancelEndConfirmation);
+  ui.endConfirmButton.addEventListener("click", confirmEndGame);
   ui.exitButton.addEventListener("click", openExitConfirmation);
   ui.exitCancelButton.addEventListener("click", cancelExitConfirmation);
   ui.exitConfirmButton.addEventListener("click", confirmExitGame);
@@ -4698,6 +4750,9 @@
     ui.resetButton,
     ui.resetCancelButton,
     ui.resetConfirmButton,
+    ui.endButton,
+    ui.endCancelButton,
+    ui.endConfirmButton,
     ui.exitCancelButton,
     ui.exitConfirmButton,
     ui.restartButton,

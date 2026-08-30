@@ -21,8 +21,8 @@
     <link rel="canonical" href="https://moviemaster.vip/game/">
     <title>MOVIE MASTER vs GARBAGE</title>
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./game.css?v=20260830-resume-rays">
-    <script src="./game.js?v=20260830-resume-rays" defer></script>
+    <link rel="stylesheet" href="./game.css?v=20260830-end-game">
+    <script src="./game.js?v=20260830-end-game" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -168,6 +168,7 @@
           <div class="pause-actions">
             <button class="primary-button" id="resume-button" type="button">CONTINUE</button>
             <button class="secondary-button" id="reset-button" type="button">RESET</button>
+            <button class="secondary-button danger-button" id="end-button" type="button">END GAME</button>
           </div>
         </section>
       </div>
@@ -180,6 +181,18 @@
           <div class="pause-actions">
             <button class="primary-button" id="reset-cancel-button" type="button">CANCEL</button>
             <button class="secondary-button danger-button" id="reset-confirm-button" type="button">RESET GAME</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="game-overlay intermission-overlay" id="end-confirm-overlay" hidden>
+        <section class="intermission-panel reset-confirmation-panel" aria-labelledby="end-confirm-title">
+          <p>END CURRENT RUN</p>
+          <h2 id="end-confirm-title">ARE YOU SURE?</h2>
+          <span>YOUR RUN WILL END AND RESULTS WILL BE SHOWN.</span>
+          <div class="pause-actions">
+            <button class="primary-button" id="end-cancel-button" type="button">CANCEL</button>
+            <button class="secondary-button danger-button" id="end-confirm-button" type="button">END GAME</button>
           </div>
         </section>
       </div>
