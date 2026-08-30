@@ -4059,12 +4059,60 @@ h3 {
 .footer-inner {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: center;
   gap: 8px 26px;
 }
 
 .footer-inner p {
   margin: 0;
+}
+
+.footer-arcade-ticket {
+  position: relative;
+  display: grid;
+  width: 42px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid #d38b08;
+  background:
+    radial-gradient(circle at 0 50%, #080706 0 4px, transparent 4.5px),
+    radial-gradient(circle at 100% 50%, #080706 0 4px, transparent 4.5px),
+    linear-gradient(135deg, #f3b617, #ffd463 48%, #dd8c04);
+  color: #17100b;
+  box-shadow: 3px 3px 0 #6f3800;
+  cursor: pointer;
+  font-family: Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+  transform: rotate(-2deg);
+  transition: filter 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.footer-arcade-ticket::after {
+  position: absolute;
+  inset: 3px 6px;
+  border: 1px dashed rgba(23, 16, 11, 0.55);
+  content: "";
+  pointer-events: none;
+}
+
+.footer-arcade-ticket span {
+  position: relative;
+  z-index: 1;
+}
+
+.footer-arcade-ticket:hover,
+.footer-arcade-ticket:focus-visible {
+  filter: brightness(1.16) saturate(1.12);
+  outline: 2px solid #ffd463;
+  outline-offset: 4px;
+  box-shadow: 5px 6px 0 #6f3800, 0 0 18px rgba(255, 212, 99, 0.38);
+  transform: translateY(-3px) rotate(2deg) scale(1.06);
 }
 
 .reveal-on-scroll {

@@ -12,6 +12,7 @@
     best: $("best-value"),
     bestStreak: $("best-streak-value"),
     lives: $("lives-value"),
+    ratingLabel: $("rating-label"),
     streak: $("streak-value"),
     masteryPercent: $("mastery-percent"),
     masteryTrack: $("mastery-track"),
@@ -23,8 +24,11 @@
     startOverlay: $("start-overlay"),
     pauseOverlay: $("pause-overlay"),
     resetConfirmOverlay: $("reset-confirm-overlay"),
+    exitConfirmOverlay: $("exit-confirm-overlay"),
     gameoverOverlay: $("gameover-overlay"),
     statsOverlay: $("stats-overlay"),
+    resumeCountdown: $("resume-countdown"),
+    resumeCountdownValue: $("resume-countdown-value"),
     startButton: $("start-button"),
     startModeButton: $("start-mode-button"),
     startHardcoreWarning: $("start-hardcore-warning"),
@@ -32,8 +36,13 @@
     resetButton: $("reset-button"),
     resetCancelButton: $("reset-cancel-button"),
     resetConfirmButton: $("reset-confirm-button"),
+    exitButton: $("exit-button"),
+    exitCancelButton: $("exit-cancel-button"),
+    exitConfirmButton: $("exit-confirm-button"),
     restartButton: $("restart-button"),
     statsButton: $("stats-button"),
+    shareRunButton: $("share-run-button"),
+    shareRunStatus: $("share-run-status"),
     statsCloseButton: $("stats-close-button"),
     gameoverModeButton: $("gameover-mode-button"),
     gameoverHardcoreWarning: $("gameover-hardcore-warning"),
@@ -108,6 +117,15 @@
   const GAMEPAD_TRIGGER_THRESHOLD = 0.5;
   const GAMEPAD_BLAST_BUTTONS = [0, 1, 2, 3, 7];
   const GAMEPAD_PAUSE_BUTTON = 9;
+  const GAMEPAD_CONFIRM_BUTTON = 0;
+  const GAMEPAD_CANCEL_BUTTON = 1;
+  const GAMEPAD_DPAD_UP = 12;
+  const GAMEPAD_DPAD_DOWN = 13;
+  const GAMEPAD_DPAD_LEFT = 14;
+  const GAMEPAD_DPAD_RIGHT = 15;
+  const MENU_AXIS_THRESHOLD = 0.55;
+  const RECORD_SAVE_DELAY = 1800;
+  const RESUME_COUNTDOWN_DURATION = 2000;
   const GAMEPAD_RUMBLE = {
     blast: { duration: 130, weakMagnitude: 0.3, strongMagnitude: 0.5 },
     hit: { duration: 130, weakMagnitude: 0.3, strongMagnitude: 0.5 },
@@ -274,6 +292,11 @@
     hardcoreMode ? HARDCORE_STREAK_SCORE_KEY : STREAK_SCORE_KEY,
     0,
   );
+  let runStartingBestScore = bestScore;
+  let runStartingBestStreak = bestStreak;
+  let recordScoreDirty = false;
+  let recordStreakDirty = false;
+  let recordSaveTimer = 0;
   let difficultyLevel = 1;
   let mastery = 0;
   let spawnTimer = 0;
@@ -324,6 +347,13 @@
   let activeGamepadIndex = null;
   let gamepadBlastPressed = false;
   let gamepadPausePressed = false;
+  let gamepadConfirmPressed = false;
+  let gamepadCancelPressed = false;
+  let gamepadMenuDirectionActive = false;
+  let controllerSelectedButton = null;
+  let resumeCountdownStartedAt = 0;
+  let resumeCountdownStep = "";
+  let exitReturnState = "paused";
   let runStats = createRunStats();
 
   if (movementMode !== "mouse" && movementMode !== "keys" && movementMode !== "touch") {
@@ -371,6 +401,48 @@
     bestStreak = readNumber(currentStreakScoreKey(), 0);
     lastRenderedBest = -1;
     lastRenderedBestStreak = -1;
+  }
+
+  function flushRunRecords() {
+    if (recordSaveTimer) {
+      window.clearTimeout(recordSaveTimer);
+      recordSaveTimer = 0;
+    }
+    if (recordScoreDirty) {
+      saveValue(currentScoreKey(), bestScore);
+      recordScoreDirty = false;
+    }
+    if (recordStreakDirty) {
+      saveValue(currentStreakScoreKey(), bestStreak);
+      recordStreakDirty = false;
+    }
+  }
+
+  function scheduleRunRecordSave() {
+    if (recordSaveTimer) return;
+    recordSaveTimer = window.setTimeout(() => {
+      recordSaveTimer = 0;
+      if (recordScoreDirty) {
+        saveValue(currentScoreKey(), bestScore);
+        recordScoreDirty = false;
+      }
+      if (recordStreakDirty) {
+        saveValue(currentStreakScoreKey(), bestStreak);
+        recordStreakDirty = false;
+      }
+    }, RECORD_SAVE_DELAY);
+  }
+
+  function trackRunRecords(roundedScore = Math.floor(score), streak = longestStreak) {
+    if (roundedScore > bestScore) {
+      bestScore = roundedScore;
+      recordScoreDirty = true;
+    }
+    if (streak > bestStreak) {
+      bestStreak = streak;
+      recordStreakDirty = true;
+    }
+    if (recordScoreDirty || recordStreakDirty) scheduleRunRecordSave();
   }
 
   function maximumLives() {
@@ -424,11 +496,12 @@
     for (const warning of [ui.startHardcoreWarning, ui.gameoverHardcoreWarning]) {
       warning.hidden = !enabled;
     }
+    ui.ratingLabel.textContent = enabled ? "YOUR HARDCORE RATING" : "YOUR CURRENT RATING";
     document.documentElement?.classList.toggle("hardcore-mode", enabled);
   }
 
   function toggleHardcoreMode() {
-    if (gameState === "running" || gameState === "paused") return;
+    if (!["ready", "gameover"].includes(gameState)) return;
     hardcoreMode = !hardcoreMode;
     saveValue(GAME_MODE_KEY, hardcoreMode ? "hardcore" : "normal");
     loadCurrentModeRecords();
@@ -926,6 +999,10 @@
     lastRenderedMissionMessage = null;
     lastRenderedMissionDanger = null;
     lastRenderedPickupTenths = -1;
+    runStartingBestScore = bestScore;
+    runStartingBestStreak = bestStreak;
+    recordScoreDirty = false;
+    recordStreakDirty = false;
     runStats = createRunStats();
 
     enemies.length = 0;
@@ -958,16 +1035,150 @@
     document.documentElement?.classList.toggle("game-paused", active);
   }
 
+  function visibleMenuButtons() {
+    if (gameState === "ready") return [ui.startButton, ui.startModeButton];
+    if (gameState === "paused") return [ui.resumeButton, ui.resetButton];
+    if (gameState === "reset-confirm") return [ui.resetCancelButton, ui.resetConfirmButton];
+    if (gameState === "exit-confirm") return [ui.exitCancelButton, ui.exitConfirmButton];
+    if (gameState === "gameover" && !ui.statsOverlay.hidden) return [ui.statsCloseButton];
+    if (gameState === "gameover") {
+      return [ui.restartButton, ui.statsButton, ui.shareRunButton, ui.gameoverModeButton];
+    }
+    return [];
+  }
+
+  function setControllerSelection(button) {
+    const candidates = visibleMenuButtons();
+    const next = candidates.includes(button) && !button.disabled ? button : candidates.find((item) => !item.disabled) || null;
+    if (controllerSelectedButton === next) return;
+    controllerSelectedButton?.classList.remove("controller-selected");
+    controllerSelectedButton = next;
+    controllerSelectedButton?.classList.add("controller-selected");
+    controllerSelectedButton?.focus({ preventScroll: true });
+  }
+
+  function selectDefaultMenuButton() {
+    setControllerSelection(visibleMenuButtons().find((button) => !button.disabled) || null);
+  }
+
+  function moveControllerSelection(directionX, directionY) {
+    const candidates = visibleMenuButtons().filter((button) => !button.disabled && button.getClientRects().length);
+    if (!candidates.length) return;
+    if (!candidates.includes(controllerSelectedButton)) {
+      setControllerSelection(candidates[0]);
+      return;
+    }
+
+    const currentRect = controllerSelectedButton.getBoundingClientRect();
+    const currentX = currentRect.left + currentRect.width / 2;
+    const currentY = currentRect.top + currentRect.height / 2;
+    let winner = null;
+    let winnerScore = Infinity;
+
+    for (const candidate of candidates) {
+      if (candidate === controllerSelectedButton) continue;
+      const rect = candidate.getBoundingClientRect();
+      const dx = rect.left + rect.width / 2 - currentX;
+      const dy = rect.top + rect.height / 2 - currentY;
+      const forwardDistance = dx * directionX + dy * directionY;
+      if (forwardDistance <= 2) continue;
+      const perpendicularDistance = Math.abs(dx * directionY - dy * directionX);
+      const scoreValue = forwardDistance + perpendicularDistance * 2.35;
+      if (scoreValue < winnerScore) {
+        winner = candidate;
+        winnerScore = scoreValue;
+      }
+    }
+
+    if (winner) setControllerSelection(winner);
+  }
+
+  function clearControllerSelection() {
+    controllerSelectedButton?.classList.remove("controller-selected");
+    controllerSelectedButton = null;
+  }
+
+  function hideResumeCountdown() {
+    ui.resumeCountdown.hidden = true;
+    ui.resumeCountdown.setAttribute("aria-hidden", "true");
+    ui.resumeCountdown.style.removeProperty("--resume-progress");
+    resumeCountdownStartedAt = 0;
+    resumeCountdownStep = "";
+  }
+
+  function pauseRunningGame() {
+    flushRunRecords();
+    gameState = "paused";
+    setPausePresentation(true);
+    hideResumeCountdown();
+    ui.resetConfirmOverlay.hidden = true;
+    ui.exitConfirmOverlay.hidden = true;
+    ui.pauseOverlay.hidden = false;
+    ui.pauseButton.textContent = "RESUME";
+    mouseTarget.active = false;
+    resetJoystick();
+    selectDefaultMenuButton();
+    announce("Intermission.");
+  }
+
+  function beginResumeCountdown() {
+    if (!["paused", "resuming", "exit-confirm"].includes(gameState)) return;
+    gameState = "resuming";
+    setPausePresentation(false);
+    ui.pauseOverlay.hidden = true;
+    ui.resetConfirmOverlay.hidden = true;
+    ui.exitConfirmOverlay.hidden = true;
+    clearControllerSelection();
+    resumeCountdownStartedAt = performance.now();
+    resumeCountdownStep = "3";
+    ui.resumeCountdownValue.textContent = "3";
+    ui.resumeCountdown.style.setProperty("--resume-progress", "0");
+    ui.resumeCountdown.hidden = false;
+    ui.resumeCountdown.setAttribute("aria-hidden", "false");
+    ui.pauseButton.textContent = "PAUSE";
+    announce("Resuming in three, two, one.");
+  }
+
+  function updateResumeCountdown(now) {
+    if (gameState !== "resuming") return;
+    const elapsedCountdown = Math.max(0, now - resumeCountdownStartedAt);
+    const progress = Math.min(1, elapsedCountdown / RESUME_COUNTDOWN_DURATION);
+    ui.resumeCountdown.style.setProperty("--resume-progress", String(progress));
+    const nextStep = elapsedCountdown < 550
+      ? "3"
+      : elapsedCountdown < 1100
+        ? "2"
+        : elapsedCountdown < 1650
+          ? "1"
+          : "GO";
+    if (nextStep !== resumeCountdownStep) {
+      resumeCountdownStep = nextStep;
+      ui.resumeCountdownValue.textContent = nextStep;
+    }
+    if (progress < 1) return;
+
+    gameState = "running";
+    hideResumeCountdown();
+    lastFrame = now;
+    canvas.focus({ preventScroll: true });
+    announce("The Movie Master has resumed.");
+  }
+
   function startGame() {
     ensureAudio();
+    flushRunRecords();
     resetGame();
     gameState = "running";
     setPausePresentation(false);
+    hideResumeCountdown();
+    clearControllerSelection();
     ui.startOverlay.hidden = true;
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
+    ui.exitConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = true;
     ui.statsOverlay.hidden = true;
+    ui.shareRunStatus.textContent = "";
     ui.pauseButton.disabled = false;
     ui.pauseButton.textContent = "PAUSE";
     lastFrame = performance.now();
@@ -979,17 +1190,10 @@
 
   function saveRunRecords() {
     const finalScore = Math.floor(score);
-    const scoreRecord = finalScore > bestScore;
-    const streakRecord = longestStreak > bestStreak;
-
-    if (scoreRecord) {
-      bestScore = finalScore;
-      saveValue(currentScoreKey(), bestScore);
-    }
-    if (streakRecord) {
-      bestStreak = longestStreak;
-      saveValue(currentStreakScoreKey(), bestStreak);
-    }
+    const scoreRecord = finalScore > runStartingBestScore;
+    const streakRecord = longestStreak > runStartingBestStreak;
+    trackRunRecords(finalScore, longestStreak);
+    flushRunRecords();
 
     return { finalScore, scoreRecord, streakRecord };
   }
@@ -1013,14 +1217,18 @@
           : "OVERWHELMED BY GARBAGE 🗑️";
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
+    ui.exitConfirmOverlay.hidden = true;
+    hideResumeCountdown();
     ui.gameoverOverlay.hidden = false;
     ui.statsOverlay.hidden = true;
+    ui.shareRunStatus.textContent = "";
     fitNumberToWidth(ui.finalScore);
     fitNumberToWidth(ui.finalLongestStreak);
     ui.pauseButton.disabled = true;
     resetJoystick();
     renderGameStats(records.finalScore);
     updateInterface(true);
+    selectDefaultMenuButton();
     announce(
       missedPopcorn
         ? "You missed a popcorn. Game over."
@@ -1064,12 +1272,51 @@
     ui.statPowerupMagnet.textContent = formatScore(runStats.powerups.magnet);
   }
 
+  async function copyRunText(text) {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    if (!copied) throw new Error("Copy unavailable");
+  }
+
+  async function shareRun() {
+    if (gameState !== "gameover") return;
+    const runSummary = `I scored ${formatScore(Math.floor(score))} points with a ${formatScore(longestStreak)} popcorn streak in ${hardcoreMode ? "Hardcore" : "Normal"} Mode in Movie Master vs Garbage. Game time: ${formatDuration(elapsed)}.`;
+    const gameUrl = "https://moviemaster.vip/game/";
+    ui.shareRunStatus.textContent = "";
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ title: "Movie Master vs Garbage", text: runSummary, url: gameUrl });
+        ui.shareRunStatus.textContent = "RUN SHARED";
+        announce("Run shared.");
+        return;
+      }
+      await copyRunText(`${runSummary} ${gameUrl}`);
+      ui.shareRunStatus.textContent = "RUN SUMMARY COPIED";
+      announce("Run summary copied.");
+    } catch (error) {
+      if (error?.name === "AbortError") return;
+      ui.shareRunStatus.textContent = "SHARING ISN'T AVAILABLE HERE";
+      announce("Sharing is not available in this browser.");
+    }
+  }
+
   function openGameStats() {
     if (gameState !== "gameover") return;
     ui.gameoverOverlay.hidden = true;
     ui.statsOverlay.hidden = false;
     fitAllStatDisplays();
-    ui.statsCloseButton.focus({ preventScroll: true });
+    setControllerSelection(ui.statsCloseButton);
     announce("Game stats.");
   }
 
@@ -1077,53 +1324,89 @@
     if (gameState !== "gameover" || ui.statsOverlay.hidden) return;
     ui.statsOverlay.hidden = true;
     ui.gameoverOverlay.hidden = false;
-    ui.statsButton.focus({ preventScroll: true });
+    setControllerSelection(ui.statsButton);
     announce("Game over.");
   }
 
   function openResetConfirmation() {
     if (gameState !== "paused") return;
+    gameState = "reset-confirm";
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = false;
-    ui.resetCancelButton.focus({ preventScroll: true });
+    setControllerSelection(ui.resetCancelButton);
     announce("Confirm reset. Your current game will end.");
   }
 
   function cancelResetConfirmation() {
-    if (gameState !== "paused" || ui.resetConfirmOverlay.hidden) return;
+    if (gameState !== "reset-confirm" || ui.resetConfirmOverlay.hidden) return;
+    gameState = "paused";
     ui.resetConfirmOverlay.hidden = true;
     ui.pauseOverlay.hidden = false;
-    ui.resetButton.focus({ preventScroll: true });
+    setControllerSelection(ui.resetButton);
     announce("Reset cancelled. Intermission.");
   }
 
   function confirmResetGame() {
-    if (gameState !== "paused") return;
+    if (gameState !== "reset-confirm") return;
     saveRunRecords();
     startGame();
   }
 
-  function togglePause(forcePause = false) {
-    if (gameState === "running") {
+  function openExitConfirmation(event) {
+    if (gameState === "exit-confirm") {
+      event?.preventDefault();
+      return;
+    }
+    if (!["running", "paused", "resuming", "reset-confirm"].includes(gameState)) return;
+    event?.preventDefault();
+    flushRunRecords();
+    exitReturnState = gameState === "paused" || gameState === "reset-confirm" ? "paused" : "running";
+    gameState = "exit-confirm";
+    setPausePresentation(true);
+    hideResumeCountdown();
+    ui.pauseOverlay.hidden = true;
+    ui.resetConfirmOverlay.hidden = true;
+    ui.exitConfirmOverlay.hidden = false;
+    mouseTarget.active = false;
+    resetJoystick();
+    setControllerSelection(ui.exitCancelButton);
+    announce("Confirm exit. Your current game will end.");
+  }
+
+  function cancelExitConfirmation() {
+    if (gameState !== "exit-confirm") return;
+    ui.exitConfirmOverlay.hidden = true;
+    if (exitReturnState === "paused") {
       gameState = "paused";
       setPausePresentation(true);
-      ui.resetConfirmOverlay.hidden = true;
       ui.pauseOverlay.hidden = false;
       ui.pauseButton.textContent = "RESUME";
-      resetJoystick();
-      announce("Intermission.");
+      setControllerSelection(ui.resumeButton);
+      announce("Exit cancelled. Intermission.");
+      return;
+    }
+    beginResumeCountdown();
+  }
+
+  function confirmExitGame() {
+    if (gameState !== "exit-confirm") return;
+    flushRunRecords();
+    window.location.assign(ui.exitButton.href);
+  }
+
+  function togglePause(forcePause = false) {
+    if (gameState === "running") {
+      pauseRunningGame();
       return;
     }
 
     if (gameState === "paused" && !forcePause) {
-      gameState = "running";
-      setPausePresentation(false);
-      ui.pauseOverlay.hidden = true;
-      ui.resetConfirmOverlay.hidden = true;
-      ui.pauseButton.textContent = "PAUSE";
-      lastFrame = performance.now();
-      canvas.focus({ preventScroll: true });
-      announce("The Movie Master has resumed.");
+      beginResumeCountdown();
+      return;
+    }
+
+    if (gameState === "resuming") {
+      pauseRunningGame();
     }
   }
 
@@ -1212,7 +1495,7 @@
     soundOn = !soundOn;
     saveValue(SOUND_KEY, soundOn ? "on" : "off");
     ui.soundButton.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
-    ui.soundButton.setAttribute("aria-pressed", soundOn ? "false" : "true");
+    ui.soundButton.setAttribute("aria-pressed", soundOn ? "true" : "false");
 
     if (soundOn) {
       ensureAudio();
@@ -2308,6 +2591,10 @@
     for (let index = 0; index < GAMEPAD_BLAST_BUTTONS.length; index += 1) {
       if (isGamepadButtonPressed(gamepad, GAMEPAD_BLAST_BUTTONS[index])) return true;
     }
+    if (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_UP)) return true;
+    if (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_DOWN)) return true;
+    if (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_LEFT)) return true;
+    if (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_RIGHT)) return true;
     return isGamepadButtonPressed(gamepad, GAMEPAD_PAUSE_BUTTON);
   }
 
@@ -2440,17 +2727,69 @@
       gamepadMove.active = false;
       gamepadBlastPressed = false;
       gamepadPausePressed = false;
+      gamepadConfirmPressed = false;
+      gamepadCancelPressed = false;
+      gamepadMenuDirectionActive = false;
       return;
     }
 
     normalizeGamepadStick(gamepad.axes?.[0], gamepad.axes?.[1], gamepadMove);
-    if (gamepadMove.active) mouseTarget.active = false;
+    const menuActive = gameState === "ready"
+      || gameState === "paused"
+      || gameState === "reset-confirm"
+      || gameState === "exit-confirm"
+      || gameState === "gameover";
+    const menuButtons = menuActive ? visibleMenuButtons() : null;
+    if (menuActive) {
+      const dpadX = (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_RIGHT) ? 1 : 0)
+        - (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_LEFT) ? 1 : 0);
+      const dpadY = (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_DOWN) ? 1 : 0)
+        - (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_UP) ? 1 : 0);
+      let directionX = dpadX;
+      let directionY = dpadY;
+      if (directionX === 0 && directionY === 0 && gamepadMove.active) {
+        if (Math.abs(gamepadMove.x) >= Math.abs(gamepadMove.y) && Math.abs(gamepadMove.x) >= MENU_AXIS_THRESHOLD) {
+          directionX = Math.sign(gamepadMove.x);
+        } else if (Math.abs(gamepadMove.y) >= MENU_AXIS_THRESHOLD) {
+          directionY = Math.sign(gamepadMove.y);
+        }
+      }
+      const directionActive = directionX !== 0 || directionY !== 0;
+      if (directionActive && !gamepadMenuDirectionActive) {
+        moveControllerSelection(directionX, directionY);
+      }
+      gamepadMenuDirectionActive = directionActive;
+      gamepadMove.x = 0;
+      gamepadMove.y = 0;
+      gamepadMove.active = false;
+    } else {
+      gamepadMenuDirectionActive = false;
+      if (gamepadMove.active) mouseTarget.active = false;
+    }
+
+    const confirmPressed = isGamepadButtonPressed(gamepad, GAMEPAD_CONFIRM_BUTTON);
+    if (menuActive && confirmPressed && !gamepadConfirmPressed) {
+      if (!menuButtons.includes(controllerSelectedButton)) selectDefaultMenuButton();
+      controllerSelectedButton?.click();
+    }
+    gamepadConfirmPressed = confirmPressed;
+
+    const cancelPressed = isGamepadButtonPressed(gamepad, GAMEPAD_CANCEL_BUTTON);
+    if (menuActive && cancelPressed && !gamepadCancelPressed) {
+      if (gameState === "reset-confirm") cancelResetConfirmation();
+      else if (gameState === "exit-confirm") cancelExitConfirmation();
+      else if (gameState === "gameover" && !ui.statsOverlay.hidden) closeGameStats();
+      else if (gameState === "paused") beginResumeCountdown();
+    }
+    gamepadCancelPressed = cancelPressed;
 
     let blastPressed = false;
-    for (let index = 0; index < GAMEPAD_BLAST_BUTTONS.length; index += 1) {
-      if (!isGamepadButtonPressed(gamepad, GAMEPAD_BLAST_BUTTONS[index])) continue;
-      blastPressed = true;
-      break;
+    if (!menuActive && gameState === "running") {
+      for (let index = 0; index < GAMEPAD_BLAST_BUTTONS.length; index += 1) {
+        if (!isGamepadButtonPressed(gamepad, GAMEPAD_BLAST_BUTTONS[index])) continue;
+        blastPressed = true;
+        break;
+      }
     }
     if (blastPressed && !gamepadBlastPressed) activateBlast(gamepad);
     gamepadBlastPressed = blastPressed;
@@ -2459,7 +2798,7 @@
     if (
       pausePressed
       && !gamepadPausePressed
-      && (gameState === "running" || gameState === "paused")
+      && (gameState === "running" || gameState === "paused" || gameState === "resuming")
     ) {
       togglePause();
     }
@@ -2704,6 +3043,7 @@
 
   function updateInterface(force = false) {
     const roundedScore = Math.floor(score);
+    if (gameState === "running") trackRunRecords(roundedScore, longestStreak);
     const liveBest = Math.max(bestScore, roundedScore);
     const liveBestStreak = Math.max(bestStreak, longestStreak);
     const masteryPercent = Math.round(Math.min(1, mastery) * 100);
@@ -4158,7 +4498,9 @@
     if (gameState === "running") {
       update(dt);
       draw(now);
-    } else if (gameState !== "paused") {
+    } else if (gameState === "resuming") {
+      updateResumeCountdown(now);
+    } else if (gameState === "ready" || gameState === "gameover") {
       player.bob += dt * 2;
       draw(now);
     }
@@ -4196,13 +4538,16 @@
       closeGameStats();
     } else if (
       event.code === "Escape"
-      && gameState === "paused"
+      && gameState === "reset-confirm"
       && !ui.resetConfirmOverlay.hidden
     ) {
       event.preventDefault();
       cancelResetConfirmation();
+    } else if (event.code === "Escape" && gameState === "exit-confirm") {
+      event.preventDefault();
+      cancelExitConfirmation();
     } else if (event.code === "KeyP" || event.code === "Escape") {
-      if (gameState === "running" || gameState === "paused") {
+      if (gameState === "running" || gameState === "paused" || gameState === "resuming") {
         event.preventDefault();
         togglePause();
       }
@@ -4231,6 +4576,9 @@
     gamepadMove.active = false;
     gamepadBlastPressed = false;
     gamepadPausePressed = false;
+    gamepadConfirmPressed = false;
+    gamepadCancelPressed = false;
+    gamepadMenuDirectionActive = false;
   });
 
   window.addEventListener("pointermove", (event) => {
@@ -4239,7 +4587,7 @@
     const movementBounds = world.playerBounds;
     mouseTarget.x = clamp(event.clientX - rect.left, movementBounds.left, movementBounds.right);
     mouseTarget.y = clamp(event.clientY - rect.top, movementBounds.top, movementBounds.bottom);
-    if (gameState === "running") mouseTarget.active = true;
+    if (gameState === "running" || gameState === "resuming") mouseTarget.active = true;
   }, { passive: true });
 
   window.addEventListener("blur", () => {
@@ -4249,23 +4597,34 @@
     gamepadMove.active = false;
     gamepadBlastPressed = false;
     gamepadPausePressed = false;
-    if (gameState === "running") togglePause(true);
+    gamepadConfirmPressed = false;
+    gamepadCancelPressed = false;
+    gamepadMenuDirectionActive = false;
+    if (gameState === "running" || gameState === "resuming") togglePause(true);
   });
 
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden && gameState === "running") togglePause(true);
+    if (!document.hidden) return;
+    flushRunRecords();
+    if (gameState === "running" || gameState === "resuming") togglePause(true);
   });
+
+  window.addEventListener("pagehide", flushRunRecords);
 
   ui.startButton.addEventListener("click", startGame);
   ui.startModeButton.addEventListener("click", toggleHardcoreMode);
   ui.restartButton.addEventListener("click", startGame);
   ui.statsButton.addEventListener("click", openGameStats);
+  ui.shareRunButton.addEventListener("click", shareRun);
   ui.statsCloseButton.addEventListener("click", closeGameStats);
   ui.gameoverModeButton.addEventListener("click", toggleHardcoreMode);
   ui.resumeButton.addEventListener("click", () => togglePause());
   ui.resetButton.addEventListener("click", openResetConfirmation);
   ui.resetCancelButton.addEventListener("click", cancelResetConfirmation);
   ui.resetConfirmButton.addEventListener("click", confirmResetGame);
+  ui.exitButton.addEventListener("click", openExitConfirmation);
+  ui.exitCancelButton.addEventListener("click", cancelExitConfirmation);
+  ui.exitConfirmButton.addEventListener("click", confirmExitGame);
   ui.movementButton.addEventListener("click", toggleMovementMode);
   ui.qualityButton.addEventListener("click", cycleQuality);
   ui.pauseButton.addEventListener("click", () => togglePause());
@@ -4301,12 +4660,32 @@
     });
   }
 
+  for (const button of [
+    ui.startButton,
+    ui.startModeButton,
+    ui.resumeButton,
+    ui.resetButton,
+    ui.resetCancelButton,
+    ui.resetConfirmButton,
+    ui.exitCancelButton,
+    ui.exitConfirmButton,
+    ui.restartButton,
+    ui.statsButton,
+    ui.shareRunButton,
+    ui.gameoverModeButton,
+    ui.statsCloseButton,
+  ]) {
+    button.addEventListener("pointerenter", () => {
+      if (visibleMenuButtons().includes(button)) setControllerSelection(button);
+    });
+  }
+
   const resizeObserver = new ResizeObserver(resizeCanvas);
   resizeObserver.observe(canvas);
   window.addEventListener("resize", resizeCanvas, { passive: true });
 
   ui.soundButton.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
-  ui.soundButton.setAttribute("aria-pressed", soundOn ? "false" : "true");
+  ui.soundButton.setAttribute("aria-pressed", soundOn ? "true" : "false");
   player.lives = maximumLives();
   updateGameModeUi();
   applyQuality(qualityLevel, false, false);

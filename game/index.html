@@ -4,12 +4,25 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#120c08">
-    <meta name="robots" content="noindex, nofollow">
-    <meta name="description" content="Help the Movie Master save the world from garbage 🗑️.">
+    <meta name="description" content="Keep the Movie Master moving, collect popcorn, and destroy garbage in Movie Master vs Garbage.">
+    <meta property="og:title" content="MOVIE MASTER vs GARBAGE">
+    <meta property="og:description" content="Keep the Movie Master moving, collect popcorn, and destroy garbage.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://moviemaster.vip/game/">
+    <meta property="og:image" content="https://moviemaster.vip/assets/images/social-preview-1200x630.jpg">
+    <meta property="og:image:alt" content="The Movie Master in front of radiant gold rays beside the words Movie Master and The best and most correct movie opinions.">
+    <meta property="og:image:type" content="image/jpeg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MOVIE MASTER vs GARBAGE">
+    <meta name="twitter:description" content="Keep the Movie Master moving, collect popcorn, and destroy garbage.">
+    <meta name="twitter:image" content="https://moviemaster.vip/assets/images/social-preview-1200x630.jpg">
+    <link rel="canonical" href="https://moviemaster.vip/game/">
     <title>MOVIE MASTER vs GARBAGE</title>
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="./game.css?v=20260829-hardcore-popcorn">
-    <script src="./game.js?v=20260830-deep-performance" defer></script>
+    <link rel="stylesheet" href="./game.css?v=20260830-flow-polish">
+    <script src="./game.js?v=20260830-flow-polish" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -31,11 +44,11 @@
         </div>
 
         <div class="game-actions">
-          <a href="https://moviemaster.vip/">EXIT</a>
+          <a id="exit-button" href="https://moviemaster.vip/">EXIT</a>
           <button class="movement-button" id="movement-button" type="button">MOVE: MOUSE</button>
           <button class="quality-button" id="quality-button" type="button">QUALITY: HIGH</button>
           <button id="pause-button" type="button" disabled>PAUSE</button>
-          <button id="sound-button" type="button" aria-pressed="false">SOUND ON</button>
+          <button id="sound-button" type="button" aria-pressed="true">SOUND ON</button>
         </div>
       </header>
 
@@ -49,7 +62,7 @@
           <strong class="fit-number" id="best-value">0</strong>
         </div>
         <div class="hud-stat hud-lives">
-          <span>YOUR CURRENT RATING</span>
+          <span id="rating-label">YOUR CURRENT RATING</span>
           <strong id="lives-value" aria-label="Five lives">★★★★★</strong>
         </div>
         <div class="hud-stat hud-streak">
@@ -99,6 +112,12 @@
 
       <div class="combo-callout" id="combo-callout" aria-hidden="true"></div>
       <div class="status-announcement visually-hidden" id="status-announcement" aria-live="polite"></div>
+
+      <div class="resume-countdown" id="resume-countdown" hidden aria-hidden="true">
+        <div class="resume-dial" id="resume-dial">
+          <span id="resume-countdown-value">3</span>
+        </div>
+      </div>
 
       <div class="game-overlay" id="start-overlay">
         <section class="start-poster" aria-labelledby="start-title">
@@ -165,6 +184,18 @@
         </section>
       </div>
 
+      <div class="game-overlay intermission-overlay" id="exit-confirm-overlay" hidden>
+        <section class="intermission-panel reset-confirmation-panel" aria-labelledby="exit-confirm-title">
+          <p>LEAVE THE MOVIE?</p>
+          <h2 id="exit-confirm-title">ARE YOU SURE?</h2>
+          <span>YOUR CURRENT GAME WILL END.</span>
+          <div class="pause-actions">
+            <button class="primary-button" id="exit-cancel-button" type="button">CANCEL</button>
+            <button class="secondary-button danger-button" id="exit-confirm-button" type="button">EXIT GAME</button>
+          </div>
+        </section>
+      </div>
+
       <div class="game-overlay gameover-overlay" id="gameover-overlay" hidden>
         <section class="gameover-panel" aria-labelledby="gameover-title">
           <p class="poster-kicker">THE END</p>
@@ -182,10 +213,12 @@
           <div class="run-actions">
             <button class="primary-button" id="restart-button" type="button">TRY AGAIN</button>
             <button class="secondary-button" id="stats-button" type="button">GAME STATS</button>
+            <button class="secondary-button" id="share-run-button" type="button">SHARE RUN</button>
             <button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">
               HARDCORE MODE: OFF
             </button>
           </div>
+          <p class="share-run-status" id="share-run-status" role="status" aria-live="polite"></p>
           <p class="hardcore-warning" id="gameover-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
         </section>
       </div>

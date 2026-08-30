@@ -300,6 +300,12 @@ html.game-paused .hud {
   z-index: 40;
 }
 
+html.hardcore-mode .hud {
+  outline: 2px solid rgba(255, 78, 57, 0.9);
+  outline-offset: 2px;
+  box-shadow: 7px 7px 0 rgba(64, 29, 6, 0.48), 0 0 18px rgba(210, 75, 53, 0.2);
+}
+
 .hud-stat,
 .blast-meter {
   display: flex;
@@ -709,11 +715,21 @@ html.game-paused .hud {
 }
 
 .primary-button:hover,
+.primary-button.controller-selected,
 .secondary-button:hover,
+.secondary-button.controller-selected,
 .blast-button:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translate(-1px, -2px);
   box-shadow: 7px 7px 0 var(--gold-dark);
+}
+
+.primary-button:hover,
+.primary-button.controller-selected,
+.secondary-button:hover,
+.secondary-button.controller-selected {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
 }
 
 .primary-button:active,
@@ -735,6 +751,71 @@ html.game-paused .hud {
   color: var(--gold-dark);
   font-size: 1.08em;
   font-variant-numeric: tabular-nums;
+}
+
+.resume-countdown {
+  --resume-progress: 0;
+  position: absolute;
+  z-index: 24;
+  inset: var(--play-top) 0 var(--play-bottom);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.resume-countdown[hidden] {
+  display: none;
+}
+
+.resume-dial {
+  position: relative;
+  display: grid;
+  width: clamp(104px, 12vw, 146px);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 3px solid var(--gold-light);
+  border-radius: 50%;
+  background:
+    conic-gradient(
+      from -90deg,
+      rgba(255, 211, 96, 0.18) calc(var(--resume-progress) * 1turn),
+      var(--gold-bright) 0
+    );
+  box-shadow: 0 0 0 5px rgba(18, 12, 8, 0.78), 0 12px 38px rgba(0, 0, 0, 0.62);
+}
+
+.resume-dial::before {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255, 231, 162, 0.65);
+  border-radius: 50%;
+  background:
+    linear-gradient(transparent calc(50% - 1px), rgba(255, 231, 162, 0.25) 50%, transparent calc(50% + 1px)),
+    linear-gradient(90deg, transparent calc(50% - 1px), rgba(255, 231, 162, 0.25) 50%, transparent calc(50% + 1px)),
+    rgba(12, 7, 4, 0.94);
+  content: "";
+}
+
+.resume-dial span {
+  position: relative;
+  z-index: 1;
+  color: var(--gold-bright);
+  font-family: "Alfa Movie", Rockwell, serif;
+  font-size: clamp(2.8rem, 6vw, 4.5rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-shadow: 0 3px 0 #6d3100;
+}
+
+.share-run-status {
+  min-height: 1em;
+  margin: 12px 0 0;
+  color: var(--gold-light);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .intermission-overlay,
@@ -1822,5 +1903,57 @@ strong.fit-number {
     scroll-behavior: auto !important;
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .game-actions button,
+  .game-actions a {
+    min-height: 44px;
+    padding-block: 8px;
+  }
+}
+
+@media (hover: none) and (max-width: 720px), (pointer: coarse) and (max-width: 720px) {
+  .game-shell {
+    --play-top: 182px;
+  }
+
+  .game-bar {
+    height: 64px;
+  }
+
+  .hud {
+    top: 71px;
+  }
+
+  .mission-banner {
+    top: 152px;
+  }
+
+  .combo-callout {
+    top: 180px;
+  }
+}
+
+@media (hover: none) and (max-height: 500px), (pointer: coarse) and (max-height: 500px) {
+  .game-shell {
+    --play-top: 126px;
+  }
+
+  .game-bar {
+    height: 58px;
+  }
+
+  .hud {
+    top: 64px;
+  }
+
+  .mission-banner {
+    top: 110px;
+  }
+
+  .combo-callout {
+    top: 134px;
   }
 }
