@@ -155,9 +155,16 @@
     if (!output) return;
 
     const counter = output.closest(".visitor-counter");
+    if (!counter) return;
+
     const apiBase = "https://movie-master-visitor-counter.isasto.workers.dev";
     const visitorIdKey = "movie-master-visitor-id";
+    const pollInterval = 5000;
     let priorFormatted = "";
+    let counterIsVisible = false;
+    let initialRequestDone = false;
+    let pollTimer = null;
+    let pollInFlight = false;
 
     const render = (count) => {
       const formatted = count.toLocaleString("en-US");
@@ -182,7 +189,7 @@
       });
 
       output.replaceChildren(fragment);
-      counter?.setAttribute(
+      counter.setAttribute(
         "aria-label",
         `THIS SITE HAS HAD ${formatted} VISITORS AND COUNTING!`,
       );
@@ -238,14 +245,86 @@
       render(data.count);
     };
 
-    registerVisit().catch(async (error) => {
-      console.error("Unable to register Movie Master visitor", error);
+    const shouldPoll = () =>
+      initialRequestDone &&
+      counterIsVisible &&
+      document.visibilityState === "visible" &&
+      document.hasFocus();
+
+    const stopPolling = () => {
+      if (pollTimer !== null) {
+        window.clearTimeout(pollTimer);
+        pollTimer = null;
+      }
+    };
+
+    const scheduleNextPoll = () => {
+      stopPolling();
+      if (!shouldPoll()) return;
+      pollTimer = window.setTimeout(runPoll, pollInterval);
+    };
+
+    const runPoll = async () => {
+      stopPolling();
+      if (!shouldPoll() || pollInFlight) return;
+
+      pollInFlight = true;
       try {
         render(await fetchCount());
-      } catch (fallbackError) {
-        console.error("Unable to load Movie Master visitor count", fallbackError);
+      } catch (error) {
+        console.error("Unable to refresh Movie Master visitor count", error);
+      } finally {
+        pollInFlight = false;
+        scheduleNextPoll();
       }
-    });
+    };
+
+    const syncPolling = () => {
+      stopPolling();
+      if (shouldPoll()) runPoll();
+    };
+
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          counterIsVisible = Boolean(entry?.isIntersecting && entry.intersectionRatio > 0);
+          syncPolling();
+        },
+        { threshold: 0.01 },
+      );
+      observer.observe(counter);
+    } else {
+      const updateFallbackVisibility = () => {
+        const rect = counter.getBoundingClientRect();
+        counterIsVisible =
+          rect.bottom > 0 &&
+          rect.top < window.innerHeight &&
+          rect.right > 0 &&
+          rect.left < window.innerWidth;
+        syncPolling();
+      };
+      window.addEventListener("scroll", updateFallbackVisibility, { passive: true });
+      window.addEventListener("resize", updateFallbackVisibility);
+      updateFallbackVisibility();
+    }
+
+    document.addEventListener("visibilitychange", syncPolling);
+    window.addEventListener("focus", syncPolling);
+    window.addEventListener("blur", syncPolling);
+
+    registerVisit()
+      .catch(async (error) => {
+        console.error("Unable to register Movie Master visitor", error);
+        try {
+          render(await fetchCount());
+        } catch (fallbackError) {
+          console.error("Unable to load Movie Master visitor count", fallbackError);
+        }
+      })
+      .finally(() => {
+        initialRequestDone = true;
+        syncPolling();
+      });
   }
 
   function setUpPurchaseFlow() {
