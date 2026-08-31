@@ -155,49 +155,97 @@
     if (!output) return;
 
     const counter = output.closest(".visitor-counter");
-    const epoch = Date.parse("2026-08-03T00:00:00-05:00");
-    const tickLength = 2500;
+    const apiBase = "https://movie-master-visitor-counter.isasto.workers.dev";
+    const visitorIdKey = "movie-master-visitor-id";
     let priorFormatted = "";
 
-    const formatCount = (value) => value.toLocaleString("en-US");
+    const render = (count) => {
+      const formatted = count.toLocaleString("en-US");
+      if (formatted === priorFormatted) return;
 
-    const render = () => {
-      const elapsed = Math.max(0, Date.now() - epoch);
-      const count = Math.floor(elapsed / tickLength);
-      const formatted = formatCount(count);
+      const fragment = document.createDocumentFragment();
 
-      if (formatted !== priorFormatted) {
-        const fragment = document.createDocumentFragment();
+      [...formatted].forEach((character, index) => {
+        const span = document.createElement("span");
 
-        [...formatted].forEach((character, index) => {
-          const span = document.createElement("span");
-
-          if (character === ",") {
-            span.className = "counter-comma";
-          } else {
-            span.className = "counter-digit";
-            if (priorFormatted[index] && priorFormatted[index] !== character) {
-              span.classList.add("changing");
-            }
+        if (character === ",") {
+          span.className = "counter-comma";
+        } else {
+          span.className = "counter-digit";
+          if (priorFormatted[index] && priorFormatted[index] !== character) {
+            span.classList.add("changing");
           }
+        }
 
-          span.textContent = character;
-          fragment.append(span);
-        });
+        span.textContent = character;
+        fragment.append(span);
+      });
 
-        output.replaceChildren(fragment);
-        counter?.setAttribute(
-          "aria-label",
-          `THE MOVIE MASTER HAS ${count.toLocaleString("en-US")} SATISFIED CUSTOMERS AND COUNTING!`,
-        );
-        priorFormatted = formatted;
-      }
-
-      const delay = Math.max(16, tickLength - (Date.now() - epoch) % tickLength);
-      window.setTimeout(render, delay);
+      output.replaceChildren(fragment);
+      counter?.setAttribute(
+        "aria-label",
+        `THE MOVIE MASTER HAS ${formatted} SATISFIED CUSTOMERS AND COUNTING!`,
+      );
+      priorFormatted = formatted;
     };
 
-    render();
+    const getVisitorId = () => {
+      try {
+        let visitorId = window.localStorage.getItem(visitorIdKey);
+        if (!visitorId) {
+          visitorId = crypto.randomUUID();
+          window.localStorage.setItem(visitorIdKey, visitorId);
+        }
+        return visitorId;
+      } catch {
+        return null;
+      }
+    };
+
+    const fetchCount = async () => {
+      const response = await fetch(`${apiBase}/count`, {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error(`Counter request failed: ${response.status}`);
+      const data = await response.json();
+      if (!Number.isSafeInteger(data.count) || data.count < 0) {
+        throw new Error("Counter returned an invalid count");
+      }
+      return data.count;
+    };
+
+    const registerVisit = async () => {
+      const visitorId = getVisitorId();
+
+      if (!visitorId) {
+        render(await fetchCount());
+        return;
+      }
+
+      const response = await fetch(`${apiBase}/visit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visitorId }),
+        cache: "no-store",
+      });
+
+      if (!response.ok) throw new Error(`Counter request failed: ${response.status}`);
+      const data = await response.json();
+      if (!Number.isSafeInteger(data.count) || data.count < 0) {
+        throw new Error("Counter returned an invalid count");
+      }
+      render(data.count);
+    };
+
+    registerVisit().catch(async (error) => {
+      console.error("Unable to register Movie Master visitor", error);
+      try {
+        render(await fetchCount());
+      } catch (fallbackError) {
+        console.error("Unable to load Movie Master visitor count", fallbackError);
+      }
+    });
   }
 
   function setUpPurchaseFlow() {
