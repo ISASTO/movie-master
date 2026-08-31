@@ -1,0 +1,148 @@
+name: Patch real visitor counter
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/visitor-counter-patch.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Replace fake counter with real unique visitor counter
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("script.js")
+          text = path.read_text()
+          start_marker = "  function setUpVisitorCounter() {"
+          end_marker = "  function setUpPurchaseFlow() {"
+          start = text.index(start_marker)
+          end = text.index(end_marker, start)
+
+          replacement = r'''  function setUpVisitorCounter() {
+            const output = document.querySelector("#visitor-counter");
+            if (!output) return;
+
+            const counter = output.closest(".visitor-counter");
+            const apiBase = "https://movie-master-visitor-counter.isasto.workers.dev";
+            const visitorIdKey = "movie-master-visitor-id";
+            let priorFormatted = "";
+
+            const render = (count) => {
+              const formatted = count.toLocaleString("en-US");
+              if (formatted === priorFormatted) return;
+
+              const fragment = document.createDocumentFragment();
+
+              [...formatted].forEach((character, index) => {
+                const span = document.createElement("span");
+
+                if (character === ",") {
+                  span.className = "counter-comma";
+                } else {
+                  span.className = "counter-digit";
+                  if (priorFormatted[index] && priorFormatted[index] !== character) {
+                    span.classList.add("changing");
+                  }
+                }
+
+                span.textContent = character;
+                fragment.append(span);
+              });
+
+              output.replaceChildren(fragment);
+              counter?.setAttribute(
+                "aria-label",
+                `THE MOVIE MASTER HAS ${formatted} SATISFIED CUSTOMERS AND COUNTING!`,
+              );
+              priorFormatted = formatted;
+            };
+
+            const getVisitorId = () => {
+              try {
+                let visitorId = window.localStorage.getItem(visitorIdKey);
+                if (!visitorId) {
+                  visitorId = crypto.randomUUID();
+                  window.localStorage.setItem(visitorIdKey, visitorId);
+                }
+                return visitorId;
+              } catch {
+                return null;
+              }
+            };
+
+            const fetchCount = async () => {
+              const response = await fetch(`${apiBase}/count`, {
+                method: "GET",
+                cache: "no-store",
+              });
+              if (!response.ok) throw new Error(`Counter request failed: ${response.status}`);
+              const data = await response.json();
+              if (!Number.isSafeInteger(data.count) || data.count < 0) {
+                throw new Error("Counter returned an invalid count");
+              }
+              return data.count;
+            };
+
+            const registerVisit = async () => {
+              const visitorId = getVisitorId();
+
+              if (!visitorId) {
+                render(await fetchCount());
+                return;
+              }
+
+              const response = await fetch(`${apiBase}/visit`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ visitorId }),
+                cache: "no-store",
+              });
+
+              if (!response.ok) throw new Error(`Counter request failed: ${response.status}`);
+              const data = await response.json();
+              if (!Number.isSafeInteger(data.count) || data.count < 0) {
+                throw new Error("Counter returned an invalid count");
+              }
+              render(data.count);
+            };
+
+            registerVisit().catch(async (error) => {
+              console.error("Unable to register Movie Master visitor", error);
+              try {
+                render(await fetchCount());
+              } catch (fallbackError) {
+                console.error("Unable to load Movie Master visitor count", fallbackError);
+              }
+            });
+          }
+
+'''
+
+          path.write_text(text[:start] + replacement + text[end:])
+          PY
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          if git diff --quiet -- script.js; then
+            echo "No script.js changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add script.js
+          git commit -m "Use real unique visitor counter"
+          git push
