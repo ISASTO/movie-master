@@ -167,6 +167,70 @@ const hook = String.raw`
       });
     },
 
+    buildOrdinaryRenderScene(enemyCount, projectileCount, particleCount, floatingTextCount) {
+      this.buildRenderScene(enemyCount, projectileCount, particleCount, floatingTextCount);
+      shieldTime = 0;
+      shieldHits = 0;
+      speedTime = 0;
+      superStarsTime = 0;
+      magnetTime = 0;
+      mastery = 0.42;
+      dualBlastUnlocked = false;
+    },
+
+    buildIdleScene() {
+      this.buildCollisionScene(0, 0);
+      recycleAllParticles();
+      floatingTexts.length = 0;
+      pickups.length = 0;
+      powerups.length = 0;
+      blast = null;
+      rushWarning = null;
+      gameState = "running";
+      elapsed = 0;
+      score = 0;
+      difficultyLevel = 1;
+      mastery = 0;
+      dualBlastUnlocked = false;
+      shieldTime = 0;
+      shieldHits = 0;
+      speedTime = 0;
+      superStarsTime = 0;
+      magnetTime = 0;
+      spawnTimer = 1000000;
+      shotTimer = 1000000;
+      popcornSpawnTimer = 1000000;
+      powerupSpawnTimer = 1000000;
+      rushTimer = 1000000;
+      bannerTime = 0;
+      player.moving = false;
+      player.vx = 0;
+      player.vy = 0;
+      runStats = createRunStats();
+      updateInterface(true);
+    },
+
+    buildCollectibleScene() {
+      this.buildIdleScene();
+      pickups.push({
+        x: world.width * 0.28,
+        y: world.height * 0.48,
+        radius: scaleWorld(21),
+        ttl: 1000000,
+        totalTtl: 1000000,
+        phase: 0.4,
+      });
+      powerups.push({
+        type: "super",
+        x: world.width * 0.72,
+        y: world.height * 0.48,
+        radius: scaleWorld(23),
+        ttl: 1000000,
+        totalTtl: 1000000,
+        phase: 1.2,
+      });
+    },
+
     buildCrowdedSpawnScene(enemyCount) {
       this.buildCollisionScene(enemyCount, 0);
       const { left, right, top, bottom } = world.playerBounds;
@@ -213,6 +277,51 @@ const hook = String.raw`
       for (let index = 0; index < iterations; index += 1) choosePopcornPosition(radius);
     },
 
+    spawnPopcornMany(iterations) {
+      for (let index = 0; index < iterations; index += 1) {
+        pickups.length = 0;
+        spawnPopcorn();
+      }
+    },
+
+    spawnPowerupMany(iterations) {
+      for (let index = 0; index < iterations; index += 1) {
+        powerups.length = 0;
+        spawnPowerup();
+      }
+    },
+
+    updateIdleMany(iterations, dt) {
+      for (let index = 0; index < iterations; index += 1) update(dt);
+    },
+
+    updateCollectiblesMany(iterations, dt) {
+      for (let index = 0; index < iterations; index += 1) {
+        updatePickups(dt);
+        updatePowerups(dt);
+      }
+    },
+
+    updateInterfaceStableMany(iterations) {
+      for (let index = 0; index < iterations; index += 1) updateInterface();
+    },
+
+    updateInterfaceDirtyMany(iterations) {
+      gameState = "ready";
+      for (let index = 0; index < iterations; index += 1) {
+        score = index;
+        popcornChain = index % 501;
+        longestStreak = popcornChain;
+        mastery = (index % 200) / 100;
+        dualBlastUnlocked = index % 200 >= 100;
+        updateInterface();
+      }
+    },
+
+    pollGamepadMany(iterations) {
+      for (let index = 0; index < iterations; index += 1) pollGamepad();
+    },
+
     updateStableMany(iterations, dt) {
       for (let index = 0; index < iterations; index += 1) {
         updateMovement(dt);
@@ -254,6 +363,8 @@ const hook = String.raw`
         projectiles: projectiles.length,
         particles: particles.length,
         floatingTexts: floatingTexts.length,
+        pickups: pickups.length,
+        powerups: powerups.length,
       };
     },
   };
@@ -395,6 +506,7 @@ elements.set("game-canvas", mainCanvas);
 
 const documentObject = {
   hidden: false,
+  documentElement: { classList: createClassList(), dataset: {} },
   fonts: { ready: new Promise(() => {}) },
   getElementById(id) {
     if (!elements.has(id)) elements.set(id, createElement(id));
@@ -407,9 +519,10 @@ const documentObject = {
 };
 
 const storage = new Map();
+let mockGamepads = [];
 const windowObject = {
   devicePixelRatio: 2,
-  navigator: { getGamepads() { return []; } },
+  navigator: { getGamepads() { return mockGamepads; } },
   localStorage: {
     getItem(key) { return storage.has(key) ? storage.get(key) : null; },
     setItem(key, value) { storage.set(key, String(value)); },
@@ -526,6 +639,80 @@ function measureOperations(scenario) {
 
 const allScenarios = [
   {
+    name: "idle-full-update",
+    category: "update",
+    units: 2400,
+    setup: () => game.buildIdleScene(),
+    run: () => game.updateIdleMany(2400, 1 / 120),
+  },
+  {
+    name: "no-controller-poll",
+    category: "input",
+    units: 30000,
+    setup: () => game.buildIdleScene(),
+    run: () => game.pollGamepadMany(30000),
+  },
+  {
+    name: "connected-controller-poll",
+    category: "input",
+    units: 30000,
+    setup: () => {
+      mockGamepads = [{
+        index: 0,
+        connected: true,
+        axes: [0.62, -0.28],
+        buttons: Array.from({ length: 16 }, (_, index) => ({
+          pressed: index === 0,
+          value: index === 0 ? 1 : 0,
+        })),
+      }];
+      game.buildIdleScene();
+    },
+    run: () => game.pollGamepadMany(30000),
+  },
+  {
+    name: "stable-hud",
+    category: "ui",
+    units: 30000,
+    setup: () => game.buildIdleScene(),
+    run: () => game.updateInterfaceStableMany(30000),
+  },
+  {
+    name: "dirty-hud",
+    category: "ui",
+    units: 2400,
+    setup: () => game.buildIdleScene(),
+    run: () => game.updateInterfaceDirtyMany(2400),
+  },
+  {
+    name: "collectible-update",
+    category: "update",
+    units: 6000,
+    setup: () => game.buildCollectibleScene(),
+    run: () => game.updateCollectiblesMany(6000, 1 / 120),
+  },
+  {
+    name: "projectile-motion-no-targets",
+    category: "update",
+    units: 480000,
+    setup: () => game.buildCollisionScene(0, 800),
+    run: () => game.updateProjectilesMany(600, 1 / 120),
+  },
+  {
+    name: "ordinary-popcorn-placement",
+    category: "spawn",
+    units: 1200,
+    setup: () => game.buildIdleScene(),
+    run: () => game.spawnPopcornMany(1200),
+  },
+  {
+    name: "ordinary-powerup-placement",
+    category: "spawn",
+    units: 1200,
+    setup: () => game.buildIdleScene(),
+    run: () => game.spawnPowerupMany(1200),
+  },
+  {
     name: "projectile-collisions-busy",
     category: "update",
     units: 360,
@@ -575,6 +762,13 @@ const allScenarios = [
     run: () => game.updateStableMany(180, 1 / 240),
   },
   {
+    name: "ordinary-full-update",
+    category: "update",
+    units: 360,
+    setup: () => game.buildOrdinaryRenderScene(24, 80, 64, 4),
+    run: () => game.updateStableMany(360, 1 / 240),
+  },
+  {
     name: "projectile-sprite-cache-hits",
     category: "render-cpu",
     units: 240000,
@@ -598,6 +792,33 @@ const allScenarios = [
     prime: () => game.drawBackgroundMany(5),
     run: () => game.drawBackgroundMany(360),
     operations: () => game.drawBackgroundMany(1),
+  },
+  {
+    name: "empty-render",
+    category: "render",
+    units: 480,
+    setup: () => game.buildIdleScene(),
+    prime: () => game.drawMany(5),
+    run: () => game.drawMany(480),
+    operations: () => game.drawMany(1),
+  },
+  {
+    name: "early-render",
+    category: "render",
+    units: 360,
+    setup: () => game.buildOrdinaryRenderScene(12, 36, 24, 2),
+    prime: () => game.drawMany(5),
+    run: () => game.drawMany(360),
+    operations: () => game.drawMany(1),
+  },
+  {
+    name: "typical-render",
+    category: "render",
+    units: 240,
+    setup: () => game.buildOrdinaryRenderScene(48, 220, 160, 8),
+    prime: () => game.drawMany(5),
+    run: () => game.drawMany(240),
+    operations: () => game.drawMany(1),
   },
   {
     name: "busy-render",
@@ -690,8 +911,12 @@ async function main() {
   const profiles = {};
   if (profileDirectory) {
     const selectedProfiles = new Set([
+      "idle-full-update",
+      "stable-hud",
       "projectile-collisions-extreme",
       "crowded-popcorn-placement",
+      "background-render",
+      "typical-render",
       "extreme-render",
     ]);
     for (const scenario of scenarios) {

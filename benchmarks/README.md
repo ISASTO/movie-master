@@ -1,13 +1,16 @@
 # Game performance benchmarks
 
-The benchmark runner exercises the update and rendering paths that become most
-expensive during long, high-streak runs. It uses deterministic scenes and writes
-every raw timing sample, summary percentiles, transient and retained heap growth,
-scene counts, and canvas-operation counts to JSON.
+The benchmark runner exercises both the steady work paid by every frame and the
+paths that become most expensive during long, high-streak runs. It uses
+deterministic scenes and writes every raw timing sample, summary percentiles,
+transient and retained heap growth, scene counts, and canvas-operation counts to
+JSON.
 
-The suite covers busy and extreme projectile collisions, enemy steering, target
-acquisition, crowded popcorn placement, full stable updates, hot sprite caches,
-the animated background, and busy and extreme complete renders.
+The suite covers idle and ordinary full updates, controller polling, stable and
+changing HUD state, collectible updates, ordinary and crowded placement,
+no-target projectile motion, busy and extreme projectile collisions, enemy
+steering, target acquisition, hot sprite caches, the animated background, and
+empty, early, typical, busy, and extreme complete renders.
 
 Run the complete suite from the repository root:
 
@@ -22,7 +25,8 @@ node --expose-gc benchmarks/game-performance.js \
 ```
 
 The profile directory is optional. When supplied, the runner also records CPU
-profiles for the extreme collision, crowded-placement, and extreme-render cases.
+profiles for idle updates, stable HUD work, extreme collisions, crowded
+placement, background rendering, and typical and extreme complete renders.
 
 Use `--scenario` with a comma-separated list for a focused run:
 

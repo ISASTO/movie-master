@@ -155,6 +155,34 @@
     super: { label: "SUPER STARS", icon: "★10", color: COLORS.super },
     magnet: { label: "MAGNET", icon: "🧲", color: COLORS.magnet },
   };
+  const POWERUP_TYPE_KEYS = Object.keys(POWERUP_TYPES);
+  const PLAYER_AURA_STOPS = {
+    normal: [
+      [0, "rgba(255, 218, 107, 0.58)"],
+      [0.42, "rgba(229, 164, 8, 0.25)"],
+      [1, "rgba(229, 164, 8, 0)"],
+    ],
+    ready: [
+      [0, "rgba(255, 244, 185, 0.92)"],
+      [0.42, "rgba(255, 196, 41, 0.54)"],
+      [1, "rgba(229, 164, 8, 0)"],
+    ],
+  };
+  const PICKUP_BEAM_STOPS = {
+    normal: [[0, "rgba(255, 211, 96, 0.27)"], [1, "rgba(229, 164, 8, 0)"]],
+    danger: [[0, "rgba(255, 105, 72, 0.27)"], [1, "rgba(229, 164, 8, 0)"]],
+  };
+  const POWERUP_BEAM_STOPS = Object.fromEntries(
+    POWERUP_TYPE_KEYS.map((type) => [
+      type,
+      [[0, `${POWERUP_TYPES[type].color}55`], [1, `${POWERUP_TYPES[type].color}00`]],
+    ]),
+  );
+  const ENEMY_DEFINITIONS = {
+    standard: { radius: 23, speed: 1, hp: 1, color: "#6d5747", score: 34 },
+    fast: { radius: 18, speed: 1.56, hp: 1, color: "#a53a29", score: 52 },
+    heavy: { radius: 31, speed: 0.72, hp: 3, color: "#513660", score: 105 },
+  };
   const SOUND_KEY = "movie-master-vs-garbage-sound-v1";
   const MOVEMENT_KEY = "movie-master-vs-garbage-movement-v1";
   const QUALITY_KEY = "movie-master-vs-garbage-quality-v1";
@@ -220,6 +248,8 @@
     height: 0,
     dpr: 1,
     gameScale: 1,
+    canvasLeft: 0,
+    canvasTop: 0,
     backgroundStars: [],
     bounds: { left: 24, right: 300, top: 160, bottom: 500 },
     playerBounds: { left: 24, right: 300, top: 160, bottom: 500 },
@@ -235,6 +265,7 @@
     projectileSprites: new Map(),
     enemySprites: new Map(),
     emojiSprites: new Map(),
+    radialFillSprites: new Map(),
     textWidths: new Map(),
     emojiMetrics: new Map(),
     powerupStatusLayout: null,
@@ -352,6 +383,9 @@
   if (!QUALITY_LEVELS[qualityLevel]) qualityLevel = "high";
   let qualitySettings = QUALITY_LEVELS[qualityLevel];
   let activeGamepadIndex = null;
+  let activeGamepadHasRelevantInput = false;
+  let gamepadConnectionKnown = false;
+  let nextGamepadProbeAt = 0;
   let gamepadBlastPressed = false;
   let gamepadPausePressed = false;
   let gamepadConfirmPressed = false;
@@ -699,6 +733,7 @@
     renderCache.projectileSprites.clear();
     renderCache.enemySprites.clear();
     renderCache.emojiSprites.clear();
+    renderCache.radialFillSprites.clear();
     for (let index = 0; index < projectilePool.length; index += 1) {
       projectilePool[index].renderSprite = null;
     }
@@ -825,6 +860,8 @@
 
     world.width = Math.max(1, rect.width);
     world.height = Math.max(1, rect.height);
+    world.canvasLeft = rect.left;
+    world.canvasTop = rect.top;
     world.dpr = Math.min(window.devicePixelRatio || 1, qualitySettings.maxDpr);
     world.bounds = getPlayBounds();
 
@@ -874,12 +911,19 @@
           ),
         ),
       },
-      () => ({
-        x: Math.random() * world.width,
-        y: Math.random() * world.height,
-        size: randomBetween(0.7, 2.1),
-        phase: Math.random() * Math.PI * 2,
-      }),
+      () => {
+        const x = Math.random() * world.width;
+        const y = Math.random() * world.height;
+        const size = randomBetween(0.7, 2.1);
+        const phase = Math.random() * Math.PI * 2;
+        return {
+          x,
+          y,
+          size,
+          phaseSine: Math.sin(phase),
+          phaseCosine: Math.cos(phase),
+        };
+      },
     );
 
     const remapGameplayPosition = (item) => {
@@ -1635,12 +1679,7 @@
   }
 
   function enemyDefinition(kind) {
-    const definitions = {
-      standard: { radius: 23, speed: 1, hp: 1, color: "#6d5747", score: 34 },
-      fast: { radius: 18, speed: 1.56, hp: 1, color: "#a53a29", score: 52 },
-      heavy: { radius: 31, speed: 0.72, hp: 3, color: "#513660", score: 105 },
-    };
-    return definitions[kind];
+    return ENEMY_DEFINITIONS[kind];
   }
 
   function chooseEnemyKind(forceKind = null) {
@@ -1916,8 +1955,7 @@
     if (powerups.length) return;
 
     const { left, right, top, bottom } = world.bounds;
-    const availableTypes = Object.keys(POWERUP_TYPES);
-    const type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    const type = POWERUP_TYPE_KEYS[Math.floor(Math.random() * POWERUP_TYPE_KEYS.length)];
     const horizontalInset = scaleWorld(62);
     const topInset = scaleWorld(55);
     const bottomInset = scaleWorld(72);
@@ -2420,14 +2458,20 @@
 
   function update(dt) {
     elapsed += dt;
-    player.invulnerable = Math.max(0, player.invulnerable - dt);
-    shieldTime = Math.max(0, shieldTime - dt);
-    speedTime = Math.max(0, speedTime - dt);
-    superStarsTime = Math.max(0, superStarsTime - dt);
-    magnetTime = Math.max(0, magnetTime - dt);
-    if (shieldTime === 0) shieldHits = 0;
+    if (player.invulnerable > 0) {
+      player.invulnerable = player.invulnerable > dt ? player.invulnerable - dt : 0;
+    }
+    if (shieldTime > 0) {
+      shieldTime = shieldTime > dt ? shieldTime - dt : 0;
+      if (shieldTime === 0) shieldHits = 0;
+    } else if (shieldHits) {
+      shieldHits = 0;
+    }
+    if (speedTime > 0) speedTime = speedTime > dt ? speedTime - dt : 0;
+    if (superStarsTime > 0) superStarsTime = superStarsTime > dt ? superStarsTime - dt : 0;
+    if (magnetTime > 0) magnetTime = magnetTime > dt ? magnetTime - dt : 0;
     player.bob += dt * (player.moving ? 8 : 3);
-    bannerTime = Math.max(0, bannerTime - dt);
+    if (bannerTime > 0) bannerTime = bannerTime > dt ? bannerTime - dt : 0;
 
     const nextDifficulty = 1 + Math.floor(elapsed / 27);
     if (nextDifficulty > difficultyLevel) {
@@ -2450,7 +2494,7 @@
       spawnTimer = baseInterval * randomBetween(0.78, 1.15);
     }
 
-    shotTimer = Math.max(0, shotTimer - dt);
+    if (shotTimer > 0) shotTimer = shotTimer > dt ? shotTimer - dt : 0;
     if (superStarsTime > 0 && shotTimer <= 0) {
       fireSuperStars();
       shotTimer = currentShotInterval();
@@ -2484,8 +2528,12 @@
       }
     }
 
-    comboTimer = Math.max(0, comboTimer - dt);
-    if (comboTimer === 0) killCombo = 0;
+    if (comboTimer > 0) {
+      comboTimer = comboTimer > dt ? comboTimer - dt : 0;
+      if (comboTimer === 0) killCombo = 0;
+    } else if (killCombo) {
+      killCombo = 0;
+    }
 
     updatePowerups(dt);
     updatePickups(dt);
@@ -2496,7 +2544,7 @@
     updateParticles(dt);
     updateFloatingTexts(dt);
 
-    shakeTime = Math.max(0, shakeTime - dt);
+    if (shakeTime > 0) shakeTime = shakeTime > dt ? shakeTime - dt : 0;
     updateInterface();
   }
 
@@ -2536,6 +2584,14 @@
       dy /= length;
     }
 
+    if (dx === 0 && dy === 0) {
+      player.moving = false;
+      player.stationaryTime += dt;
+      player.vx = 0;
+      player.vy = 0;
+      return;
+    }
+
     const previousX = player.x;
     const previousY = player.y;
     const popcornSpeedMultiplier = 1 + Math.min(0.6, movementPower * 0.1);
@@ -2559,11 +2615,14 @@
   }
 
   function updateEnemies(dt) {
+    if (!enemies.length) return;
+
     const rushMargin = scaleWorld(90);
     const closeThreatDistance = scaleWorld(CLOSE_THREAT_RADIUS);
     const closeThreatDistanceSquared = closeThreatDistance * closeThreatDistance;
-    const playerSpeed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
-    const canPredictPlayer = playerSpeed >= 1;
+    const playerSpeedSquared = player.vx * player.vx + player.vy * player.vy;
+    const canPredictPlayer = playerSpeedSquared >= 1;
+    const playerSpeed = canPredictPlayer ? Math.sqrt(playerSpeedSquared) : 0;
     const maximumPredictionScale = canPredictPlayer
       ? MAX_PURSUIT_LEAD_FRACTION / playerSpeed
       : 0;
@@ -2580,7 +2639,9 @@
     for (let i = enemies.length - 1; i >= 0; i -= 1) {
       const enemy = enemies[i];
       enemy.phase += dt * (enemy.kind === "fast" ? 8 : 4.5);
-      enemy.hitFlash = Math.max(0, enemy.hitFlash - dt);
+      if (enemy.hitFlash > 0) {
+        enemy.hitFlash = enemy.hitFlash > dt ? enemy.hitFlash - dt : 0;
+      }
 
       if (enemy.mode === "rush") {
         enemy.x += enemy.vx * dt;
@@ -2690,7 +2751,17 @@
     }
   }
 
-  function chooseActiveGamepad() {
+  function chooseActiveGamepad(now = performance.now(), forceProbe = false) {
+    if (
+      !forceProbe
+      && !gamepadConnectionKnown
+      && activeGamepadIndex === null
+      && now < nextGamepadProbeAt
+    ) {
+      activeGamepadHasRelevantInput = false;
+      return null;
+    }
+
     const gamepads = readConnectedGamepads();
     let first = null;
     let current = null;
@@ -2712,6 +2783,9 @@
 
     if (!first) {
       activeGamepadIndex = null;
+      activeGamepadHasRelevantInput = false;
+      gamepadConnectionKnown = false;
+      nextGamepadProbeAt = now + 500;
       return null;
     }
 
@@ -2719,7 +2793,23 @@
       ? engaged
       : current || engaged || first;
     activeGamepadIndex = selected.index;
+    activeGamepadHasRelevantInput = selected === engaged
+      || (selected === current && currentEngaged);
+    gamepadConnectionKnown = true;
+    nextGamepadProbeAt = 0;
     return selected;
+  }
+
+  function resetGamepadInputState() {
+    gamepadMove.x = 0;
+    gamepadMove.y = 0;
+    gamepadMove.active = false;
+    gamepadBlastPressed = false;
+    gamepadPausePressed = false;
+    gamepadConfirmPressed = false;
+    gamepadCancelPressed = false;
+    gamepadMenuDirectionActive = false;
+    setControllerInputActive(false);
   }
 
   function supportsGamepadHapticEffect(actuator, effectType) {
@@ -2778,7 +2868,7 @@
     const sourceIsGamepad = sourceGamepad
       && Number.isInteger(sourceGamepad.index)
       && sourceGamepad.connected !== false;
-    const gamepad = sourceIsGamepad ? sourceGamepad : chooseActiveGamepad();
+    const gamepad = sourceIsGamepad ? sourceGamepad : chooseActiveGamepad(undefined, true);
     if (!gamepad) return;
 
     const actuators = [];
@@ -2799,22 +2889,24 @@
     })();
   }
 
-  function pollGamepad() {
-    const gamepad = chooseActiveGamepad();
+  function pollGamepad(now = performance.now()) {
+    const gamepad = chooseActiveGamepad(now);
     if (!gamepad) {
-      setControllerInputActive(false);
-      gamepadMove.x = 0;
-      gamepadMove.y = 0;
-      gamepadMove.active = false;
-      gamepadBlastPressed = false;
-      gamepadPausePressed = false;
-      gamepadConfirmPressed = false;
-      gamepadCancelPressed = false;
-      gamepadMenuDirectionActive = false;
+      if (
+        controllerInputActive
+        || gamepadMove.active
+        || gamepadBlastPressed
+        || gamepadPausePressed
+        || gamepadConfirmPressed
+        || gamepadCancelPressed
+        || gamepadMenuDirectionActive
+      ) {
+        resetGamepadInputState();
+      }
       return;
     }
 
-    if (hasRelevantGamepadInput(gamepad)) setControllerInputActive(true);
+    if (activeGamepadHasRelevantInput) setControllerInputActive(true);
 
     normalizeGamepadStick(gamepad.axes?.[0], gamepad.axes?.[1], gamepadMove);
     const menuActive = gameState === "ready"
@@ -2897,6 +2989,27 @@
     const maximumXBoundary = world.width + offscreenMargin;
     const maximumYBoundary = world.height + offscreenMargin;
     const rotationStep = dt * 10;
+    if (!enemies.length) {
+      for (let index = projectiles.length - 1; index >= 0; index -= 1) {
+        const projectile = projectiles[index];
+        projectile.x += projectile.vx * dt;
+        projectile.y += projectile.vy * dt;
+        projectile.rotation += rotationStep;
+        if (projectile.rotation >= STAR_ROTATION_PERIOD) {
+          projectile.rotation -= STAR_ROTATION_PERIOD;
+        }
+        if (
+          projectile.x < -offscreenMargin
+          || projectile.x > maximumXBoundary
+          || projectile.y < -offscreenMargin
+          || projectile.y > maximumYBoundary
+        ) {
+          recycleProjectileAt(index);
+        }
+      }
+      return;
+    }
+
     let destroyedEnemies = false;
     populateCollisionIndex();
     const sortedEnemies = collisionIndex.enemies;
@@ -3039,6 +3152,7 @@
   }
 
   function updatePickups(dt) {
+    if (!pickups.length) return;
     for (let i = pickups.length - 1; i >= 0; i -= 1) {
       const pickup = pickups[i];
       applyMagnet(pickup, dt);
@@ -3059,6 +3173,7 @@
   }
 
   function updatePowerups(dt) {
+    if (!powerups.length) return;
     for (let i = powerups.length - 1; i >= 0; i -= 1) {
       const powerup = powerups[i];
       applyMagnet(powerup, dt);
@@ -3100,6 +3215,7 @@
   }
 
   function updateParticles(dt) {
+    if (!particles.length) return;
     const horizontalDrag = Math.pow(0.08, dt);
     const verticalDrag = Math.pow(0.12, dt);
     const gravity = scaleWorld(45) * dt;
@@ -3118,6 +3234,7 @@
   }
 
   function updateFloatingTexts(dt) {
+    if (!floatingTexts.length) return;
     for (let i = floatingTexts.length - 1; i >= 0; i -= 1) {
       const text = floatingTexts[i];
       text.life -= dt;
@@ -3173,8 +3290,8 @@
     }
 
     const pickup = pickups[0];
-
     const dualBlastPresentationChanged = ui.reserveMasteryTrack.hidden === dualBlastUnlocked;
+
     if (dualBlastPresentationChanged) {
       ui.reserveMasteryTrack.hidden = !dualBlastUnlocked;
       ui.blastMeter?.classList.toggle("is-dual", dualBlastUnlocked);
@@ -3302,9 +3419,13 @@
 
     ctx.fillStyle = COLORS.goldLight;
     const backgroundStars = world.backgroundStars;
+    const twinkleTime = time * 1.7;
+    const twinkleSine = Math.sin(twinkleTime);
+    const twinkleCosine = Math.cos(twinkleTime);
     for (let index = 0; index < backgroundStars.length; index += 1) {
       const star = backgroundStars[index];
-      const alpha = 0.14 + (Math.sin(time * 1.7 + star.phase) + 1) * 0.11;
+      const twinkle = twinkleSine * star.phaseCosine + twinkleCosine * star.phaseSine;
+      const alpha = 0.25 + twinkle * 0.11;
       ctx.globalAlpha = alpha;
       ctx.fillRect(star.x, star.y, star.size, star.size);
     }
@@ -3423,6 +3544,40 @@
     rasterCanvas.height = height;
     const rasterContext = rasterCanvas.getContext("2d");
     return rasterContext ? { canvas: rasterCanvas, context: rasterContext } : null;
+  }
+
+  function getRadialFillSprite(key, innerRadius, outerRadius, colorStops) {
+    const cached = renderCache.radialFillSprites.get(key);
+    if (cached) return cached;
+
+    const logicalSize = Math.ceil(outerRadius * 2 + 2);
+    const pixelSize = Math.max(1, Math.ceil(logicalSize * world.dpr));
+    const actualLogicalSize = pixelSize / world.dpr;
+    const center = actualLogicalSize / 2;
+    const raster = createRasterCanvas(pixelSize, pixelSize);
+    if (!raster) return null;
+
+    const rasterContext = raster.context;
+    rasterContext.setTransform(world.dpr, 0, 0, world.dpr, 0, 0);
+    const gradient = rasterContext.createRadialGradient(
+      center,
+      center,
+      innerRadius,
+      center,
+      center,
+      outerRadius,
+    );
+    for (let index = 0; index < colorStops.length; index += 1) {
+      gradient.addColorStop(colorStops[index][0], colorStops[index][1]);
+    }
+    rasterContext.fillStyle = gradient;
+    rasterContext.beginPath();
+    rasterContext.arc(center, center, outerRadius, 0, Math.PI * 2);
+    rasterContext.fill();
+
+    const sprite = { canvas: raster.canvas, logicalSize: actualLogicalSize };
+    renderCache.radialFillSprites.set(key, sprite);
+    return sprite;
   }
 
   function getProjectileSprite(projectile) {
@@ -3803,24 +3958,45 @@
     const auraRadius = player.drawHeight * (blastReady ? 0.62 : 0.5);
     const playerVisualOffset = scaleWorld(8);
     if (qualitySettings.playerAura === "gradient") {
-      const aura = ctx.createRadialGradient(
-        0,
-        -playerVisualOffset,
+      const auraSprite = getRadialFillSprite(
+        blastReady ? "player-aura-ready" : "player-aura-normal",
         scaleWorld(4),
-        0,
-        -playerVisualOffset,
         auraRadius,
+        blastReady ? PLAYER_AURA_STOPS.ready : PLAYER_AURA_STOPS.normal,
       );
-      aura.addColorStop(0, blastReady ? "rgba(255, 244, 185, 0.92)" : "rgba(255, 218, 107, 0.58)");
-      aura.addColorStop(0.42, blastReady ? "rgba(255, 196, 41, 0.54)" : "rgba(229, 164, 8, 0.25)");
-      aura.addColorStop(1, "rgba(229, 164, 8, 0)");
-      ctx.fillStyle = aura;
+      if (auraSprite) {
+        const auraHalf = auraSprite.logicalSize / 2;
+        ctx.drawImage(
+          auraSprite.canvas,
+          -auraHalf,
+          -playerVisualOffset - auraHalf,
+          auraSprite.logicalSize,
+          auraSprite.logicalSize,
+        );
+      } else {
+        const aura = ctx.createRadialGradient(
+          0,
+          -playerVisualOffset,
+          scaleWorld(4),
+          0,
+          -playerVisualOffset,
+          auraRadius,
+        );
+        const colorStops = blastReady ? PLAYER_AURA_STOPS.ready : PLAYER_AURA_STOPS.normal;
+        for (let index = 0; index < colorStops.length; index += 1) {
+          aura.addColorStop(colorStops[index][0], colorStops[index][1]);
+        }
+        ctx.fillStyle = aura;
+        ctx.beginPath();
+        ctx.arc(0, -playerVisualOffset, auraRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
     } else {
       ctx.fillStyle = blastReady ? "rgba(255, 211, 96, 0.34)" : "rgba(229, 164, 8, 0.18)";
+      ctx.beginPath();
+      ctx.arc(0, -playerVisualOffset, auraRadius, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.beginPath();
-    ctx.arc(0, -playerVisualOffset, auraRadius, 0, Math.PI * 2);
-    ctx.fill();
 
     if (blastReady) {
       ctx.save();
@@ -3949,6 +4125,7 @@
   }
 
   function drawEnemies() {
+    if (!enemies.length) return;
     const cullPadding = scaleWorld(45);
     const bobDistance = scaleWorld(2.4);
     const cacheGeneration = renderCache.generation;
@@ -4030,6 +4207,7 @@
   }
 
   function drawProjectiles() {
+    if (!projectiles.length) return;
     const cullPadding = scaleWorld(30);
     const cacheGeneration = renderCache.generation;
     for (let index = 0; index < projectiles.length; index += 1) {
@@ -4082,20 +4260,39 @@
       ctx.save();
       if (qualitySettings.pickupBeams) {
         const beamRadius = scaleWorld(POPCORN_GLOW_RADIUS);
-        const beam = ctx.createRadialGradient(
-          pickup.x,
-          pickup.y,
+        const beamSprite = getRadialFillSprite(
+          danger ? "pickup-beam-danger" : "pickup-beam-normal",
           scaleWorld(5),
-          pickup.x,
-          pickup.y,
           beamRadius,
+          danger ? PICKUP_BEAM_STOPS.danger : PICKUP_BEAM_STOPS.normal,
         );
-        beam.addColorStop(0, danger ? "rgba(255, 105, 72, 0.27)" : "rgba(255, 211, 96, 0.27)");
-        beam.addColorStop(1, "rgba(229, 164, 8, 0)");
-        ctx.fillStyle = beam;
-        ctx.beginPath();
-        ctx.arc(pickup.x, pickup.y, beamRadius, 0, Math.PI * 2);
-        ctx.fill();
+        if (beamSprite) {
+          const beamHalf = beamSprite.logicalSize / 2;
+          ctx.drawImage(
+            beamSprite.canvas,
+            pickup.x - beamHalf,
+            pickup.y - beamHalf,
+            beamSprite.logicalSize,
+            beamSprite.logicalSize,
+          );
+        } else {
+          const colorStops = danger ? PICKUP_BEAM_STOPS.danger : PICKUP_BEAM_STOPS.normal;
+          const beam = ctx.createRadialGradient(
+            pickup.x,
+            pickup.y,
+            scaleWorld(5),
+            pickup.x,
+            pickup.y,
+            beamRadius,
+          );
+          for (let index = 0; index < colorStops.length; index += 1) {
+            beam.addColorStop(colorStops[index][0], colorStops[index][1]);
+          }
+          ctx.fillStyle = beam;
+          ctx.beginPath();
+          ctx.arc(pickup.x, pickup.y, beamRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       ctx.translate(pickup.x, pickup.y);
@@ -4134,20 +4331,39 @@
       ctx.save();
       if (qualitySettings.pickupBeams) {
         const beamRadius = scaleWorld(POWERUP_GLOW_RADIUS);
-        const beam = ctx.createRadialGradient(
-          powerup.x,
-          powerup.y,
+        const beamSprite = getRadialFillSprite(
+          `powerup-beam-${powerup.type}`,
           scaleWorld(5),
-          powerup.x,
-          powerup.y,
           beamRadius,
+          POWERUP_BEAM_STOPS[powerup.type],
         );
-        beam.addColorStop(0, `${definition.color}55`);
-        beam.addColorStop(1, `${definition.color}00`);
-        ctx.fillStyle = beam;
-        ctx.beginPath();
-        ctx.arc(powerup.x, powerup.y, beamRadius, 0, Math.PI * 2);
-        ctx.fill();
+        if (beamSprite) {
+          const beamHalf = beamSprite.logicalSize / 2;
+          ctx.drawImage(
+            beamSprite.canvas,
+            powerup.x - beamHalf,
+            powerup.y - beamHalf,
+            beamSprite.logicalSize,
+            beamSprite.logicalSize,
+          );
+        } else {
+          const colorStops = POWERUP_BEAM_STOPS[powerup.type];
+          const beam = ctx.createRadialGradient(
+            powerup.x,
+            powerup.y,
+            scaleWorld(5),
+            powerup.x,
+            powerup.y,
+            beamRadius,
+          );
+          for (let index = 0; index < colorStops.length; index += 1) {
+            beam.addColorStop(colorStops[index][0], colorStops[index][1]);
+          }
+          ctx.fillStyle = beam;
+          ctx.beginPath();
+          ctx.arc(powerup.x, powerup.y, beamRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
       ctx.translate(powerup.x, powerup.y);
@@ -4447,6 +4663,7 @@
   }
 
   function drawParticles() {
+    if (!particles.length) return;
     ctx.save();
     const stride = qualitySettings.particleDrawStride;
     const cullPadding = scaleWorld(16);
@@ -4506,6 +4723,7 @@
   }
 
   function drawFloatingTexts() {
+    if (!floatingTexts.length) return;
     ctx.save();
     ctx.strokeStyle = COLORS.ink;
     ctx.lineWidth = Math.max(1.5, scaleWorld(4));
@@ -4578,7 +4796,7 @@
   function frame(now) {
     const dt = Math.min((now - lastFrame) / 1000, 0.034);
     lastFrame = now;
-    pollGamepad();
+    pollGamepad(now);
 
     if (
       gameState === "running"
@@ -4669,20 +4887,17 @@
 
   window.addEventListener("gamepadconnected", (event) => {
     activeGamepadIndex = event.gamepad.index;
+    gamepadConnectionKnown = true;
+    nextGamepadProbeAt = 0;
   });
 
   window.addEventListener("gamepaddisconnected", (event) => {
     if (event.gamepad.index !== activeGamepadIndex) return;
     activeGamepadIndex = null;
-    gamepadMove.x = 0;
-    gamepadMove.y = 0;
-    gamepadMove.active = false;
-    gamepadBlastPressed = false;
-    gamepadPausePressed = false;
-    gamepadConfirmPressed = false;
-    gamepadCancelPressed = false;
-    gamepadMenuDirectionActive = false;
-    setControllerInputActive(false);
+    activeGamepadHasRelevantInput = false;
+    gamepadConnectionKnown = false;
+    nextGamepadProbeAt = 0;
+    resetGamepadInputState();
   });
 
   window.addEventListener("pointerdown", () => {
@@ -4692,10 +4907,17 @@
   window.addEventListener("pointermove", (event) => {
     if (coarsePointer || event.pointerType === "touch") return;
     setControllerInputActive(false);
-    const rect = canvas.getBoundingClientRect();
     const movementBounds = world.playerBounds;
-    mouseTarget.x = clamp(event.clientX - rect.left, movementBounds.left, movementBounds.right);
-    mouseTarget.y = clamp(event.clientY - rect.top, movementBounds.top, movementBounds.bottom);
+    mouseTarget.x = clamp(
+      event.clientX - world.canvasLeft,
+      movementBounds.left,
+      movementBounds.right,
+    );
+    mouseTarget.y = clamp(
+      event.clientY - world.canvasTop,
+      movementBounds.top,
+      movementBounds.bottom,
+    );
     if (gameState === "running" || gameState === "resuming") mouseTarget.active = true;
   }, { passive: true });
 
@@ -4798,6 +5020,11 @@
   const resizeObserver = new ResizeObserver(resizeCanvas);
   resizeObserver.observe(canvas);
   window.addEventListener("resize", resizeCanvas, { passive: true });
+  window.addEventListener("scroll", () => {
+    const rect = canvas.getBoundingClientRect();
+    world.canvasLeft = rect.left;
+    world.canvasTop = rect.top;
+  }, { passive: true });
 
   ui.soundButton.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
   ui.soundButton.setAttribute("aria-pressed", soundOn ? "true" : "false");
