@@ -184,7 +184,7 @@
       output.replaceChildren(fragment);
       counter?.setAttribute(
         "aria-label",
-        `THE MOVIE MASTER HAS ${formatted} SATISFIED CUSTOMERS AND COUNTING!`,
+        `THIS SITE HAS HAD ${formatted} VISITORS AND COUNTING!`,
       );
       priorFormatted = formatted;
     };
