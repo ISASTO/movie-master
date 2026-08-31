@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const inspector = require("node:inspector");
+const assert = require("node:assert/strict");
 
 function readOption(name, fallback = null) {
   const index = process.argv.indexOf(`--${name}`);
@@ -23,6 +24,7 @@ const label = readOption("label", "unlabeled");
 const scenarioFilter = readOption("scenario");
 const sampleCount = readIntegerOption("samples", 25);
 const warmupCount = readIntegerOption("warmups", 7);
+const verifyControllerMenu = process.argv.includes("--verify-controller-menu");
 const source = fs.readFileSync(path.join(repositoryRoot, "game", "game.js"), "utf8");
 
 const hook = String.raw`
@@ -357,6 +359,41 @@ const hook = String.raw`
       }
     },
 
+    setupControllerMenu(entering = false) {
+      gameState = "paused";
+      ui.pauseOverlay.hidden = false;
+      ui.resetConfirmOverlay.hidden = true;
+      ui.endConfirmOverlay.hidden = true;
+      ui.exitConfirmOverlay.hidden = true;
+      ui.statsOverlay.hidden = true;
+      const buttons = [ui.resumeButton, ui.resetButton, ui.endButton];
+      for (let index = 0; index < buttons.length; index += 1) {
+        buttons[index].hidden = false;
+        buttons[index].disabled = false;
+        buttons[index].mockRect = {
+          left: index * 200,
+          right: index * 200 + 160,
+          top: 0,
+          bottom: 50,
+          width: 160,
+          height: 50,
+        };
+      }
+      activeGamepadIndex = null;
+      gamepadConnectionKnown = true;
+      gamepadMenuContext = entering ? "" : "paused";
+      resetGamepadMenuNavigation(false);
+      setControllerSelection(ui.resumeButton);
+    },
+
+    pollGamepadAt(now) {
+      pollGamepad(now);
+    },
+
+    selectedMenuButton() {
+      return controllerSelectedButton?.id || null;
+    },
+
     counts() {
       return {
         enemies: enemies.length,
@@ -487,10 +524,16 @@ function createElement(id) {
     addEventListener() {},
     setAttribute() {},
     focus() {},
+    blur() {},
+    click() {},
     setPointerCapture() {},
     closest() { return null; },
+    getClientRects() {
+      return this.hidden ? [] : [this.getBoundingClientRect()];
+    },
     getBoundingClientRect() {
-      return { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
+      return this.mockRect
+        || { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
     },
   };
 }
@@ -575,6 +618,90 @@ context.globalThis = context;
 vm.createContext(context);
 vm.runInContext(instrumented, context, { filename: "game.js" });
 const game = context.__performanceGame;
+
+function setMockControllerInput(axisX = 0, axisY = 0, pressedButtons = []) {
+  const pressed = new Set(pressedButtons);
+  mockGamepads = [{
+    index: 0,
+    connected: true,
+    axes: [axisX, axisY],
+    buttons: Array.from({ length: 16 }, (_, index) => ({
+      pressed: pressed.has(index),
+      value: pressed.has(index) ? 1 : 0,
+    })),
+  }];
+}
+
+function verifyControllerMenuNavigation() {
+  const expectSelection = (expected, message) => {
+    assert.equal(game.selectedMenuButton(), expected, message);
+  };
+
+  game.setupControllerMenu();
+  setMockControllerInput(0.63, 0);
+  game.pollGamepadAt(0);
+  expectSelection("resume-button", "Stick input below the menu threshold must not move selection");
+  setMockControllerInput(0.8, 0);
+  game.pollGamepadAt(16);
+  expectSelection("reset-button", "Crossing the menu threshold should move exactly one item");
+  setMockControllerInput(-0.8, 0);
+  game.pollGamepadAt(500);
+  expectSelection("reset-button", "Reversing without a neutral release must not snap selection back");
+
+  setMockControllerInput(0, 0);
+  game.pollGamepadAt(516);
+  game.pollGamepadAt(600);
+  setMockControllerInput(-0.8, 0);
+  game.pollGamepadAt(616);
+  expectSelection("reset-button", "The stick must remain neutral for the full dwell time");
+  setMockControllerInput(0, 0);
+  game.pollGamepadAt(632);
+  game.pollGamepadAt(717);
+  setMockControllerInput(-0.8, 0);
+  game.pollGamepadAt(733);
+  expectSelection("resume-button", "A deliberate direction after neutral dwell should move selection");
+
+  game.setupControllerMenu();
+  setMockControllerInput(0.8, 0);
+  game.pollGamepadAt(0);
+  expectSelection("reset-button", "Initial held direction should make one move");
+  setMockControllerInput(0.5, 0);
+  game.pollGamepadAt(419);
+  expectSelection("reset-button", "Held input must wait through the initial repeat delay");
+  game.pollGamepadAt(420);
+  expectSelection("end-button", "Held input should repeat after the initial delay");
+
+  game.setupControllerMenu(true);
+  setMockControllerInput(0.8, 0);
+  game.pollGamepadAt(0);
+  expectSelection("resume-button", "A stick held while entering a menu must not move selection");
+  setMockControllerInput(0, 0);
+  game.pollGamepadAt(16);
+  game.pollGamepadAt(101);
+  setMockControllerInput(0.8, 0);
+  game.pollGamepadAt(117);
+  expectSelection("reset-button", "Menu navigation should arm after the entry stick is released");
+
+  game.setupControllerMenu();
+  setMockControllerInput(0, 0, [15]);
+  game.pollGamepadAt(0);
+  expectSelection("reset-button", "D-pad input should move one item");
+  setMockControllerInput();
+  game.pollGamepadAt(16);
+  game.pollGamepadAt(101);
+  setMockControllerInput(0, 0, [14]);
+  game.pollGamepadAt(117);
+  expectSelection("resume-button", "D-pad input should re-arm after release");
+
+  return {
+    threshold: 0.64,
+    releaseThreshold: 0.3,
+    neutralDwellMs: 85,
+    initialRepeatDelayMs: 420,
+    repeatIntervalMs: 170,
+    checks: 12,
+  };
+}
 
 function nowNanoseconds() {
   return process.hrtime.bigint();
@@ -880,6 +1007,12 @@ async function recordCpuProfile(scenario, directory) {
 }
 
 async function main() {
+  if (verifyControllerMenu) {
+    const verification = verifyControllerMenuNavigation();
+    process.stdout.write(`${JSON.stringify({ controllerMenu: verification }, null, 2)}\n`);
+    return;
+  }
+
   const scenarioResults = {};
 
   for (const scenario of scenarios) {

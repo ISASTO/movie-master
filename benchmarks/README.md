@@ -38,6 +38,13 @@ node --expose-gc benchmarks/game-performance.js \
   --warmups 6
 ```
 
+Verify controller-menu thresholds, neutral re-arming, held-stick repeat timing,
+stick springback rejection, and D-pad navigation:
+
+```sh
+node benchmarks/game-performance.js --verify-controller-menu
+```
+
 Compare `unitMedianMs` and the per-work-unit value derived from `p95Ms` between
 runs. Canvas-operation and scene counts should remain stable when validating a
 performance-only change that is intended to preserve High-quality output.

@@ -702,7 +702,8 @@ html.hardcore-mode .hud {
   display: none;
 }
 
-#start-hardcore-warning[hidden] {
+#start-hardcore-warning[hidden],
+#gameover-hardcore-warning[hidden] {
   display: block;
   visibility: hidden;
 }

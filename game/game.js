@@ -127,7 +127,11 @@
   const GAMEPAD_DPAD_DOWN = 13;
   const GAMEPAD_DPAD_LEFT = 14;
   const GAMEPAD_DPAD_RIGHT = 15;
-  const MENU_AXIS_THRESHOLD = 0.55;
+  const MENU_AXIS_THRESHOLD = 0.64;
+  const MENU_AXIS_RELEASE_THRESHOLD = 0.3;
+  const MENU_NEUTRAL_DWELL = 85;
+  const MENU_REPEAT_DELAY = 420;
+  const MENU_REPEAT_INTERVAL = 170;
   const RECORD_SAVE_DELAY = 1800;
   const RESUME_COUNTDOWN_DURATION = 2000;
   const GAMEPAD_RUMBLE = {
@@ -391,6 +395,12 @@
   let gamepadConfirmPressed = false;
   let gamepadCancelPressed = false;
   let gamepadMenuDirectionActive = false;
+  let gamepadMenuDirectionX = 0;
+  let gamepadMenuDirectionY = 0;
+  let gamepadMenuNeutralSince = -1;
+  let gamepadMenuNextRepeatAt = 0;
+  let gamepadMenuRequiresNeutral = false;
+  let gamepadMenuContext = "ready";
   let controllerSelectedButton = null;
   let controllerInputActive = false;
   let backgroundAnimationTime = performance.now() / 1000;
@@ -2719,6 +2729,94 @@
     return output;
   }
 
+  function resetGamepadMenuNavigation(requireNeutral = false) {
+    gamepadMenuDirectionActive = false;
+    gamepadMenuDirectionX = 0;
+    gamepadMenuDirectionY = 0;
+    gamepadMenuNeutralSince = -1;
+    gamepadMenuNextRepeatAt = 0;
+    gamepadMenuRequiresNeutral = requireNeutral;
+  }
+
+  function readGamepadMenuDirection(gamepad) {
+    const dpadX = (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_RIGHT) ? 1 : 0)
+      - (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_LEFT) ? 1 : 0);
+    const dpadY = (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_DOWN) ? 1 : 0)
+      - (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_UP) ? 1 : 0);
+    if (dpadX !== 0 || dpadY !== 0) {
+      return {
+        directionX: dpadX,
+        directionY: dpadY,
+        holdX: dpadX,
+        holdY: dpadY,
+        neutral: false,
+      };
+    }
+
+    const axisX = Number.isFinite(gamepad?.axes?.[0])
+      ? clamp(gamepad.axes[0], -1, 1)
+      : 0;
+    const axisY = Number.isFinite(gamepad?.axes?.[1])
+      ? clamp(gamepad.axes[1], -1, 1)
+      : 0;
+    const absoluteX = Math.abs(axisX);
+    const absoluteY = Math.abs(axisY);
+    const horizontal = absoluteX >= absoluteY;
+    const dominantMagnitude = horizontal ? absoluteX : absoluteY;
+    const dominantSign = Math.sign(horizontal ? axisX : axisY);
+
+    return {
+      directionX: horizontal && dominantMagnitude >= MENU_AXIS_THRESHOLD ? dominantSign : 0,
+      directionY: !horizontal && dominantMagnitude >= MENU_AXIS_THRESHOLD ? dominantSign : 0,
+      holdX: horizontal && dominantMagnitude > MENU_AXIS_RELEASE_THRESHOLD ? dominantSign : 0,
+      holdY: !horizontal && dominantMagnitude > MENU_AXIS_RELEASE_THRESHOLD ? dominantSign : 0,
+      neutral: Math.max(absoluteX, absoluteY) <= MENU_AXIS_RELEASE_THRESHOLD,
+    };
+  }
+
+  function updateGamepadMenuNavigation(gamepad, now, contextChanged) {
+    const input = readGamepadMenuDirection(gamepad);
+    if (contextChanged) resetGamepadMenuNavigation(!input.neutral);
+
+    if (gamepadMenuRequiresNeutral) {
+      if (!input.neutral) {
+        gamepadMenuNeutralSince = -1;
+        return;
+      }
+      if (gamepadMenuNeutralSince < 0) gamepadMenuNeutralSince = now;
+      if (now - gamepadMenuNeutralSince < MENU_NEUTRAL_DWELL) return;
+      resetGamepadMenuNavigation(false);
+      return;
+    }
+
+    if (!gamepadMenuDirectionActive) {
+      if (input.directionX === 0 && input.directionY === 0) return;
+      moveControllerSelection(input.directionX, input.directionY);
+      gamepadMenuDirectionActive = true;
+      gamepadMenuDirectionX = input.directionX;
+      gamepadMenuDirectionY = input.directionY;
+      gamepadMenuNeutralSince = -1;
+      gamepadMenuNextRepeatAt = now + MENU_REPEAT_DELAY;
+      return;
+    }
+
+    if (input.neutral) {
+      if (gamepadMenuNeutralSince < 0) gamepadMenuNeutralSince = now;
+      if (now - gamepadMenuNeutralSince >= MENU_NEUTRAL_DWELL) {
+        resetGamepadMenuNavigation(false);
+      }
+      return;
+    }
+
+    gamepadMenuNeutralSince = -1;
+    const heldDirectionMatches = input.holdX === gamepadMenuDirectionX
+      && input.holdY === gamepadMenuDirectionY;
+    if (!heldDirectionMatches || now < gamepadMenuNextRepeatAt) return;
+
+    moveControllerSelection(gamepadMenuDirectionX, gamepadMenuDirectionY);
+    gamepadMenuNextRepeatAt = now + MENU_REPEAT_INTERVAL;
+  }
+
   function isGamepadButtonPressed(gamepad, index) {
     const button = gamepad?.buttons?.[index];
     if (typeof button === "number") return button >= GAMEPAD_TRIGGER_THRESHOLD;
@@ -2808,7 +2906,8 @@
     gamepadPausePressed = false;
     gamepadConfirmPressed = false;
     gamepadCancelPressed = false;
-    gamepadMenuDirectionActive = false;
+    gamepadMenuContext = "";
+    resetGamepadMenuNavigation(false);
     setControllerInputActive(false);
   }
 
@@ -2917,29 +3016,20 @@
       || gameState === "gameover";
     const menuButtons = menuActive ? visibleMenuButtons() : null;
     if (menuActive) {
-      const dpadX = (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_RIGHT) ? 1 : 0)
-        - (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_LEFT) ? 1 : 0);
-      const dpadY = (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_DOWN) ? 1 : 0)
-        - (isGamepadButtonPressed(gamepad, GAMEPAD_DPAD_UP) ? 1 : 0);
-      let directionX = dpadX;
-      let directionY = dpadY;
-      if (directionX === 0 && directionY === 0 && gamepadMove.active) {
-        if (Math.abs(gamepadMove.x) >= Math.abs(gamepadMove.y) && Math.abs(gamepadMove.x) >= MENU_AXIS_THRESHOLD) {
-          directionX = Math.sign(gamepadMove.x);
-        } else if (Math.abs(gamepadMove.y) >= MENU_AXIS_THRESHOLD) {
-          directionY = Math.sign(gamepadMove.y);
-        }
-      }
-      const directionActive = directionX !== 0 || directionY !== 0;
-      if (directionActive && !gamepadMenuDirectionActive) {
-        moveControllerSelection(directionX, directionY);
-      }
-      gamepadMenuDirectionActive = directionActive;
+      const currentMenuContext = gameState === "gameover" && !ui.statsOverlay.hidden
+        ? "gameover-stats"
+        : gameState;
+      const menuContextChanged = gamepadMenuContext !== currentMenuContext;
+      updateGamepadMenuNavigation(gamepad, now, menuContextChanged);
+      gamepadMenuContext = currentMenuContext;
       gamepadMove.x = 0;
       gamepadMove.y = 0;
       gamepadMove.active = false;
     } else {
-      gamepadMenuDirectionActive = false;
+      if (gamepadMenuContext) {
+        gamepadMenuContext = "";
+        resetGamepadMenuNavigation(false);
+      }
       if (gamepadMove.active) mouseTarget.active = false;
     }
 
@@ -4930,7 +5020,8 @@
     gamepadPausePressed = false;
     gamepadConfirmPressed = false;
     gamepadCancelPressed = false;
-    gamepadMenuDirectionActive = false;
+    gamepadMenuContext = "";
+    resetGamepadMenuNavigation(false);
     if (gameState === "running" || gameState === "resuming") togglePause(true);
   });
 
