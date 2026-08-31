@@ -82,8 +82,6 @@
     statHitsTaken: $("stat-hits-taken"),
     statShieldBlocks: $("stat-shield-blocks"),
     statBlastsUsed: $("stat-blasts-used"),
-    statMovingTime: $("stat-moving-time"),
-    statPeakGarbage: $("stat-peak-garbage"),
     statPowerupShield: $("stat-powerup-shield"),
     statPowerupSpeed: $("stat-powerup-speed"),
     statPowerupSuper: $("stat-powerup-super"),
@@ -523,8 +521,6 @@
       shieldBlocks: 0,
       blastsUsed: 0,
       bestCombo: 0,
-      movingTime: 0,
-      peakGarbage: 0,
       powerups: { shield: 0, speed: 0, super: 0, magnet: 0 },
     };
   }
@@ -610,8 +606,6 @@
     ui.statHitsTaken,
     ui.statShieldBlocks,
     ui.statBlastsUsed,
-    ui.statMovingTime,
-    ui.statPeakGarbage,
     ui.statPowerupShield,
     ui.statPowerupSpeed,
     ui.statPowerupSuper,
@@ -1339,10 +1333,6 @@
     const accuracy = runStats.starsFired > 0
       ? Math.round((runStats.starsHit / runStats.starsFired) * 1000) / 10
       : 0;
-    const movingPercent = elapsed > 0
-      ? Math.round((runStats.movingTime / elapsed) * 100)
-      : 0;
-
     ui.statMode.textContent = runStats.mode;
     ui.statGameTime.textContent = formatDuration(elapsed);
     ui.statScore.textContent = formatScore(finalScore);
@@ -1358,8 +1348,6 @@
     ui.statHitsTaken.textContent = formatScore(runStats.hitsTaken);
     ui.statShieldBlocks.textContent = formatScore(runStats.shieldBlocks);
     ui.statBlastsUsed.textContent = formatScore(runStats.blastsUsed);
-    ui.statMovingTime.textContent = `${formatDuration(runStats.movingTime)} (${movingPercent}%)`;
-    ui.statPeakGarbage.textContent = formatScore(runStats.peakGarbage);
     ui.statPowerupShield.textContent = formatScore(runStats.powerups.shield);
     ui.statPowerupSpeed.textContent = formatScore(runStats.powerups.speed);
     ui.statPowerupSuper.textContent = formatScore(runStats.powerups.super);
@@ -1727,7 +1715,6 @@
       renderSpriteHp: -1,
       renderSpriteHit: false,
     });
-    runStats.peakGarbage = Math.max(runStats.peakGarbage, enemies.length);
   }
 
   function spawnEnemy(forceKind = null) {
@@ -2492,8 +2479,6 @@
     }
 
     updateMovement(dt);
-    if (player.moving) runStats.movingTime += dt;
-
     spawnTimer -= dt;
     if (spawnTimer <= 0) {
       spawnEnemy();
