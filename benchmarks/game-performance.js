@@ -666,9 +666,9 @@ function verifyControllerMenuNavigation() {
   game.pollGamepadAt(0);
   expectSelection("reset-button", "Initial held direction should make one move");
   setMockControllerInput(0.5, 0);
-  game.pollGamepadAt(419);
+  game.pollGamepadAt(169);
   expectSelection("reset-button", "Held input must wait through the initial repeat delay");
-  game.pollGamepadAt(420);
+  game.pollGamepadAt(170);
   expectSelection("end-button", "Held input should repeat after the initial delay");
 
   game.setupControllerMenu(true);
@@ -697,7 +697,7 @@ function verifyControllerMenuNavigation() {
     threshold: 0.64,
     releaseThreshold: 0.3,
     neutralDwellMs: 85,
-    initialRepeatDelayMs: 420,
+    initialRepeatDelayMs: 170,
     repeatIntervalMs: 170,
     checks: 12,
   };
