@@ -6,4 +6,4 @@ workers_dev = true
 [[d1_databases]]
 binding = "DB"
 database_name = "movie-master-visitors"
-database_id = "REPLACE_WITH_DATABASE_ID"
+database_id = "a00af085-9023-4092-8090-d2a5778a9b42"
