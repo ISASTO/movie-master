@@ -37,7 +37,7 @@ function originIsAllowed(request) {
 
 async function getCount(db) {
   const row = await db
-    .prepare("SELECT COUNT(*) AS count FROM visitors")
+    .prepare("SELECT visitor_count AS count FROM visitor_stats WHERE id = 1")
     .first();
 
   return Number(row?.count ?? 0);
