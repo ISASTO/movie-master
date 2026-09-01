@@ -3,81 +3,50 @@
 
   const endpoint = "https://movie-master-visitor-counter.isasto.workers.dev/traffic?view=daily";
   const numberFormatter = new Intl.NumberFormat("en-US");
-
-  const ensureDetail = (numberId, detailId) => {
-    const number = document.querySelector(`#${numberId}`);
-    const card = number?.closest(".summary-card");
-    if (!card) return null;
-
-    let detail = document.querySelector(`#${detailId}`);
-    if (!detail) {
-      detail = document.createElement("small");
-      detail.id = detailId;
-      card.append(detail);
-    }
-    return detail;
+  const fields = {
+    siteTotal: document.querySelector("#source-site-total"),
+    siteToday: document.querySelector("#source-site-today"),
+    directTotal: document.querySelector("#source-direct-total"),
+    directToday: document.querySelector("#source-direct-today"),
+    unclassifiedTotal: document.querySelector("#source-unclassified-total"),
+    unclassifiedToday: document.querySelector("#source-unclassified-today"),
   };
 
-  const allTimeDetail = ensureDetail("summary-game-total", "summary-game-total-source");
-  const todayDetail = ensureDetail("summary-game-today", "summary-game-today-source");
-  if (!allTimeDetail || !todayDetail) return;
+  let loading = false;
 
-  const formatBreakdown = (fromSite, direct, unclassified) => {
-    const parts = [
-      `${numberFormatter.format(fromSite)} from site`,
-      `${numberFormatter.format(direct)} direct/shared`,
-    ];
-    if (unclassified > 0) {
-      parts.push(`${numberFormatter.format(unclassified)} before source tracking`);
-    }
-    return parts.join(" • ");
+  const set = (element, value) => {
+    if (element) element.textContent = numberFormatter.format(Number(value ?? 0));
   };
-
-  let inFlight = false;
 
   const refresh = async () => {
-    if (inFlight) return;
-    inFlight = true;
+    if (loading) return;
+    loading = true;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8000);
 
     try {
-      const response = await fetch(endpoint, {
-        cache: "no-store",
-        signal: controller.signal,
-      });
-      if (!response.ok) return;
-      const payload = await response.json();
-      const summary = payload.summary ?? {};
-
-      allTimeDetail.textContent = formatBreakdown(
-        Number(summary.gameFromSiteTotal ?? 0),
-        Number(summary.gameDirectTotal ?? 0),
-        Number(summary.gameUnclassifiedTotal ?? 0),
-      );
-      todayDetail.textContent = formatBreakdown(
-        Number(summary.gameFromSiteToday ?? 0),
-        Number(summary.gameDirectToday ?? 0),
-        Number(summary.gameUnclassifiedToday ?? 0),
-      );
+      const response = await fetch(endpoint, { cache: "no-store", signal: controller.signal });
+      if (!response.ok) throw new Error(`Traffic source request failed: ${response.status}`);
+      const summary = (await response.json()).summary ?? {};
+      set(fields.siteTotal, summary.gameFromSiteTotal);
+      set(fields.siteToday, summary.gameFromSiteToday);
+      set(fields.directTotal, summary.gameDirectTotal);
+      set(fields.directToday, summary.gameDirectToday);
+      set(fields.unclassifiedTotal, summary.gameUnclassifiedTotal);
+      set(fields.unclassifiedToday, summary.gameUnclassifiedToday);
     } catch (error) {
       if (error?.name !== "AbortError") {
-        console.error("Unable to load game source breakdown", error);
+        console.error("Unable to load game traffic sources", error);
       }
+      Object.values(fields).forEach((field) => {
+        if (field) field.textContent = "—";
+      });
     } finally {
       window.clearTimeout(timeout);
-      inFlight = false;
+      loading = false;
     }
   };
 
-  document.querySelector("#refresh-button")?.addEventListener("click", refresh);
-  window.setInterval(() => {
-    if (!document.hidden && document.hasFocus()) refresh();
-  }, 60 * 1000);
-  window.addEventListener("focus", refresh);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refresh();
-  });
-
+  window.addEventListener("analytics:refresh", refresh);
   refresh();
 })();

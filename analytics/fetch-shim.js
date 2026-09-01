@@ -144,12 +144,6 @@
     }
   };
 
-  // Manual and scheduled refreshes all flow through the same button. Clear the
-  // broker cache in the capture phase so the first listener starts exactly one
-  // fresh Worker request and every other listener joins/reuses it.
-  document.querySelector("#refresh-button")?.addEventListener(
-    "click",
-    () => invalidate(),
-    { capture: true },
-  );
+  // Refresh coordination lives in auto-refresh.js. It invalidates this shared
+  // snapshot immediately before notifying every dashboard module.
 })();

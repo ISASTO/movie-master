@@ -1,18 +1,15 @@
 (() => {
   "use strict";
 
-  const refresh = () => {
-    if (document.hidden || !document.hasFocus()) return;
-    document.querySelector("#refresh-button")?.click();
-  };
+  let lastQuietRefresh = 0;
 
-  const trafficTitle = document.querySelector("#traffic-dashboard-title");
-  if (trafficTitle && !trafficTitle.parentElement?.querySelector(".traffic-refresh-note")) {
-    const note = document.createElement("p");
-    note.className = "traffic-refresh-note";
-    note.textContent = "Refreshes automatically every minute";
-    trafficTitle.insertAdjacentElement("afterend", note);
-  }
+  const requestRefresh = ({ quiet = false } = {}) => {
+    if (quiet && (document.hidden || !document.hasFocus())) return;
+    if (quiet && Date.now() - lastQuietRefresh < 15000) return;
+    if (quiet) lastQuietRefresh = Date.now();
+    window.__invalidateAnalyticsSnapshot?.();
+    window.dispatchEvent(new CustomEvent("analytics:refresh", { detail: { quiet } }));
+  };
 
   const US_STATE_ABBREVIATIONS = {
     Alabama: "AL", Alaska: "AK", Arizona: "AZ", Arkansas: "AR", California: "CA",
@@ -61,15 +58,12 @@
     if (!parts.length) return text;
 
     const countryIndex = parts.length - 1;
-    const originalCountry = parts[countryIndex];
-    const country = countryAbbreviation(originalCountry);
+    const country = countryAbbreviation(parts[countryIndex]);
     parts[countryIndex] = country;
-
     if (country === "USA" && parts.length >= 2) {
       const regionIndex = parts.length - 2;
       parts[regionIndex] = US_STATE_ABBREVIATIONS[parts[regionIndex]] ?? parts[regionIndex];
     }
-
     return `${parts.join(", ")}${suffix}`;
   };
 
@@ -80,36 +74,20 @@
     });
   };
 
-  const geographyRoot = document.querySelector("#traffic-dashboard");
+  const geographyRoot = document.querySelector("#traffic-geography");
   if (geographyRoot) {
     const locationObserver = new MutationObserver(compactRenderedLocations);
     locationObserver.observe(geographyRoot, { childList: true, subtree: true });
     compactRenderedLocations();
   }
 
-  window.setInterval(refresh, 60 * 1000);
-  window.addEventListener("focus", refresh);
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refresh();
+  document.querySelector("#refresh-button")?.addEventListener("click", () => {
+    requestRefresh({ quiet: false });
   });
 
-  const sourceBreakdown = document.createElement("script");
-  sourceBreakdown.src = "./source-breakdown.js?v=20260901-1";
-  sourceBreakdown.defer = true;
-  document.head.append(sourceBreakdown);
-
-  const leaderboardStyles = document.createElement("link");
-  leaderboardStyles.rel = "stylesheet";
-  leaderboardStyles.href = "./mode-leaderboards.css?v=20260901-2";
-  document.head.append(leaderboardStyles);
-
-  const modeLeaderboards = document.createElement("script");
-  modeLeaderboards.src = "./mode-leaderboards.js?v=20260901-1";
-  modeLeaderboards.defer = true;
-  document.head.append(modeLeaderboards);
-
-  const storeStats = document.createElement("script");
-  storeStats.src = "./store-stats.js?v=20260901-2";
-  storeStats.defer = true;
-  document.head.append(storeStats);
+  window.setInterval(() => requestRefresh({ quiet: true }), 60 * 1000);
+  window.addEventListener("focus", () => requestRefresh({ quiet: true }));
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) requestRefresh({ quiet: true });
+  });
 })();

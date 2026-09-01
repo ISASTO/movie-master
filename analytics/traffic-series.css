@@ -1,62 +1,64 @@
 .series-controls {
+  display: flex;
   align-items: center;
-  gap: 0.85rem;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 1.15rem 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
 }
 
 .series-controls label {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.36rem 0.52rem;
-  border: 1px solid rgba(95, 74, 45, 0.55);
+  min-height: 44px;
+  padding: 0.5rem 0.68rem;
+  border: 1px solid var(--line);
   background: rgba(18, 12, 8, 0.28);
   cursor: pointer;
   user-select: none;
 }
 
+.series-controls label:hover,
+.series-controls label:has(input:focus-visible) {
+  border-color: var(--gold);
+}
+
+.series-controls label:has(input:focus-visible) {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .series-controls input {
-  position: static;
   width: 1rem;
   height: 1rem;
   margin: 0;
-  opacity: 1;
-  pointer-events: auto;
   cursor: pointer;
 }
 
-.series-toggle-site input {
-  accent-color: var(--gold);
+.series-controls input:focus-visible {
+  outline: none;
 }
 
-.series-toggle-game input {
-  accent-color: var(--red);
-}
+.series-toggle-site input { accent-color: var(--gold); }
+.series-toggle-game input { accent-color: var(--red); }
+.series-toggle-merch input { accent-color: var(--teal); }
 
-.series-toggle-merch input {
-  accent-color: #62c9b7;
-}
-
-.series-controls .legend-swatch {
+.legend-swatch {
   width: 1.45rem;
   height: 0.22rem;
+  border-radius: 99px;
 }
 
-.legend-merch {
-  background: #62c9b7;
-}
+.legend-site { background: var(--gold); }
+.legend-game { background: var(--red); }
+.legend-merch { background: var(--teal); }
 
-.chart-line-merch {
-  fill: none;
-  stroke: #62c9b7;
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.chart-point-merch {
-  fill: var(--paper);
-  stroke: #62c9b7;
-  stroke-width: 4;
+.series-controls input:not(:checked) + .legend-swatch {
+  opacity: 0.2;
 }
 
 @media (max-width: 640px) {
@@ -67,7 +69,7 @@
   .series-controls label {
     flex: 1 1 auto;
     justify-content: center;
-    padding: 0.42rem 0.38rem;
+    padding-inline: 0.42rem;
     font-size: 0.66rem;
   }
 

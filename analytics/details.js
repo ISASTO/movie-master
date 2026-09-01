@@ -11,29 +11,34 @@
   const state = {
     payload: null,
     trafficSection: "site",
+    locationsExpanded: false,
     loading: false,
   };
 
   const elements = {
     hourBars: document.querySelector("#hour-bars"),
     weekdayBars: document.querySelector("#weekday-bars"),
+    hourDescription: document.querySelector("#hour-chart-description"),
+    weekdayDescription: document.querySelector("#weekday-chart-description"),
     timeNote: document.querySelector("#time-pattern-note"),
+    map: document.querySelector("#visitor-map"),
     mapPoints: document.querySelector("#visitor-map-points"),
     locationList: document.querySelector("#location-list"),
+    locationToggle: document.querySelector("#location-list-toggle"),
     locationNote: document.querySelector("#location-note"),
-    detailStatus: document.querySelector("#detail-status"),
     gameTrackingNote: document.querySelector("#game-tracking-note"),
-    leaderboardBody: document.querySelector("#leaderboard-body"),
+    gameOverview: document.querySelector("#game-overview"),
     modeNormal: document.querySelector("#mode-normal-fill"),
     modeHardcore: document.querySelector("#mode-hardcore-fill"),
     modeNormalLabel: document.querySelector("#mode-normal-label"),
     modeHardcoreLabel: document.querySelector("#mode-hardcore-label"),
-    totalsBody: document.querySelector("#game-totals-body"),
+    totalsGroups: document.querySelector("#game-totals-groups"),
   };
 
   const summaryIds = {
     starts: "game-stat-starts",
     completed: "game-stat-completed",
+    visitors: "game-stat-visitors",
     players: "game-stat-players",
     returning: "game-stat-returning",
     returnRate: "game-stat-return-rate",
@@ -90,7 +95,7 @@
   };
 
   function renderBarChart(container, rows, key, labelFor) {
-    if (!container) return;
+    if (!container) return 0;
     container.replaceChildren();
     const total = rows.reduce((sum, row) => sum + Number(row[state.trafficSection] ?? 0), 0);
     const maxCount = Math.max(1, ...rows.map((row) => Number(row[state.trafficSection] ?? 0)));
@@ -98,13 +103,16 @@
     rows.forEach((row) => {
       const count = Number(row[state.trafficSection] ?? 0);
       const percent = total > 0 ? (count / total) * 100 : 0;
+      const fullLabel = labelFor(row[key], true);
       const item = document.createElement("div");
       item.className = "mini-bar-item";
-      item.title = `${labelFor(row[key], true)}: ${numberFormatter.format(count)} unique browser-${key === "hour" ? "hour" : "day"} visits (${formatPercent(percent)})`;
+      item.title =
+        `${fullLabel}: ${numberFormatter.format(count)} unique browser-${key === "hour" ? "hour" : "day"} visits (${formatPercent(percent)})`;
+      item.setAttribute("aria-label", item.title);
 
       const value = document.createElement("span");
       value.className = "mini-bar-value";
-      value.textContent = count > 0 ? `${oneDecimalFormatter.format(percent)}%` : "";
+      value.textContent = count > 0 ? numberFormatter.format(count) : "";
 
       const track = document.createElement("span");
       track.className = "mini-bar-track";
@@ -120,12 +128,17 @@
       item.append(value, track, label);
       container.append(item);
     });
+
+    return total;
   }
 
   function renderTimePatterns() {
     if (!state.payload) return;
-    renderBarChart(elements.hourBars, state.payload.hourly ?? [], "hour", (hour, full) =>
-      full ? fullHourLabel(Number(hour)) : hourLabel(Number(hour)),
+    const hourlyTotal = renderBarChart(
+      elements.hourBars,
+      state.payload.hourly ?? [],
+      "hour",
+      (hour, full) => full ? fullHourLabel(Number(hour)) : hourLabel(Number(hour)),
     );
 
     const weekdayOrder = [1, 2, 3, 4, 5, 6, 0];
@@ -133,15 +146,26 @@
     const weekdayFull = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const byDay = new Map((state.payload.weekdays ?? []).map((row) => [Number(row.weekday), row]));
     const ordered = weekdayOrder.map((weekday) => byDay.get(weekday) ?? { weekday, site: 0, game: 0 });
-    renderBarChart(elements.weekdayBars, ordered, "weekday", (weekday, full) =>
-      (full ? weekdayFull : weekdayNames)[Number(weekday)],
+    const weekdayTotal = renderBarChart(
+      elements.weekdayBars,
+      ordered,
+      "weekday",
+      (weekday, full) => (full ? weekdayFull : weekdayNames)[Number(weekday)],
     );
 
+    const sectionLabel = state.trafficSection === "site" ? "main-site" : "game";
+    if (elements.hourDescription) {
+      elements.hourDescription.textContent =
+        `${numberFormatter.format(hourlyTotal)} tracked ${sectionLabel} browser-hour visits`;
+    }
+    if (elements.weekdayDescription) {
+      elements.weekdayDescription.textContent =
+        `${numberFormatter.format(weekdayTotal)} tracked ${sectionLabel} browser-day visits`;
+    }
     if (elements.timeNote) {
-      const label = state.trafficSection === "site" ? "main-site" : "game";
       elements.timeNote.textContent =
-        `Percentages are the share of tracked ${label} browser-hour/browser-day visits in America/Chicago. ` +
-        "A browser can count at most once per hour, so refreshes do not inflate a bucket.";
+        "Labels show counts; bar height shows each bucket's share of tracked visits in America/Chicago. " +
+        "A browser counts at most once per hour, so refreshes do not inflate a bucket.";
     }
   }
 
@@ -162,6 +186,7 @@
   function renderGeography() {
     if (!state.payload) return;
     const locations = state.payload.locations?.[state.trafficSection] ?? [];
+    const sectionLabel = state.trafficSection === "site" ? "main-site" : "game";
 
     if (elements.mapPoints) {
       elements.mapPoints.replaceChildren();
@@ -178,12 +203,20 @@
         circle.setAttribute("cy", String(y));
         circle.setAttribute("r", String(5 + 12 * Math.sqrt(count / maxCount)));
         circle.setAttribute("class", "map-visitor-point");
-        circle.setAttribute("tabindex", "0");
         const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-        title.textContent = `${locationLabel(location)} • ${numberFormatter.format(count)} unique ${state.trafficSection === "site" ? "main-site" : "game"} browser${count === 1 ? "" : "s"}`;
+        title.textContent =
+          `${locationLabel(location)} • ${numberFormatter.format(count)} unique ${sectionLabel} browser${count === 1 ? "" : "s"}`;
         circle.append(title);
         elements.mapPoints.append(circle);
       });
+    }
+
+    if (elements.map) {
+      const total = locations.reduce((sum, location) => sum + Number(location.count ?? 0), 0);
+      elements.map.setAttribute(
+        "aria-label",
+        `Approximate map of ${numberFormatter.format(total)} ${sectionLabel} browser locations. Exact ranked locations follow.`,
+      );
     }
 
     if (elements.locationList) {
@@ -194,7 +227,8 @@
         empty.textContent = "No geography has been recorded for this section yet.";
         elements.locationList.append(empty);
       } else {
-        locations.slice(0, 20).forEach((location, index) => {
+        const limit = state.locationsExpanded ? 20 : 5;
+        locations.slice(0, limit).forEach((location, index) => {
           const item = document.createElement("li");
           const rank = document.createElement("span");
           rank.className = "location-rank";
@@ -210,10 +244,18 @@
       }
     }
 
+    if (elements.locationToggle) {
+      elements.locationToggle.hidden = locations.length <= 5;
+      elements.locationToggle.setAttribute("aria-expanded", String(state.locationsExpanded));
+      elements.locationToggle.textContent = state.locationsExpanded
+        ? "SHOW TOP 5"
+        : `VIEW ALL ${Math.min(locations.length, 20)} LOCATIONS`;
+    }
+
     if (elements.locationNote) {
       elements.locationNote.textContent =
         `Location tracking began ${formatTrackingDate(state.payload.tracking?.trafficContextStartedAt)}. ` +
-        "Locations are approximate IP-geolocation from Cloudflare; no IP addresses are stored and map coordinates are rounded.";
+        "Locations use approximate Cloudflare IP-geolocation; no IP addresses are stored.";
     }
   }
 
@@ -225,87 +267,80 @@
     const hardcorePercent = total > 0 ? (hardcore / total) * 100 : 0;
     if (elements.modeNormal) elements.modeNormal.style.width = `${normalPercent}%`;
     if (elements.modeHardcore) elements.modeHardcore.style.width = `${hardcorePercent}%`;
-    if (elements.modeNormalLabel) elements.modeNormalLabel.textContent = `${numberFormatter.format(normal)} • ${formatPercent(normalPercent)}`;
-    if (elements.modeHardcoreLabel) elements.modeHardcoreLabel.textContent = `${numberFormatter.format(hardcore)} • ${formatPercent(hardcorePercent)}`;
+    if (elements.modeNormalLabel) {
+      elements.modeNormalLabel.textContent =
+        `${numberFormatter.format(normal)} • ${formatPercent(normalPercent)}`;
+    }
+    if (elements.modeHardcoreLabel) {
+      elements.modeHardcoreLabel.textContent =
+        `${numberFormatter.format(hardcore)} • ${formatPercent(hardcorePercent)}`;
+    }
   }
 
-  function renderLeaderboard(game) {
-    if (!elements.leaderboardBody) return;
-    elements.leaderboardBody.replaceChildren();
-    const rows = game.leaderboard ?? [];
-    if (!rows.length) {
-      const row = document.createElement("tr");
-      const cell = document.createElement("td");
-      cell.colSpan = 6;
-      cell.textContent = "No completed runs have been recorded yet.";
-      row.append(cell);
-      elements.leaderboardBody.append(row);
-      return;
-    }
+  function metricRow(label, value) {
+    const row = document.createElement("div");
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+    term.textContent = label;
+    description.textContent = value;
+    row.append(term, description);
+    return row;
+  }
 
-    rows.forEach((entry) => {
-      const row = document.createElement("tr");
-      const values = [
-        `#${entry.rank}`,
-        entry.player,
-        entry.mode,
-        numberFormatter.format(entry.score ?? 0),
-        numberFormatter.format(entry.longestStreak ?? 0),
-        formatDuration(entry.gameTimeSeconds),
-      ];
-      values.forEach((value, index) => {
-        const cell = document.createElement(index === 0 ? "th" : "td");
-        if (index === 0) cell.scope = "row";
-        cell.textContent = value;
-        row.append(cell);
-      });
-      elements.leaderboardBody.append(row);
-    });
+  function totalsGroup(title, rows) {
+    const section = document.createElement("section");
+    section.className = "totals-group";
+    const heading = document.createElement("h3");
+    heading.textContent = title;
+    const list = document.createElement("dl");
+    list.className = "metric-list";
+    rows.forEach(([label, value]) => list.append(metricRow(label, value)));
+    section.append(heading, list);
+    return section;
   }
 
   function renderGameTotals(game) {
-    if (!elements.totalsBody) return;
+    if (!elements.totalsGroups) return;
     const totals = game.totals ?? {};
-    const rows = [
-      ["TOTAL PLAY TIME", formatDuration(game.totalTimeSeconds)],
-      ["POPCORN COLLECTED", numberFormatter.format(totals.popcornCollected ?? 0)],
-      ["POPCORN MISSED", numberFormatter.format(totals.popcornMissed ?? 0)],
-      ["GARBAGE DESTROYED", numberFormatter.format(totals.garbageDestroyed ?? 0)],
-      ["DESTROYED BY STARS", numberFormatter.format(totals.destroyedByStars ?? 0)],
-      ["DESTROYED BY BLASTS", numberFormatter.format(totals.destroyedByBlasts ?? 0)],
-      ["STARS FIRED", numberFormatter.format(totals.starsFired ?? 0)],
-      ["STARS HIT", numberFormatter.format(totals.starsHit ?? 0)],
-      ["STAR ACCURACY", formatPercent(game.starAccuracy)],
-      ["HITS TAKEN", numberFormatter.format(totals.hitsTaken ?? 0)],
-      ["SHIELD BLOCKS", numberFormatter.format(totals.shieldBlocks ?? 0)],
-      ["BLASTS USED", numberFormatter.format(totals.blastsUsed ?? 0)],
-      ["SHIELD POWER-UPS", numberFormatter.format(totals.powerups?.shield ?? 0)],
-      ["SUPER SPEED POWER-UPS", numberFormatter.format(totals.powerups?.speed ?? 0)],
-      ["SUPER STARS POWER-UPS", numberFormatter.format(totals.powerups?.super ?? 0)],
-      ["MAGNET POWER-UPS", numberFormatter.format(totals.powerups?.magnet ?? 0)],
-    ];
-
-    elements.totalsBody.replaceChildren();
-    rows.forEach(([label, value]) => {
-      const row = document.createElement("tr");
-      const name = document.createElement("th");
-      name.scope = "row";
-      name.textContent = label;
-      const number = document.createElement("td");
-      number.textContent = value;
-      row.append(name, number);
-      elements.totalsBody.append(row);
-    });
+    elements.totalsGroups.replaceChildren(
+      totalsGroup("RUNS & POPCORN", [
+        ["TOTAL PLAY TIME", formatDuration(game.totalTimeSeconds)],
+        ["POPCORN COLLECTED", numberFormatter.format(totals.popcornCollected ?? 0)],
+        ["POPCORN MISSED", numberFormatter.format(totals.popcornMissed ?? 0)],
+      ]),
+      totalsGroup("COMBAT", [
+        ["GARBAGE DESTROYED", numberFormatter.format(totals.garbageDestroyed ?? 0)],
+        ["DESTROYED BY STARS", numberFormatter.format(totals.destroyedByStars ?? 0)],
+        ["DESTROYED BY BLASTS", numberFormatter.format(totals.destroyedByBlasts ?? 0)],
+        ["STARS FIRED", numberFormatter.format(totals.starsFired ?? 0)],
+        ["STARS HIT", numberFormatter.format(totals.starsHit ?? 0)],
+        ["STAR ACCURACY", formatPercent(game.starAccuracy)],
+        ["HITS TAKEN", numberFormatter.format(totals.hitsTaken ?? 0)],
+        ["SHIELD BLOCKS", numberFormatter.format(totals.shieldBlocks ?? 0)],
+        ["BLASTS USED", numberFormatter.format(totals.blastsUsed ?? 0)],
+      ]),
+      totalsGroup("POWER-UPS", [
+        ["SHIELD", numberFormatter.format(totals.powerups?.shield ?? 0)],
+        ["SUPER SPEED", numberFormatter.format(totals.powerups?.speed ?? 0)],
+        ["SUPER STARS", numberFormatter.format(totals.powerups?.super ?? 0)],
+        ["MAGNET", numberFormatter.format(totals.powerups?.magnet ?? 0)],
+      ]),
+    );
   }
 
   function renderGame() {
     if (!state.payload) return;
     const game = state.payload.game ?? {};
+    const starts = Number(game.starts ?? 0);
+    const completed = Number(game.completed ?? 0);
+    const gameVisitors = Number(game.gameVisitors ?? 0);
+    const returning = Number(game.returningPlayers ?? 0);
 
-    setText(summaryIds.starts, numberFormatter.format(game.starts ?? 0));
-    setText(summaryIds.completed, numberFormatter.format(game.completed ?? 0));
+    setText(summaryIds.starts, numberFormatter.format(starts));
+    setText(summaryIds.completed, numberFormatter.format(completed));
+    setText(summaryIds.visitors, numberFormatter.format(gameVisitors));
     setText(summaryIds.players, numberFormatter.format(game.uniquePlayers ?? 0));
-    setText(summaryIds.returning, numberFormatter.format(game.returningPlayers ?? 0));
+    setText(summaryIds.returning, numberFormatter.format(returning));
     setText(summaryIds.returnRate, formatPercent(game.returningRate));
     setText(summaryIds.completion, formatPercent(game.completionRate));
     setText(summaryIds.averageScore, numberFormatter.format(Math.round(game.averageScore ?? 0)));
@@ -317,12 +352,22 @@
 
     setText("game-starts-detail", `${numberFormatter.format(game.startsToday ?? 0)} today`);
     setText("game-completed-detail", `${numberFormatter.format(game.completedToday ?? 0)} today`);
-    setText("game-players-detail", `${oneDecimalFormatter.format(game.averageRunsPerPlayer ?? 0)} completed runs per player`);
-    setText("game-returning-detail", `${numberFormatter.format(game.gameVisitors ?? 0)} unique game-page visitors tracked`);
+    setText(
+      "game-completion-detail",
+      `${numberFormatter.format(completed)} of ${numberFormatter.format(starts)} started runs completed`,
+    );
+    setText(
+      "game-players-detail",
+      `${oneDecimalFormatter.format(game.averageRunsPerPlayer ?? 0)} completed runs per finishing player`,
+    );
+    setText(
+      "game-returning-detail",
+      `${numberFormatter.format(returning)} of ${numberFormatter.format(gameVisitors)} game-page visitors`,
+    );
 
     renderModeSplit(game);
-    renderLeaderboard(game);
     renderGameTotals(game);
+    elements.gameOverview?.setAttribute("aria-busy", "false");
 
     if (elements.gameTrackingNote) {
       elements.gameTrackingNote.textContent =
@@ -337,10 +382,9 @@
     renderGame();
   }
 
-  async function refresh({ quiet = false } = {}) {
+  async function refresh() {
     if (state.loading) return;
     state.loading = true;
-    if (!quiet && elements.detailStatus) elements.detailStatus.textContent = "LOADING…";
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8000);
 
@@ -349,12 +393,13 @@
       if (!response.ok) throw new Error(`Detail request failed: ${response.status}`);
       state.payload = await response.json();
       render();
-      if (elements.detailStatus) {
-        elements.detailStatus.textContent = `UPDATED ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
-      }
     } catch (error) {
-      if (error?.name !== "AbortError") console.error("Unable to load Movie Master details", error);
-      if (elements.detailStatus) elements.detailStatus.textContent = "DETAILS UNAVAILABLE";
+      if (error?.name !== "AbortError") {
+        console.error("Unable to load Movie Master details", error);
+      }
+      if (elements.timeNote) elements.timeNote.textContent = "Traffic patterns are temporarily unavailable.";
+      if (elements.gameTrackingNote) elements.gameTrackingNote.textContent = "Game statistics are temporarily unavailable.";
+      if (elements.locationNote) elements.locationNote.textContent = "Geography is temporarily unavailable.";
     } finally {
       window.clearTimeout(timeout);
       state.loading = false;
@@ -367,6 +412,7 @@
       const section = button.dataset.trafficSection;
       if (!VALID_SECTIONS.has(section)) return;
       state.trafficSection = section;
+      state.locationsExpanded = false;
       document.querySelectorAll("[data-traffic-section]").forEach((entry) => {
         const active = entry === button;
         entry.classList.toggle("is-active", active);
@@ -377,14 +423,11 @@
     });
   });
 
-  document.querySelector("#refresh-button")?.addEventListener("click", () => refresh());
-  window.setInterval(() => {
-    if (!document.hidden && document.hasFocus()) refresh({ quiet: true });
-  }, 60 * 1000);
-  window.addEventListener("focus", () => refresh({ quiet: true }));
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refresh({ quiet: true });
+  elements.locationToggle?.addEventListener("click", () => {
+    state.locationsExpanded = !state.locationsExpanded;
+    renderGeography();
   });
 
+  window.addEventListener("analytics:refresh", refresh);
   refresh();
 })();
