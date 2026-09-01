@@ -359,11 +359,11 @@
     const emailSubject = "Movie Master Package Purchase Request";
     const packageMessages = {
       five:
-        "Hello Mr. Movie Master sir. I am interested in purchasing 5 Blockbuster Smash Hit Masterpieces for $5. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I am interested in purchasing 5 Blockbuster Smash Hit Masterpieces for $5. Please provide your payment information so I can pay you via PayPal, Venmo, or Cash App. Thank you.",
       ten:
-        "Hello Mr. Movie Master sir. I am interested in purchasing 10 Blockbuster Smash Hit Masterpieces for $10. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I am interested in purchasing 10 Blockbuster Smash Hit Masterpieces for $10. Please provide your payment information so I can pay you via PayPal, Venmo, or Cash App. Thank you.",
       vip:
-        "Hello Mr. Movie Master sir. I am interested in purchasing the Movie Master VIP Package for $20. It includes 20 Blockbuster Smash Hit Masterpieces, 3 of the best R&B music videos ever made, and a VIP certificate to prove my VIP status. Please provide your payment information so I can pay you via PayPal or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I am interested in purchasing the Movie Master VIP Package for $20. It includes 20 Blockbuster Smash Hit Masterpieces, 3 of the best R&B music videos ever made, and a VIP certificate to prove my VIP status. Please provide your payment information so I can pay you via PayPal, Venmo, or Cash App. Thank you.",
       lifetime:
         "Hello Mr. Movie Master sir. I am interested in applying for the Ultimate Lifetime Membership for $1,000,000. I understand that membership requires your personal approval. Please tell me what I must do to prove that I am worthy. Thank you.",
     };
