@@ -216,6 +216,45 @@ async function getAnalytics(db, view) {
   };
 }
 
+async function readVisitBody(request, origin) {
+  if (!request.headers.get("Content-Type")?.toLowerCase().includes("application/json")) {
+    return { error: jsonResponse({ error: "Expected application/json" }, 415, origin) };
+  }
+
+  try {
+    return { body: await request.json() };
+  } catch {
+    return { error: jsonResponse({ error: "Invalid JSON" }, 400, origin) };
+  }
+}
+
+async function recordVisit(env, visitorId, section) {
+  const normalizedId = visitorId.toLowerCase();
+  const visitDate = chicagoDateKey();
+
+  if (section === "site") {
+    await env.DB
+      .prepare("INSERT OR IGNORE INTO visitors (visitor_id) VALUES (?)")
+      .bind(normalizedId)
+      .run();
+  }
+
+  await env.DB
+    .prepare(
+      "INSERT OR IGNORE INTO visitor_sections (visitor_id, section) VALUES (?, ?)",
+    )
+    .bind(normalizedId, section)
+    .run();
+
+  await env.DB
+    .prepare(
+      `INSERT OR IGNORE INTO visitor_daily (visitor_id, section, visit_date)
+       VALUES (?, ?, ?)`,
+    )
+    .bind(normalizedId, section, visitDate)
+    .run();
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -251,19 +290,22 @@ export default {
       }
 
       if (request.method === "POST" && url.pathname === "/visit") {
-        if (!request.headers.get("Content-Type")?.toLowerCase().includes("application/json")) {
-          return jsonResponse({ error: "Expected application/json" }, 415, origin);
+        const parsed = await readVisitBody(request, origin);
+        if (parsed.error) return parsed.error;
+        const visitorId = parsed.body?.visitorId;
+        if (typeof visitorId !== "string" || !UUID_PATTERN.test(visitorId)) {
+          return jsonResponse({ error: "Invalid visitor ID" }, 400, origin);
         }
 
-        let body;
-        try {
-          body = await request.json();
-        } catch {
-          return jsonResponse({ error: "Invalid JSON" }, 400, origin);
-        }
+        await recordVisit(env, visitorId, "site");
+        return jsonResponse({ count: await getCount(env.DB), section: "site" }, 200, origin);
+      }
 
-        const visitorId = body?.visitorId;
-        const section = body?.section ?? "site";
+      if (request.method === "POST" && url.pathname === "/section-visit") {
+        const parsed = await readVisitBody(request, origin);
+        if (parsed.error) return parsed.error;
+        const visitorId = parsed.body?.visitorId;
+        const section = parsed.body?.section;
         if (typeof visitorId !== "string" || !UUID_PATTERN.test(visitorId)) {
           return jsonResponse({ error: "Invalid visitor ID" }, 400, origin);
         }
@@ -271,33 +313,8 @@ export default {
           return jsonResponse({ error: "Invalid section" }, 400, origin);
         }
 
-        const normalizedId = visitorId.toLowerCase();
-        const visitDate = chicagoDateKey();
-
-        if (section === "site") {
-          await env.DB
-            .prepare("INSERT OR IGNORE INTO visitors (visitor_id) VALUES (?)")
-            .bind(normalizedId)
-            .run();
-        }
-
-        await env.DB
-          .prepare(
-            "INSERT OR IGNORE INTO visitor_sections (visitor_id, section) VALUES (?, ?)",
-          )
-          .bind(normalizedId, section)
-          .run();
-
-        await env.DB
-          .prepare(
-            `INSERT OR IGNORE INTO visitor_daily (visitor_id, section, visit_date)
-             VALUES (?, ?, ?)`,
-          )
-          .bind(normalizedId, section, visitDate)
-          .run();
-
-        const count = await getCount(env.DB);
-        return jsonResponse({ count, section }, 200, origin);
+        await recordVisit(env, visitorId, section);
+        return jsonResponse({ section }, 200, origin);
       }
 
       return jsonResponse({ error: "Not found" }, 404, origin);
