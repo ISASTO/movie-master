@@ -525,7 +525,7 @@
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       const nextView = button.dataset.view;
-      if (!VALID_VIEWS.has(nextView) || nextView === state.view) return;
+      if (state.loading || !VALID_VIEWS.has(nextView) || nextView === state.view) return;
       setViewControls(nextView);
       loadView(nextView);
     });
