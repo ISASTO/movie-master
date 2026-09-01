@@ -6,6 +6,7 @@ const ALLOWED_ORIGINS = new Set([
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CHICAGO_TIME_ZONE = "America/Chicago";
+let storeSchemaReadyPromise = null;
 
 function corsHeaders(origin) {
   const headers = {
@@ -39,6 +40,58 @@ function chicagoDateKey(date = new Date()) {
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
+}
+
+function ensureStoreSchema(env) {
+  if (storeSchemaReadyPromise) return storeSchemaReadyPromise;
+
+  storeSchemaReadyPromise = (async () => {
+    await env.DB
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS tracking_meta (
+           key TEXT PRIMARY KEY,
+           value TEXT NOT NULL
+         )`,
+      )
+      .run();
+
+    await env.DB
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS store_clicks (
+           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           visitor_id TEXT NOT NULL,
+           click_date TEXT NOT NULL,
+           clicked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+         )`,
+      )
+      .run();
+
+    await env.DB
+      .prepare(
+        `CREATE INDEX IF NOT EXISTS idx_store_clicks_visitor
+         ON store_clicks(visitor_id, clicked_at)`,
+      )
+      .run();
+
+    await env.DB
+      .prepare(
+        `CREATE INDEX IF NOT EXISTS idx_store_clicks_date
+         ON store_clicks(click_date)`,
+      )
+      .run();
+
+    await env.DB
+      .prepare(
+        `INSERT OR IGNORE INTO tracking_meta (key, value)
+         VALUES ('store_click_started_at', CURRENT_TIMESTAMP)`,
+      )
+      .run();
+  })().catch((error) => {
+    storeSchemaReadyPromise = null;
+    throw error;
+  });
+
+  return storeSchemaReadyPromise;
 }
 
 async function recordStoreClick(request, env, origin) {
@@ -129,6 +182,8 @@ export async function handleStoreRequest(request, env) {
   }
 
   try {
+    await ensureStoreSchema(env);
+
     if (url.pathname === "/store-event" && request.method === "POST") {
       return await recordStoreClick(request, env, origin);
     }
