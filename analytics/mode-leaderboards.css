@@ -36,7 +36,7 @@
 .mode-leaderboard-board th,
 .mode-leaderboard-board td {
   min-width: 0;
-  padding: 0.9rem clamp(0.35rem, 0.8vw, 0.8rem);
+  padding: 0.9rem clamp(0.3rem, 0.7vw, 0.7rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -51,19 +51,26 @@
 }
 
 .mode-leaderboard-board th:nth-child(1),
-.mode-leaderboard-board td:nth-child(1) { width: 13%; }
+.mode-leaderboard-board td:nth-child(1) { width: 12%; }
 
 .mode-leaderboard-board th:nth-child(2),
-.mode-leaderboard-board td:nth-child(2) { width: 35%; }
+.mode-leaderboard-board td:nth-child(2) { width: 30%; }
 
 .mode-leaderboard-board th:nth-child(3),
-.mode-leaderboard-board td:nth-child(3) { width: 18%; }
+.mode-leaderboard-board td:nth-child(3) { width: 25%; }
 
 .mode-leaderboard-board th:nth-child(4),
-.mode-leaderboard-board td:nth-child(4) { width: 17%; }
+.mode-leaderboard-board td:nth-child(4) { width: 16%; }
 
 .mode-leaderboard-board th:nth-child(5),
 .mode-leaderboard-board td:nth-child(5) { width: 17%; }
+
+.mode-leaderboard-board .leaderboard-score {
+  font-size: clamp(0.68rem, 0.92vw, 0.9rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+  text-overflow: clip;
+}
 
 .mode-leaderboard-board tbody tr:first-child {
   background: rgba(242, 193, 78, 0.08);
@@ -82,6 +89,10 @@
   .mode-leaderboard-board th,
   .mode-leaderboard-board td {
     padding-inline: clamp(0.4rem, 2vw, 1rem);
+  }
+
+  .mode-leaderboard-board .leaderboard-score {
+    font-size: clamp(0.72rem, 1.5vw, 0.95rem);
   }
 }
 
@@ -133,6 +144,11 @@
   .leaderboard-score { grid-column: 2; }
   .leaderboard-streak { grid-column: 3; }
   .leaderboard-time { grid-column: 4; }
+
+  .mode-leaderboard-board .leaderboard-score {
+    font-size: 0.78rem;
+    letter-spacing: 0;
+  }
 
   .leaderboard-score::before,
   .leaderboard-streak::before,
