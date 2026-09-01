@@ -30,52 +30,44 @@
 .mode-leaderboard-board table {
   width: 100%;
   min-width: 0;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .mode-leaderboard-board th,
 .mode-leaderboard-board td {
-  min-width: 0;
-  padding: 0.9rem clamp(0.28rem, 0.62vw, 0.62rem);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: auto;
+  padding: 0.9rem clamp(0.3rem, 0.62vw, 0.62rem);
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
 }
 
 .mode-leaderboard-board th {
-  font-size: clamp(0.58rem, 0.75vw, 0.72rem);
+  font-size: clamp(0.56rem, 0.68vw, 0.68rem);
+  letter-spacing: 0.08em;
 }
 
 .mode-leaderboard-board td {
-  font-size: clamp(0.72rem, 1vw, 0.95rem);
+  font-size: clamp(0.7rem, 0.88vw, 0.9rem);
 }
 
-.mode-leaderboard-board th:nth-child(1),
-.mode-leaderboard-board td:nth-child(1) { width: 10%; }
-
-.mode-leaderboard-board th:nth-child(2),
-.mode-leaderboard-board td:nth-child(2) { width: 36%; }
-
-.mode-leaderboard-board th:nth-child(3),
-.mode-leaderboard-board td:nth-child(3) { width: 24%; }
-
-.mode-leaderboard-board th:nth-child(4),
-.mode-leaderboard-board td:nth-child(4) { width: 14%; }
-
-.mode-leaderboard-board th:nth-child(5),
-.mode-leaderboard-board td:nth-child(5) { width: 16%; }
+.mode-leaderboard-board .leaderboard-rank,
+.mode-leaderboard-board .leaderboard-score,
+.mode-leaderboard-board .leaderboard-streak,
+.mode-leaderboard-board .leaderboard-time {
+  width: 1%;
+}
 
 .mode-leaderboard-board .leaderboard-player {
-  font-size: clamp(0.7rem, 0.94vw, 0.92rem);
+  width: 42%;
+  font-size: clamp(0.7rem, 0.9vw, 0.9rem);
   letter-spacing: -0.01em;
-  text-overflow: clip;
 }
 
 .mode-leaderboard-board .leaderboard-score {
-  font-size: clamp(0.68rem, 0.92vw, 0.9rem);
+  font-size: clamp(0.66rem, 0.82vw, 0.84rem);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.015em;
-  text-overflow: clip;
+  letter-spacing: -0.02em;
 }
 
 /* The high-score card can contain seven-digit scores. Keep the number intact
@@ -102,6 +94,27 @@
   color: var(--gold);
 }
 
+@media (max-width: 1100px) and (min-width: 901px) {
+  .mode-leaderboard-board th,
+  .mode-leaderboard-board td {
+    padding-inline: 0.28rem;
+  }
+
+  .mode-leaderboard-board th {
+    font-size: 0.54rem;
+    letter-spacing: 0.05em;
+  }
+
+  .mode-leaderboard-board td,
+  .mode-leaderboard-board .leaderboard-player {
+    font-size: 0.68rem;
+  }
+
+  .mode-leaderboard-board .leaderboard-score {
+    font-size: 0.64rem;
+  }
+}
+
 @media (max-width: 900px) {
   .mode-leaderboard-grid {
     grid-template-columns: 1fr;
@@ -112,9 +125,14 @@
     padding-inline: clamp(0.4rem, 2vw, 1rem);
   }
 
+  .mode-leaderboard-board th {
+    font-size: clamp(0.58rem, 1.4vw, 0.72rem);
+  }
+
+  .mode-leaderboard-board td,
   .mode-leaderboard-board .leaderboard-player,
   .mode-leaderboard-board .leaderboard-score {
-    font-size: clamp(0.72rem, 1.5vw, 0.95rem);
+    font-size: clamp(0.72rem, 1.6vw, 0.95rem);
   }
 }
 
@@ -145,6 +163,7 @@
   .mode-leaderboard-board .leaderboard-table th,
   .mode-leaderboard-board .leaderboard-table td {
     width: auto;
+    min-width: 0;
     padding: 0;
     border: 0;
     overflow: visible;
