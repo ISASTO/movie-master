@@ -8,10 +8,11 @@
     <meta name="description" content="Anonymous traffic and game statistics for Movie Master.">
     <title>MOVIE MASTER ANALYTICS</title>
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://movie-master-visitor-counter.isasto.workers.dev" crossorigin>
     <link rel="stylesheet" href="./analytics.css?v=20260901-5">
     <link rel="stylesheet" href="./details.css?v=20260901-1">
     <link rel="stylesheet" href="./traffic-series.css?v=20260901-1">
-    <script src="./fetch-shim.js?v=20260901-1" defer></script>
+    <script src="./fetch-shim.js?v=20260901-2" defer></script>
     <script src="./dashboard.js?v=20260901-2" defer></script>
     <script src="./auto-refresh.js?v=20260901-4" defer></script>
     <script src="./details.js?v=20260901-1" defer></script>
@@ -89,7 +90,7 @@
           <div class="series-controls" aria-label="Chart series">
             <label class="series-toggle series-toggle-site"><input type="checkbox" id="toggle-site" checked><span class="legend-swatch legend-site" aria-hidden="true"></span>MAIN SITE</label>
             <label class="series-toggle series-toggle-game"><input type="checkbox" id="toggle-game" checked><span class="legend-swatch legend-game" aria-hidden="true"></span>GAME</label>
-            <label class="series-toggle series-toggle-store"><input type="checkbox" id="toggle-store" checked><span class="legend-swatch legend-store" aria-hidden="true"></span>MERCH STORE</label>
+            <label class="series-toggle series-toggle-store"><input type="checkbox" id="toggle-merch" checked><span class="legend-swatch legend-store" aria-hidden="true"></span>MERCH STORE</label>
           </div>
 
           <div class="chart-wrap" id="chart-wrap">
