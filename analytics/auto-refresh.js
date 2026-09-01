@@ -19,7 +19,7 @@
 
   const leaderboardStyles = document.createElement("link");
   leaderboardStyles.rel = "stylesheet";
-  leaderboardStyles.href = "./mode-leaderboards.css?v=20260901-1";
+  leaderboardStyles.href = "./mode-leaderboards.css?v=20260901-2";
   document.head.append(leaderboardStyles);
 
   const modeLeaderboards = document.createElement("script");
