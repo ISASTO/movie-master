@@ -4,8 +4,13 @@
   const endpoint = "https://movie-master-visitor-counter.isasto.workers.dev/game-event";
   const visitorIdKey = "movie-master-visitor-id";
   const startButtons = ["start-button", "restart-button", "reset-confirm-button"];
+  const GAMEPAD_DEAD_ZONE = 0.18;
+  const GAMEPAD_BUTTON_THRESHOLD = 0.5;
+  const GAMEPAD_SCAN_INTERVAL = 50;
   let activeRunId = null;
+  let runActive = false;
   let finishing = false;
+  let activeGamepadIndex = null;
 
   const createUuid = () => {
     if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
@@ -56,12 +61,92 @@
     return Math.max(0, parts[0] ?? 0);
   };
 
+  const readConnectedGamepads = () => {
+    const getGamepads = navigator.getGamepads || navigator.webkitGetGamepads;
+    if (typeof getGamepads !== "function") return [];
+    try {
+      return [...(getGamepads.call(navigator) || [])].filter(
+        (gamepad) => gamepad && gamepad.connected !== false,
+      );
+    } catch {
+      return [];
+    }
+  };
+
+  const gamepadHasRelevantInput = (gamepad) => {
+    const axisX = Number(gamepad?.axes?.[0]) || 0;
+    const axisY = Number(gamepad?.axes?.[1]) || 0;
+    if (axisX * axisX + axisY * axisY > GAMEPAD_DEAD_ZONE * GAMEPAD_DEAD_ZONE) return true;
+
+    for (const button of gamepad?.buttons || []) {
+      if (typeof button === "number") {
+        if (button >= GAMEPAD_BUTTON_THRESHOLD) return true;
+      } else if (button?.pressed || Number(button?.value) >= GAMEPAD_BUTTON_THRESHOLD) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const gameIsActivelyUnpaused = () => {
+    const pauseButton = document.getElementById("pause-button");
+    if (!runActive || !pauseButton || pauseButton.disabled) return false;
+    if (document.documentElement.classList.contains("game-paused")) return false;
+    if (document.getElementById("start-overlay")?.hidden === false) return false;
+    if (document.getElementById("gameover-overlay")?.hidden === false) return false;
+    if (document.getElementById("reset-confirm-overlay")?.hidden === false) return false;
+    if (document.getElementById("end-confirm-overlay")?.hidden === false) return false;
+    if (document.getElementById("exit-confirm-overlay")?.hidden === false) return false;
+    return true;
+  };
+
+  const pauseForControllerDisconnect = () => {
+    if (!gameIsActivelyUnpaused()) return;
+    document.getElementById("pause-button")?.click();
+    const announcement = document.getElementById("status-announcement");
+    if (announcement) announcement.textContent = "Controller disconnected. Game paused.";
+  };
+
+  const handleActiveGamepadDisconnect = (index) => {
+    if (index !== activeGamepadIndex) return;
+    activeGamepadIndex = null;
+    pauseForControllerDisconnect();
+  };
+
+  const scanGamepads = () => {
+    if (document.visibilityState !== "visible") return;
+    const gamepads = readConnectedGamepads();
+
+    if (
+      activeGamepadIndex !== null
+      && !gamepads.some((gamepad) => gamepad.index === activeGamepadIndex)
+    ) {
+      handleActiveGamepadDisconnect(activeGamepadIndex);
+    }
+
+    for (const gamepad of gamepads) {
+      if (gamepadHasRelevantInput(gamepad)) activeGamepadIndex = gamepad.index;
+    }
+  };
+
+  const markNonGamepadInput = (event) => {
+    if (!runActive) return;
+    if (event.type === "keydown" && event.repeat) return;
+    activeGamepadIndex = null;
+  };
+
   const beginRun = () => {
+    runActive = true;
+    finishing = false;
+    scanGamepads();
+
     const visitorId = getVisitorId();
     const runId = createUuid();
-    if (!visitorId || !runId) return;
+    if (!visitorId || !runId) {
+      activeRunId = null;
+      return;
+    }
     activeRunId = runId;
-    finishing = false;
     post({
       event: "start",
       visitorId,
@@ -71,9 +156,14 @@
   };
 
   const finishRun = () => {
+    runActive = false;
+    activeGamepadIndex = null;
     if (!activeRunId || finishing) return;
     const visitorId = getVisitorId();
-    if (!visitorId) return;
+    if (!visitorId) {
+      activeRunId = null;
+      return;
+    }
     finishing = true;
 
     const runId = activeRunId;
@@ -109,6 +199,13 @@
   for (const id of startButtons) {
     document.getElementById(id)?.addEventListener("click", beginRun);
   }
+
+  window.addEventListener("gamepaddisconnected", (event) => {
+    handleActiveGamepadDisconnect(event.gamepad.index);
+  });
+  window.addEventListener("keydown", markNonGamepadInput, { capture: true });
+  window.addEventListener("pointerdown", markNonGamepadInput, { capture: true });
+  window.setInterval(scanGamepads, GAMEPAD_SCAN_INTERVAL);
 
   const gameover = document.getElementById("gameover-overlay");
   if (gameover) {
