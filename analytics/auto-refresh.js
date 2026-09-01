@@ -28,7 +28,7 @@
   document.head.append(modeLeaderboards);
 
   const storeStats = document.createElement("script");
-  storeStats.src = "./store-stats.js?v=20260901-1";
+  storeStats.src = "./store-stats.js?v=20260901-2";
   storeStats.defer = true;
   document.head.append(storeStats);
 })();
