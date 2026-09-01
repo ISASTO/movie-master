@@ -1,3 +1,4 @@
+# One-time repository SEO updater; remove after successful run.
 name: One-time SEO pass
 
 on:
@@ -34,98 +35,34 @@ jobs:
                   raise SystemExit(f"Expected exactly one {label}; found {count}")
               return text.replace(old, new, 1)
 
-          # Homepage: descriptive title, consistent social metadata, site-name JSON-LD,
-          # and a Google Search-supported PNG favicon.
           p = Path("index.html")
           text = p.read_text(encoding="utf-8")
-          text = replace_once(
-              text,
-              'content="Buy the best and most correct movie recommendations from the Movie Master."',
-              'content="Get personalized movie recommendations from the Movie Master — the home of Blockbuster Smash Hit Masterpieces."',
-              "homepage meta description",
-          )
-          text = replace_once(
-              text,
-              '<meta property="og:title" content="MOVIE MASTER">',
-              '<meta property="og:title" content="Movie Master | Personalized Movie Recommendations">\n    <meta property="og:site_name" content="Movie Master">',
-              "homepage og title",
-          )
-          text = replace_once(
-              text,
-              'content="Buy the best and most correct movie recommendations from the Movie Master."',
-              'content="Get personalized movie recommendations from the Movie Master — the home of Blockbuster Smash Hit Masterpieces."',
-              "homepage og description",
-          )
-          text = replace_once(
-              text,
-              '<meta name="twitter:title" content="MOVIE MASTER">',
-              '<meta name="twitter:title" content="Movie Master | Personalized Movie Recommendations">',
-              "homepage twitter title",
-          )
-          text = replace_once(
-              text,
-              '<meta name="twitter:description" content="Buy the best and most correct movie recommendations from the Movie Master.">',
-              '<meta name="twitter:description" content="Get personalized movie recommendations from the Movie Master — the home of Blockbuster Smash Hit Masterpieces.">',
-              "homepage twitter description",
-          )
-          text = replace_once(
-              text,
-              '<title>MOVIE MASTER</title>\n    <link rel="icon" href="./assets/images/favicon.svg" type="image/svg+xml">',
-              '''<title>Movie Master | Personalized Movie Recommendations</title>\n    <link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">\n    <link rel="shortcut icon" href="/favicon.ico">\n    <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">\n    <script type="application/ld+json">\n      {\n        "@context": "https://schema.org",\n        "@type": "WebSite",\n        "name": "Movie Master",\n        "alternateName": ["The Movie Master", "moviemaster.vip"],\n        "url": "https://moviemaster.vip/"\n      }\n    </script>''',
-              "homepage title/favicon",
-          )
+          text = replace_once(text, 'content="Buy the best and most correct movie recommendations from the Movie Master."', 'content="Get personalized movie recommendations from the Movie Master — the home of Blockbuster Smash Hit Masterpieces."', "homepage meta description")
+          text = replace_once(text, '<meta property="og:title" content="MOVIE MASTER">', '<meta property="og:title" content="Movie Master | Personalized Movie Recommendations">\n    <meta property="og:site_name" content="Movie Master">', "homepage og title")
+          text = replace_once(text, 'content="Buy the best and most correct movie recommendations from the Movie Master."', 'content="Get personalized movie recommendations from the Movie Master — the home of Blockbuster Smash Hit Masterpieces."', "homepage og description")
+          text = replace_once(text, '<meta name="twitter:title" content="MOVIE MASTER">', '<meta name="twitter:title" content="Movie Master | Personalized Movie Recommendations">', "homepage twitter title")
+          text = replace_once(text, '<meta name="twitter:description" content="Buy the best and most correct movie recommendations from the Movie Master.">', '<meta name="twitter:description" content="Get personalized movie recommendations from the Movie Master — the home of Blockbuster Smash Hit Masterpieces.">', "homepage twitter description")
+          text = replace_once(text, '<title>MOVIE MASTER</title>\n    <link rel="icon" href="./assets/images/favicon.svg" type="image/svg+xml">', '''<title>Movie Master | Personalized Movie Recommendations</title>\n    <link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">\n    <link rel="shortcut icon" href="/favicon.ico">\n    <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">\n    <script type="application/ld+json">\n      {\n        "@context": "https://schema.org",\n        "@type": "WebSite",\n        "name": "Movie Master",\n        "alternateName": ["The Movie Master", "moviemaster.vip"],\n        "url": "https://moviemaster.vip/"\n      }\n    </script>''', "homepage title/favicon")
           p.write_text(text, encoding="utf-8")
 
-          # Game page: unique descriptive title and consistent site identity.
           p = Path("game/index.html")
           text = p.read_text(encoding="utf-8")
-          text = replace_once(
-              text,
-              '<meta property="og:title" content="MOVIE MASTER vs GARBAGE">',
-              '<meta property="og:title" content="Movie Master vs Garbage | Official Movie Master Game">\n    <meta property="og:site_name" content="Movie Master">',
-              "game og title",
-          )
-          text = replace_once(
-              text,
-              '<meta name="twitter:title" content="MOVIE MASTER vs GARBAGE">',
-              '<meta name="twitter:title" content="Movie Master vs Garbage | Official Movie Master Game">',
-              "game twitter title",
-          )
-          text = replace_once(
-              text,
-              '<title>MOVIE MASTER vs GARBAGE</title>\n    <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">',
-              '<title>Movie Master vs Garbage | Official Movie Master Game</title>\n    <link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">\n    <link rel="shortcut icon" href="/favicon.ico">\n    <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">',
-              "game title/favicon",
-          )
+          text = replace_once(text, '<meta property="og:title" content="MOVIE MASTER vs GARBAGE">', '<meta property="og:title" content="Movie Master vs Garbage | Official Movie Master Game">\n    <meta property="og:site_name" content="Movie Master">', "game og title")
+          text = replace_once(text, '<meta name="twitter:title" content="MOVIE MASTER vs GARBAGE">', '<meta name="twitter:title" content="Movie Master vs Garbage | Official Movie Master Game">', "game twitter title")
+          text = replace_once(text, '<title>MOVIE MASTER vs GARBAGE</title>\n    <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">', '<title>Movie Master vs Garbage | Official Movie Master Game</title>\n    <link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">\n    <link rel="shortcut icon" href="/favicon.ico">\n    <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">', "game title/favicon")
           p.write_text(text, encoding="utf-8")
 
-          # VIP remains intentionally noindex; only normalize the favicon.
           p = Path("vip/index.html")
           text = p.read_text(encoding="utf-8")
-          text = replace_once(
-              text,
-              '<link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">',
-              '<link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">\n    <link rel="shortcut icon" href="/favicon.ico">\n    <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">',
-              "vip favicon",
-          )
+          text = replace_once(text, '<link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">', '<link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">\n    <link rel="shortcut icon" href="/favicon.ico">\n    <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">', "vip favicon")
           p.write_text(text, encoding="utf-8")
 
-          # Sitemap: only canonical, indexable pages, with truthful lastmod dates.
           Path("sitemap.xml").write_text('''<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url>\n    <loc>https://moviemaster.vip/</loc>\n    <lastmod>2026-09-01</lastmod>\n  </url>\n  <url>\n    <loc>https://moviemaster.vip/game/</loc>\n    <lastmod>2026-09-01</lastmod>\n  </url>\n</urlset>\n''', encoding="utf-8")
 
-          # Public repository page should point at the canonical custom domain.
           p = Path("README.md")
           text = p.read_text(encoding="utf-8")
-          text = text.replace(
-              "The official one-page website for the Movie Master.",
-              "The official website for the Movie Master and personalized Movie Master movie recommendations.\n\nOfficial site: <https://moviemaster.vip/>",
-              1,
-          )
-          text = text.replace(
-              "Expected URL: <https://isasto.github.io/movie-master/>",
-              "Canonical URL: <https://moviemaster.vip/>",
-              1,
-          )
+          text = text.replace("The official one-page website for the Movie Master.", "The official website for the Movie Master and personalized Movie Master movie recommendations.\n\nOfficial site: <https://moviemaster.vip/>", 1)
+          text = text.replace("Expected URL: <https://isasto.github.io/movie-master/>", "Canonical URL: <https://moviemaster.vip/>", 1)
           p.write_text(text, encoding="utf-8")
           PY
 
@@ -134,7 +71,6 @@ jobs:
           python - <<'PY'
           import cairosvg
           from PIL import Image
-
           source = "assets/images/favicon.svg"
           cairosvg.svg2png(url=source, write_to="assets/images/favicon-192.png", output_width=192, output_height=192)
           cairosvg.svg2png(url=source, write_to="assets/images/favicon-512.png", output_width=512, output_height=512)
@@ -147,23 +83,18 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import json, re, xml.etree.ElementTree as ET
-
           home = Path("index.html").read_text(encoding="utf-8")
           game = Path("game/index.html").read_text(encoding="utf-8")
           vip = Path("vip/index.html").read_text(encoding="utf-8")
-
           assert '<title>Movie Master | Personalized Movie Recommendations</title>' in home
           assert '<meta property="og:site_name" content="Movie Master">' in home
           assert '/assets/images/favicon-192.png' in home
           assert 'name="robots" content="noindex, nofollow, noarchive"' in vip
           assert 'Official Movie Master Game' in game
-
           match = re.search(r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>', home, re.S)
-          assert match, "WebSite JSON-LD missing"
+          assert match
           data = json.loads(match.group(1))
-          assert data["@type"] == "WebSite" and data["name"] == "Movie Master"
-          assert data["url"] == "https://moviemaster.vip/"
-
+          assert data["@type"] == "WebSite" and data["name"] == "Movie Master" and data["url"] == "https://moviemaster.vip/"
           ET.parse("sitemap.xml")
           for f in ["assets/images/favicon-192.png", "assets/images/favicon-512.png", "favicon.ico"]:
               assert Path(f).stat().st_size > 0
