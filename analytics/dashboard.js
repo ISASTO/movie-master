@@ -9,6 +9,7 @@
     payload: null,
     showSite: true,
     showGame: true,
+    showMerch: true,
     loading: false,
   };
 
@@ -16,6 +17,12 @@
     daily: "Last 7 days",
     weekly: "Four consecutive 7-day periods ending today",
     monthly: "Last 12 calendar months",
+  };
+
+  const seriesLabels = {
+    site: "Main site",
+    game: "Game",
+    merch: "Merch store",
   };
 
   const elements = {
@@ -28,6 +35,7 @@
     refreshButton: document.querySelector("#refresh-button"),
     toggleSite: document.querySelector("#toggle-site"),
     toggleGame: document.querySelector("#toggle-game"),
+    toggleMerch: document.querySelector("#toggle-merch"),
     siteTotal: document.querySelector("#summary-site-total"),
     gameTotal: document.querySelector("#summary-game-total"),
     siteToday: document.querySelector("#summary-site-today"),
@@ -129,8 +137,9 @@
     if (!state.payload) return;
     const siteStart = formatTrackingDate(state.payload.trackingStarted.site);
     const gameStart = formatTrackingDate(state.payload.trackingStarted.game);
+    const merchStart = formatTrackingDate(state.payload.trackingStarted.merch);
     elements.trackingNote.textContent =
-      `Main-site tracking began ${siteStart}. Game tracking began ${gameStart}. ` +
+      `Main-site tracking began ${siteStart}. Game tracking began ${gameStart}. Merch click tracking began ${merchStart}. ` +
       "Earlier periods are unavailable; a period containing a tracking start date is partial.";
   }
 
@@ -143,16 +152,20 @@
       const period = document.createElement("td");
       const site = document.createElement("td");
       const game = document.createElement("td");
+      const merch = document.createElement("td");
       period.textContent = formatPeriod(row, state.view);
 
       const siteValue = valueFor(row, "site");
       const gameValue = valueFor(row, "game");
+      const merchValue = valueFor(row, "merch");
       site.textContent = siteValue === null ? "—" : numberFormatter.format(siteValue);
       game.textContent = gameValue === null ? "—" : numberFormatter.format(gameValue);
+      merch.textContent = merchValue === null ? "—" : numberFormatter.format(merchValue);
       if (siteValue === null) site.className = "data-unavailable";
       if (gameValue === null) game.className = "data-unavailable";
+      if (merchValue === null) merch.className = "data-unavailable";
 
-      tr.append(period, site, game);
+      tr.append(period, site, game, merch);
       elements.dataBody.append(tr);
     });
   }
@@ -171,12 +184,15 @@
     const visibleSeries = [];
     if (state.showSite) visibleSeries.push("site");
     if (state.showGame) visibleSeries.push("game");
+    if (state.showMerch) visibleSeries.push("merch");
 
-    const sitePhrase = state.showSite ? "main-site" : "";
-    const gamePhrase = state.showGame ? "game" : "";
-    const conjunction = state.showSite && state.showGame ? " and " : "";
+    const visibleNames = visibleSeries.map((series) => seriesLabels[series].toLowerCase());
+    const descriptionNames =
+      visibleNames.length <= 1
+        ? visibleNames.join("")
+        : `${visibleNames.slice(0, -1).join(", ")} and ${visibleNames.at(-1)}`;
     svgDescription.textContent =
-      `Unique ${sitePhrase}${conjunction}${gamePhrase} visitors for ${viewDescriptions[state.view].toLowerCase()}.`;
+      `Unique ${descriptionNames} visitors for ${viewDescriptions[state.view].toLowerCase()}.`;
 
     if (!visibleSeries.length) {
       elements.chartMessage.textContent = "Turn on at least one series to display the graph.";
@@ -283,7 +299,7 @@
           tabindex: 0,
         });
         const title = svgElement("title");
-        title.textContent = `${section === "site" ? "Main site" : "Game"}: ${numberFormatter.format(point.value)} unique visitors • ${point.label}`;
+        title.textContent = `${seriesLabels[section]}: ${numberFormatter.format(point.value)} unique ${section === "merch" ? "clickers" : "visitors"} • ${point.label}`;
         circle.append(title);
         elements.chart.append(circle);
 
@@ -316,11 +332,33 @@
     elements.refreshButton.disabled = true;
 
     try {
-      const response = await fetch(`${API_BASE}/analytics?view=${encodeURIComponent(view)}`, {
+      const primaryResponse = await fetch(`${API_BASE}/analytics?view=${encodeURIComponent(view)}`, {
         cache: "no-store",
       });
-      if (!response.ok) throw new Error(`Analytics request failed: ${response.status}`);
-      const payload = await response.json();
+      if (!primaryResponse.ok) throw new Error(`Analytics request failed: ${primaryResponse.status}`);
+      const payload = await primaryResponse.json();
+
+      payload.trackingStarted = { ...(payload.trackingStarted ?? {}), merch: null };
+      payload.data = (payload.data ?? []).map((row) => ({ ...row, merch: 0 }));
+
+      try {
+        const merchResponse = await fetch(`${API_BASE}/store-traffic?view=${encodeURIComponent(view)}`, {
+          cache: "no-store",
+        });
+        if (!merchResponse.ok) throw new Error(`Merch traffic request failed: ${merchResponse.status}`);
+        const merchPayload = await merchResponse.json();
+        const merchByPeriod = new Map(
+          (merchPayload.data ?? []).map((row) => [`${row.start}|${row.end}`, Number(row.merch ?? 0)]),
+        );
+        payload.trackingStarted.merch = merchPayload.trackingStarted ?? null;
+        payload.data = payload.data.map((row) => ({
+          ...row,
+          merch: merchByPeriod.get(`${row.start}|${row.end}`) ?? 0,
+        }));
+      } catch (merchError) {
+        console.error("Unable to load merch traffic series", merchError);
+      }
+
       state.view = payload.view;
       state.payload = payload;
       render();
@@ -358,6 +396,11 @@
 
   elements.toggleGame.addEventListener("change", () => {
     state.showGame = elements.toggleGame.checked;
+    renderChart();
+  });
+
+  elements.toggleMerch.addEventListener("change", () => {
+    state.showMerch = elements.toggleMerch.checked;
     renderChart();
   });
 
