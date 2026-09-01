@@ -42,6 +42,69 @@ function chicagoDateKey(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
+function parseDateKey(key) {
+  const [year, month, day] = key.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function utcDateKey(date) {
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function addDays(key, amount) {
+  const date = parseDateKey(key);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return utcDateKey(date);
+}
+
+function buildBuckets(view, todayKey) {
+  if (view === "daily") {
+    return Array.from({ length: 7 }, (_, index) => {
+      const day = addDays(todayKey, index - 6);
+      return { start: day, end: day };
+    });
+  }
+
+  if (view === "weekly") {
+    return Array.from({ length: 4 }, (_, index) => {
+      const start = addDays(todayKey, -27 + index * 7);
+      return { start, end: addDays(start, 6) };
+    });
+  }
+
+  const today = parseDateKey(todayKey);
+  const currentMonthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const startDate = new Date(
+      Date.UTC(
+        currentMonthStart.getUTCFullYear(),
+        currentMonthStart.getUTCMonth() + index - 11,
+        1,
+      ),
+    );
+    const endDate = new Date(
+      Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth() + 1, 0),
+    );
+    const start = utcDateKey(startDate);
+    const naturalEnd = utcDateKey(endDate);
+    return {
+      start,
+      end: naturalEnd > todayKey ? todayKey : naturalEnd,
+    };
+  });
+}
+
+function sqliteTimestampToChicagoDate(value) {
+  if (!value) return null;
+  const parsed = new Date(`${value.replace(" ", "T")}Z`);
+  return Number.isNaN(parsed.getTime()) ? null : chicagoDateKey(parsed);
+}
+
 function ensureStoreSchema(env) {
   if (storeSchemaReadyPromise) return storeSchemaReadyPromise;
 
@@ -170,9 +233,61 @@ async function getStoreStats(env, origin) {
   );
 }
 
+async function getStoreTraffic(env, view, origin) {
+  const today = chicagoDateKey();
+  const buckets = buildBuckets(view, today);
+  const bucketValues = buckets.map(() => "(?, ?, ?)").join(", ");
+  const bucketBindings = buckets.flatMap((bucket, index) => [index, bucket.start, bucket.end]);
+
+  const [trafficResult, trackingResult] = await env.DB.batch([
+    env.DB
+      .prepare(
+        `WITH buckets(bucket_index, start_date, end_date) AS (
+           VALUES ${bucketValues}
+         )
+         SELECT
+           buckets.bucket_index AS bucket_index,
+           COUNT(DISTINCT store_clicks.visitor_id) AS count
+         FROM buckets
+         LEFT JOIN store_clicks
+           ON store_clicks.click_date >= buckets.start_date
+          AND store_clicks.click_date <= buckets.end_date
+         GROUP BY buckets.bucket_index
+         ORDER BY buckets.bucket_index`,
+      )
+      .bind(...bucketBindings),
+    env.DB.prepare(
+      `SELECT value
+       FROM tracking_meta
+       WHERE key = 'store_click_started_at'`,
+    ),
+  ]);
+
+  const data = buckets.map((bucket) => ({ ...bucket, merch: 0 }));
+  for (const row of trafficResult.results ?? []) {
+    const index = Number(row.bucket_index);
+    if (Number.isInteger(index) && index >= 0 && index < data.length) {
+      data[index].merch = Number(row.count ?? 0);
+    }
+  }
+
+  return jsonResponse(
+    {
+      view,
+      timeZone: CHICAGO_TIME_ZONE,
+      generatedAt: new Date().toISOString(),
+      trackingStarted: sqliteTimestampToChicagoDate(trackingResult.results?.[0]?.value ?? null),
+      data,
+    },
+    200,
+    origin,
+  );
+}
+
 export async function handleStoreRequest(request, env) {
   const url = new URL(request.url);
-  if (url.pathname !== "/store-event" && url.pathname !== "/store-stats") return null;
+  const validPaths = new Set(["/store-event", "/store-stats", "/store-traffic"]);
+  if (!validPaths.has(url.pathname)) return null;
 
   const origin = request.headers.get("Origin");
   if (!originAllowed(origin)) return jsonResponse({ error: "Origin not allowed" }, 403, null);
@@ -190,6 +305,14 @@ export async function handleStoreRequest(request, env) {
 
     if (url.pathname === "/store-stats" && request.method === "GET") {
       return await getStoreStats(env, origin);
+    }
+
+    if (url.pathname === "/store-traffic" && request.method === "GET") {
+      const requestedView = url.searchParams.get("view") ?? "daily";
+      const view = ["daily", "weekly", "monthly"].includes(requestedView)
+        ? requestedView
+        : "daily";
+      return await getStoreTraffic(env, view, origin);
     }
 
     return jsonResponse({ error: "Method not allowed" }, 405, origin);
