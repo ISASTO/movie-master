@@ -1,0 +1,37 @@
+.mode-leaderboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.mode-leaderboard-board {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: rgba(23, 16, 11, 0.5);
+}
+
+.mode-leaderboard-heading {
+  padding: 1rem 1rem 0.65rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.mode-leaderboard-heading h3 {
+  margin: 0;
+  font-size: clamp(1.05rem, 2vw, 1.45rem);
+  letter-spacing: -0.01em;
+}
+
+.mode-leaderboard-board .table-scroll {
+  margin: 0;
+}
+
+.mode-leaderboard-board table {
+  min-width: 540px;
+}
+
+@media (max-width: 900px) {
+  .mode-leaderboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
