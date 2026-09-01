@@ -13,7 +13,6 @@
     <script src="./fetch-shim.js?v=20260901-1" defer></script>
     <script src="./dashboard.js?v=20260901-1" defer></script>
     <script src="./auto-refresh.js?v=20260901-3" defer></script>
-    <script src="./source-breakdown.js?v=20260901-2" defer></script>
     <script src="./details.js?v=20260901-1" defer></script>
   </head>
   <body>
@@ -76,7 +75,6 @@
               <h2 id="traffic-title">TRAFFIC OVER TIME</h2>
               <p id="view-description">Last 7 days</p>
             </div>
-
             <div class="chart-actions">
               <div class="view-switcher" role="group" aria-label="Analytics time scale">
                 <button type="button" data-view="daily" class="is-active" aria-pressed="true">DAILY</button>
@@ -88,16 +86,8 @@
           </div>
 
           <div class="series-controls" aria-label="Chart series">
-            <label>
-              <input type="checkbox" id="toggle-site" checked>
-              <span class="legend-swatch legend-site" aria-hidden="true"></span>
-              MAIN SITE
-            </label>
-            <label>
-              <input type="checkbox" id="toggle-game" checked>
-              <span class="legend-swatch legend-game" aria-hidden="true"></span>
-              GAME
-            </label>
+            <label><input type="checkbox" id="toggle-site" checked><span class="legend-swatch legend-site" aria-hidden="true"></span>MAIN SITE</label>
+            <label><input type="checkbox" id="toggle-game" checked><span class="legend-swatch legend-game" aria-hidden="true"></span>GAME</label>
           </div>
 
           <div class="chart-wrap" id="chart-wrap">
@@ -115,12 +105,7 @@
         </section>
 
         <section class="data-panel" aria-labelledby="data-title">
-          <div class="data-heading">
-            <div>
-              <p class="eyebrow">EXACT NUMBERS</p>
-              <h2 id="data-title">VISITOR DATA</h2>
-            </div>
-          </div>
+          <div class="data-heading"><div><p class="eyebrow">EXACT NUMBERS</p><h2 id="data-title">VISITOR DATA</h2></div></div>
           <div class="table-scroll">
             <table>
               <thead><tr><th scope="col">PERIOD</th><th scope="col">MAIN SITE</th><th scope="col">GAME</th></tr></thead>
@@ -138,14 +123,8 @@
             </div>
           </div>
           <div class="pattern-grid">
-            <article class="pattern-card">
-              <h3>HOUR OF DAY</h3><p>Share of unique browser-hour visits</p>
-              <div class="hour-chart-scroll"><div class="mini-bar-chart mini-bar-chart-hours" id="hour-bars" aria-label="Traffic by hour of day"></div></div>
-            </article>
-            <article class="pattern-card">
-              <h3>DAY OF WEEK</h3><p>Share of unique browser-day visits</p>
-              <div class="mini-bar-chart mini-bar-chart-weekdays" id="weekday-bars" aria-label="Traffic by day of week"></div>
-            </article>
+            <article class="pattern-card"><h3>HOUR OF DAY</h3><p>Share of unique browser-hour visits</p><div class="hour-chart-scroll"><div class="mini-bar-chart mini-bar-chart-hours" id="hour-bars" aria-label="Traffic by hour of day"></div></div></article>
+            <article class="pattern-card"><h3>DAY OF WEEK</h3><p>Share of unique browser-day visits</p><div class="mini-bar-chart mini-bar-chart-weekdays" id="weekday-bars" aria-label="Traffic by day of week"></div></article>
           </div>
           <p class="detail-note" id="time-pattern-note">Loading traffic patterns…</p>
         </section>
@@ -159,10 +138,7 @@
                 <g id="visitor-map-points"></g>
               </svg>
             </div>
-            <div class="location-ranking">
-              <h3>TOP LOCATIONS</h3>
-              <ol id="location-list"><li class="location-empty">Loading locations…</li></ol>
-            </div>
+            <div class="location-ranking"><h3>TOP LOCATIONS</h3><ol id="location-list"><li class="location-empty">Loading locations…</li></ol></div>
           </div>
           <p class="detail-note" id="location-note">Loading geography…</p>
         </section>
