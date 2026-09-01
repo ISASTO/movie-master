@@ -333,6 +333,10 @@ h1 {
   font-weight: 800;
 }
 
+.chart-message[hidden] {
+  display: none;
+}
+
 .chart-footer {
   display: flex;
   align-items: flex-start;
