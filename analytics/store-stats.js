@@ -7,9 +7,9 @@
   const grid = document.querySelector(".summary-grid");
   if (!grid) return;
 
-  const makeCard = (label, id, detailId, highlight = false) => {
+  const makeCard = (label, id, detailId) => {
     const card = document.createElement("article");
-    card.className = `summary-card${highlight ? " summary-card-highlight" : ""}`;
+    card.className = "summary-card";
 
     const name = document.createElement("span");
     name.textContent = label;
@@ -39,7 +39,6 @@
     "MERCH CLICK-THROUGH RATE",
     "store-click-rate",
     "store-click-rate-detail",
-    true,
   );
 
   let inFlight = false;
