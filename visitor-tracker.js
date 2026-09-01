@@ -20,6 +20,21 @@
     return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`;
   };
 
+  const getGameSource = () => {
+    if (section !== "game") return null;
+
+    try {
+      if (!document.referrer) return "direct";
+      const referrer = new URL(document.referrer);
+      const referrerPath = referrer.pathname.replace(/\/+$/, "") || "/";
+      return referrer.origin === window.location.origin && referrerPath === "/"
+        ? "site"
+        : "direct";
+    } catch {
+      return "direct";
+    }
+  };
+
   let visitorId;
   try {
     visitorId = window.localStorage.getItem(visitorIdKey);
@@ -32,10 +47,13 @@
     return;
   }
 
+  const body = { visitorId, section };
+  if (section === "game") body.source = getGameSource();
+
   fetch(apiUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ visitorId, section }),
+    body: JSON.stringify(body),
     cache: "no-store",
     keepalive: true,
   }).catch(() => {
