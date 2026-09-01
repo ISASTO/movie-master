@@ -5,7 +5,7 @@
   const section = script?.dataset.visitorSection;
   if (!section || !["site", "game"].includes(section)) return;
 
-  const apiUrl = "https://movie-master-visitor-counter.isasto.workers.dev/visit";
+  const apiUrl = "https://movie-master-visitor-counter.isasto.workers.dev/section-visit";
   const visitorIdKey = "movie-master-visitor-id";
 
   const createVisitorId = () => {
