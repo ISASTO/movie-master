@@ -26,4 +26,9 @@
   modeLeaderboards.src = "./mode-leaderboards.js?v=20260901-1";
   modeLeaderboards.defer = true;
   document.head.append(modeLeaderboards);
+
+  const storeStats = document.createElement("script");
+  storeStats.src = "./store-stats.js?v=20260901-1";
+  storeStats.defer = true;
+  document.head.append(storeStats);
 })();
