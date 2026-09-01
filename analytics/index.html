@@ -10,8 +10,9 @@
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="./analytics.css?v=20260901-5">
     <link rel="stylesheet" href="./details.css?v=20260901-1">
+    <link rel="stylesheet" href="./traffic-series.css?v=20260901-1">
     <script src="./fetch-shim.js?v=20260901-1" defer></script>
-    <script src="./dashboard.js?v=20260901-1" defer></script>
+    <script src="./dashboard.js?v=20260901-2" defer></script>
     <script src="./auto-refresh.js?v=20260901-3" defer></script>
     <script src="./details.js?v=20260901-1" defer></script>
   </head>
@@ -86,14 +87,15 @@
           </div>
 
           <div class="series-controls" aria-label="Chart series">
-            <label><input type="checkbox" id="toggle-site" checked><span class="legend-swatch legend-site" aria-hidden="true"></span>MAIN SITE</label>
-            <label><input type="checkbox" id="toggle-game" checked><span class="legend-swatch legend-game" aria-hidden="true"></span>GAME</label>
+            <label class="series-toggle series-toggle-site"><input type="checkbox" id="toggle-site" checked><span class="legend-swatch legend-site" aria-hidden="true"></span>MAIN SITE</label>
+            <label class="series-toggle series-toggle-game"><input type="checkbox" id="toggle-game" checked><span class="legend-swatch legend-game" aria-hidden="true"></span>GAME</label>
+            <label class="series-toggle series-toggle-merch"><input type="checkbox" id="toggle-merch" checked><span class="legend-swatch legend-merch" aria-hidden="true"></span>MERCH STORE</label>
           </div>
 
           <div class="chart-wrap" id="chart-wrap">
             <svg id="traffic-chart" viewBox="0 0 960 430" role="img" aria-labelledby="chart-title chart-description">
               <title id="chart-title">Movie Master visitor traffic</title>
-              <desc id="chart-description">Unique main-site and game visitors over time.</desc>
+              <desc id="chart-description">Unique main-site, game, and merch-store visitors over time.</desc>
             </svg>
             <p class="chart-message" id="chart-message" hidden></p>
           </div>
@@ -108,8 +110,8 @@
           <div class="data-heading"><div><p class="eyebrow">EXACT NUMBERS</p><h2 id="data-title">VISITOR DATA</h2></div></div>
           <div class="table-scroll">
             <table>
-              <thead><tr><th scope="col">PERIOD</th><th scope="col">MAIN SITE</th><th scope="col">GAME</th></tr></thead>
-              <tbody id="data-body"><tr><td colspan="3">Loading…</td></tr></tbody>
+              <thead><tr><th scope="col">PERIOD</th><th scope="col">MAIN SITE</th><th scope="col">GAME</th><th scope="col">MERCH STORE</th></tr></thead>
+              <tbody id="data-body"><tr><td colspan="4">Loading…</td></tr></tbody>
             </table>
           </div>
         </section>
