@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="./traffic-series.css?v=20260901-1">
     <script src="./fetch-shim.js?v=20260901-1" defer></script>
     <script src="./dashboard.js?v=20260901-2" defer></script>
-    <script src="./auto-refresh.js?v=20260901-3" defer></script>
+    <script src="./auto-refresh.js?v=20260901-4" defer></script>
     <script src="./details.js?v=20260901-1" defer></script>
   </head>
   <body>
@@ -62,7 +62,7 @@
             <strong id="summary-discovered">—</strong>
             <small>Unique main-site visitors who have also visited the game</small>
           </article>
-          <article class="summary-card summary-card-highlight">
+          <article class="summary-card">
             <span>GAME DISCOVERY RATE</span>
             <strong id="summary-rate">—</strong>
             <small id="summary-rate-detail">—</small>
@@ -89,7 +89,7 @@
           <div class="series-controls" aria-label="Chart series">
             <label class="series-toggle series-toggle-site"><input type="checkbox" id="toggle-site" checked><span class="legend-swatch legend-site" aria-hidden="true"></span>MAIN SITE</label>
             <label class="series-toggle series-toggle-game"><input type="checkbox" id="toggle-game" checked><span class="legend-swatch legend-game" aria-hidden="true"></span>GAME</label>
-            <label class="series-toggle series-toggle-merch"><input type="checkbox" id="toggle-merch" checked><span class="legend-swatch legend-merch" aria-hidden="true"></span>MERCH STORE</label>
+            <label class="series-toggle series-toggle-store"><input type="checkbox" id="toggle-store" checked><span class="legend-swatch legend-store" aria-hidden="true"></span>MERCH STORE</label>
           </div>
 
           <div class="chart-wrap" id="chart-wrap">
@@ -182,12 +182,16 @@
         </div>
 
         <section class="detail-panel leaderboard-panel" aria-labelledby="leaderboard-title">
-          <div class="detail-panel-heading"><div><p class="eyebrow">TOP 10 • ALL TIME</p><h2 id="leaderboard-title">LEADERBOARD</h2></div></div>
-          <div class="table-scroll">
-            <table class="leaderboard-table">
-              <thead><tr><th scope="col">RANK</th><th scope="col">PLAYER</th><th scope="col">MODE</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">TIME</th></tr></thead>
-              <tbody id="leaderboard-body"><tr><td colspan="6">Loading…</td></tr></tbody>
-            </table>
+          <div class="detail-panel-heading"><div><p class="eyebrow">HIGH SCORES BY DIFFICULTY</p><h2 id="leaderboard-title">LEADERBOARDS</h2></div></div>
+          <div class="mode-leaderboard-grid" id="mode-leaderboard-grid">
+            <section class="mode-leaderboard-board" aria-labelledby="leaderboard-standard-title">
+              <div class="mode-leaderboard-heading"><p class="eyebrow">TOP 10 • ALL TIME</p><h3 id="leaderboard-standard-title">STANDARD MODE</h3></div>
+              <div class="table-scroll"><table class="leaderboard-table"><thead><tr><th scope="col">RANK</th><th scope="col">PLAYER</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">TIME</th></tr></thead><tbody id="leaderboard-standard-body"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
+            </section>
+            <section class="mode-leaderboard-board" aria-labelledby="leaderboard-hardcore-title">
+              <div class="mode-leaderboard-heading"><p class="eyebrow">TOP 10 • ALL TIME</p><h3 id="leaderboard-hardcore-title">HARDCORE MODE</h3></div>
+              <div class="table-scroll"><table class="leaderboard-table"><thead><tr><th scope="col">RANK</th><th scope="col">PLAYER</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">TIME</th></tr></thead><tbody id="leaderboard-hardcore-body"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
+            </section>
           </div>
         </section>
       </section>
