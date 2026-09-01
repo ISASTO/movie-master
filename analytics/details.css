@@ -228,6 +228,7 @@ html {
 .geography-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(250px, 0.75fr);
+  align-items: start;
   gap: 1rem;
 }
 
