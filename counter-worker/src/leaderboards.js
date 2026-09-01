@@ -42,6 +42,34 @@ function normalizeRows(rows) {
   }));
 }
 
+function bestRunsForMode(mode) {
+  return `
+    WITH ranked_runs AS (
+      SELECT
+        visitor_id,
+        score,
+        longest_streak,
+        game_time_seconds,
+        finished_at,
+        ROW_NUMBER() OVER (
+          PARTITION BY visitor_id
+          ORDER BY
+            score DESC,
+            longest_streak DESC,
+            game_time_seconds DESC,
+            finished_at ASC
+        ) AS player_rank
+      FROM game_runs
+      WHERE mode = '${mode}'
+    )
+    SELECT visitor_id, score, longest_streak, game_time_seconds, finished_at
+    FROM ranked_runs
+    WHERE player_rank = 1
+    ORDER BY score DESC, longest_streak DESC, game_time_seconds DESC, finished_at ASC
+    LIMIT 10
+  `;
+}
+
 export async function handleLeaderboardRequest(request, env) {
   const url = new URL(request.url);
   if (url.pathname !== "/mode-leaderboards") return null;
@@ -61,20 +89,8 @@ export async function handleLeaderboardRequest(request, env) {
 
   try {
     const [standardResult, hardcoreResult] = await env.DB.batch([
-      env.DB.prepare(
-        `SELECT visitor_id, score, longest_streak, game_time_seconds, finished_at
-         FROM game_runs
-         WHERE mode = 'NORMAL'
-         ORDER BY score DESC, longest_streak DESC, game_time_seconds DESC, finished_at ASC
-         LIMIT 10`,
-      ),
-      env.DB.prepare(
-        `SELECT visitor_id, score, longest_streak, game_time_seconds, finished_at
-         FROM game_runs
-         WHERE mode = 'HARDCORE'
-         ORDER BY score DESC, longest_streak DESC, game_time_seconds DESC, finished_at ASC
-         LIMIT 10`,
-      ),
+      env.DB.prepare(bestRunsForMode("NORMAL")),
+      env.DB.prepare(bestRunsForMode("HARDCORE")),
     ]);
 
     return jsonResponse(
