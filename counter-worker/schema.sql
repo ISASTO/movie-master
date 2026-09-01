@@ -75,3 +75,37 @@ BEGIN
   SET visitor_count = visitor_count + 1
   WHERE section = NEW.section;
 END;
+
+-- Record when acquisition-source tracking actually began. Existing game
+-- visitors stay unclassified rather than being retroactively guessed.
+CREATE TABLE IF NOT EXISTS tracking_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
+INSERT OR IGNORE INTO tracking_meta (key, value)
+VALUES ('game_source_started_at', CURRENT_TIMESTAMP);
+
+-- First known acquisition source for each game browser. Browsers that first
+-- visited the game before source tracking began are permanently marked unknown.
+CREATE TABLE IF NOT EXISTS game_source_first (
+  visitor_id TEXT PRIMARY KEY,
+  source TEXT NOT NULL CHECK (source IN ('site', 'direct', 'unknown')),
+  first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_source_first_source
+ON game_source_first(source);
+
+-- First acquisition source seen for a browser on each Chicago calendar day.
+-- Pre-source-tracking game visits are intentionally left absent/unclassified.
+CREATE TABLE IF NOT EXISTS game_source_daily (
+  visitor_id TEXT NOT NULL,
+  visit_date TEXT NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('site', 'direct', 'unknown')),
+  first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (visitor_id, visit_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_source_daily_date_source
+ON game_source_daily(visit_date, source);
