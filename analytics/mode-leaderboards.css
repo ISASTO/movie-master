@@ -78,6 +78,21 @@
   text-overflow: clip;
 }
 
+/* The high-score card can contain seven-digit scores. Keep the number intact
+   and scale it to the card width instead of allowing mid-number wrapping. */
+.summary-card {
+  container-type: inline-size;
+}
+
+#game-stat-high-score {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  font-size: clamp(2rem, 3.15vw, 3.15rem);
+  font-size: clamp(2rem, 14cqi, 3.15rem);
+  letter-spacing: -0.045em;
+}
+
 .mode-leaderboard-board tbody tr:first-child {
   background: rgba(242, 193, 78, 0.08);
 }
