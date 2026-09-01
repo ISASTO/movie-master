@@ -21,7 +21,6 @@
   const elements = {
     chart: document.querySelector("#traffic-chart"),
     chartMessage: document.querySelector("#chart-message"),
-    chartDescription: document.querySelector("#chart-description"),
     dataBody: document.querySelector("#data-body"),
     viewDescription: document.querySelector("#view-description"),
     trackingNote: document.querySelector("#tracking-note"),
@@ -163,10 +162,21 @@
     elements.chart.replaceChildren();
     elements.chartMessage.hidden = true;
 
+    const svgTitle = svgElement("title", { id: "chart-title" });
+    svgTitle.textContent = "Movie Master visitor traffic";
+    const svgDescription = svgElement("desc", { id: "chart-description" });
+    elements.chart.append(svgTitle, svgDescription);
+
     const data = state.payload.data;
     const visibleSeries = [];
     if (state.showSite) visibleSeries.push("site");
     if (state.showGame) visibleSeries.push("game");
+
+    const sitePhrase = state.showSite ? "main-site" : "";
+    const gamePhrase = state.showGame ? "game" : "";
+    const conjunction = state.showSite && state.showGame ? " and " : "";
+    svgDescription.textContent =
+      `Unique ${sitePhrase}${conjunction}${gamePhrase} visitors for ${viewDescriptions[state.view].toLowerCase()}.`;
 
     if (!visibleSeries.length) {
       elements.chartMessage.textContent = "Turn on at least one series to display the graph.";
@@ -289,12 +299,6 @@
         }
       });
     });
-
-    const sitePhrase = state.showSite ? "main-site" : "";
-    const gamePhrase = state.showGame ? "game" : "";
-    const conjunction = state.showSite && state.showGame ? " and " : "";
-    elements.chartDescription.textContent =
-      `Unique ${sitePhrase}${conjunction}${gamePhrase} visitors for ${viewDescriptions[state.view].toLowerCase()}.`;
   }
 
   function render() {
