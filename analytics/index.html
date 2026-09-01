@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#17100b">
+    <meta name="description" content="Anonymous visitor analytics for Movie Master and Movie Master vs Garbage.">
+    <title>MOVIE MASTER ANALYTICS</title>
+    <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./analytics.css?v=20260901-1">
+    <script src="./analytics.js?v=20260901-1" defer></script>
+  </head>
+  <body>
+    <header class="analytics-header">
+      <div>
+        <p class="kicker">THE NUMBERS DON'T LIE</p>
+        <h1>MOVIE MASTER ANALYTICS</h1>
+        <p class="subtitle">Anonymous unique-browser traffic • America/Chicago</p>
+      </div>
+      <nav aria-label="Site links">
+        <a href="../">MAIN SITE</a>
+        <a href="../game/">GAME</a>
+      </nav>
+    </header>
+
+    <main class="analytics-shell">
+      <section class="summary-grid" aria-label="Traffic summary">
+        <article class="summary-card">
+          <span>MAIN SITE • ALL TIME</span>
+          <strong id="summary-site-total">—</strong>
+        </article>
+        <article class="summary-card">
+          <span>GAME • ALL TIME</span>
+          <strong id="summary-game-total">—</strong>
+        </article>
+        <article class="summary-card">
+          <span>MAIN SITE • TODAY</span>
+          <strong id="summary-site-today">—</strong>
+        </article>
+        <article class="summary-card">
+          <span>GAME • TODAY</span>
+          <strong id="summary-game-today">—</strong>
+        </article>
+        <article class="summary-card">
+          <span>FOUND THE GAME</span>
+          <strong id="summary-discovered">—</strong>
+          <small>Unique main-site visitors who have also visited the game</small>
+        </article>
+        <article class="summary-card summary-card-highlight">
+          <span>GAME DISCOVERY RATE</span>
+          <strong id="summary-rate">—</strong>
+          <small id="summary-rate-detail">—</small>
+        </article>
+      </section>
+
+      <section class="chart-panel" aria-labelledby="traffic-title">
+        <div class="chart-heading">
+          <div>
+            <p class="eyebrow">UNIQUE VISITORS</p>
+            <h2 id="traffic-title">TRAFFIC OVER TIME</h2>
+            <p id="view-description">Last 7 days</p>
+          </div>
+
+          <div class="chart-actions">
+            <div class="view-switcher" role="group" aria-label="Analytics time scale">
+              <button type="button" data-view="daily" class="is-active" aria-pressed="true">DAILY</button>
+              <button type="button" data-view="weekly" aria-pressed="false">WEEKLY</button>
+              <button type="button" data-view="monthly" aria-pressed="false">MONTHLY</button>
+            </div>
+            <button class="refresh-button" id="refresh-button" type="button">REFRESH</button>
+          </div>
+        </div>
+
+        <div class="series-controls" aria-label="Chart series">
+          <label>
+            <input type="checkbox" id="toggle-site" checked>
+            <span class="legend-swatch legend-site" aria-hidden="true"></span>
+            MAIN SITE
+          </label>
+          <label>
+            <input type="checkbox" id="toggle-game" checked>
+            <span class="legend-swatch legend-game" aria-hidden="true"></span>
+            GAME
+          </label>
+        </div>
+
+        <div class="chart-wrap" id="chart-wrap">
+          <svg
+            id="traffic-chart"
+            viewBox="0 0 960 430"
+            role="img"
+            aria-labelledby="chart-title chart-description"
+          >
+            <title id="chart-title">Movie Master visitor traffic</title>
+            <desc id="chart-description">Unique main-site and game visitors over time.</desc>
+          </svg>
+          <p class="chart-message" id="chart-message" hidden></p>
+        </div>
+
+        <div class="chart-footer">
+          <p id="tracking-note">Loading tracking history…</p>
+          <p id="updated-status" role="status" aria-live="polite">LOADING…</p>
+        </div>
+      </section>
+
+      <section class="data-panel" aria-labelledby="data-title">
+        <div class="data-heading">
+          <div>
+            <p class="eyebrow">EXACT NUMBERS</p>
+            <h2 id="data-title">VISITOR DATA</h2>
+          </div>
+        </div>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">PERIOD</th>
+                <th scope="col">MAIN SITE</th>
+                <th scope="col">GAME</th>
+              </tr>
+            </thead>
+            <tbody id="data-body">
+              <tr><td colspan="3">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p class="privacy-note">
+        Counts are based on anonymous browser IDs stored locally in each visitor's browser. No names,
+        IP addresses, fingerprints, or user-agent histories are stored by this dashboard.
+      </p>
+    </main>
+  </body>
+</html>
