@@ -1,6 +1,8 @@
 # Movie Master
 
-The official one-page website for the Movie Master.
+The official website for the Movie Master and personalized Movie Master movie recommendations.
+
+Official site: <https://moviemaster.vip/>
 
 ## Local preview
 
@@ -17,7 +19,7 @@ Then open `http://localhost:8000`.
 The included GitHub Actions workflow publishes the repository root to GitHub
 Pages whenever changes land on `main`.
 
-Expected URL: <https://isasto.github.io/movie-master/>
+Canonical URL: <https://moviemaster.vip/>
 
 ## Updating testimonials
 
