@@ -122,32 +122,71 @@ async function getCount(db) {
 async function getAnalytics(db, view) {
   const today = chicagoDateKey();
   const buckets = buildBuckets(view, today);
-  const data = [];
+  const bucketValues = buckets.map(() => "(?, ?, ?)").join(", ");
+  const bucketBindings = buckets.flatMap((bucket, index) => [
+    index,
+    bucket.start,
+    bucket.end,
+  ]);
 
-  for (const bucket of buckets) {
-    const result = await db
-      .prepare(
-        `SELECT section, COUNT(DISTINCT visitor_id) AS count
-         FROM visitor_daily
-         WHERE visit_date >= ? AND visit_date <= ?
+  const [trafficResult, statsResult, discoveredResult, trackingResult, todayResult] =
+    await db.batch([
+      db
+        .prepare(
+          `WITH buckets(bucket_index, start_date, end_date) AS (
+             VALUES ${bucketValues}
+           )
+           SELECT
+             buckets.bucket_index AS bucket_index,
+             visitor_daily.section AS section,
+             COUNT(DISTINCT visitor_daily.visitor_id) AS count
+           FROM buckets
+           LEFT JOIN visitor_daily
+             ON visitor_daily.visit_date >= buckets.start_date
+            AND visitor_daily.visit_date <= buckets.end_date
+           GROUP BY buckets.bucket_index, visitor_daily.section
+           ORDER BY buckets.bucket_index`,
+        )
+        .bind(...bucketBindings),
+      db.prepare("SELECT section, visitor_count FROM section_stats"),
+      db.prepare(
+        `SELECT COUNT(*) AS count
+         FROM visitor_sections AS site
+         WHERE site.section = 'site'
+           AND EXISTS (
+             SELECT 1 FROM visitor_sections AS game
+             WHERE game.visitor_id = site.visitor_id
+               AND game.section = 'game'
+           )`,
+      ),
+      db.prepare(
+        `SELECT section, MIN(first_seen) AS first_seen
+         FROM visitor_sections
          GROUP BY section`,
-      )
-      .bind(bucket.start, bucket.end)
-      .all();
+      ),
+      db
+        .prepare(
+          `SELECT section, COUNT(*) AS count
+           FROM visitor_daily
+           WHERE visit_date = ?
+           GROUP BY section`,
+        )
+        .bind(today),
+    ]);
 
-    const counts = { site: 0, game: 0 };
-    for (const row of result.results ?? []) {
-      if (VALID_SECTIONS.has(row.section)) {
-        counts[row.section] = Number(row.count ?? 0);
-      }
+  const data = buckets.map((bucket) => ({ ...bucket, site: 0, game: 0 }));
+  for (const row of trafficResult.results ?? []) {
+    const index = Number(row.bucket_index);
+    if (
+      Number.isInteger(index) &&
+      index >= 0 &&
+      index < data.length &&
+      VALID_SECTIONS.has(row.section)
+    ) {
+      data[index][row.section] = Number(row.count ?? 0);
     }
-
-    data.push({ ...bucket, ...counts });
   }
 
-  const statsResult = await db
-    .prepare("SELECT section, visitor_count FROM section_stats")
-    .all();
   const totals = { site: 0, game: 0 };
   for (const row of statsResult.results ?? []) {
     if (VALID_SECTIONS.has(row.section)) {
@@ -155,27 +194,8 @@ async function getAnalytics(db, view) {
     }
   }
 
-  const discoveredRow = await db
-    .prepare(
-      `SELECT COUNT(*) AS count
-       FROM visitor_sections AS site
-       WHERE site.section = 'site'
-         AND EXISTS (
-           SELECT 1 FROM visitor_sections AS game
-           WHERE game.visitor_id = site.visitor_id
-             AND game.section = 'game'
-         )`,
-    )
-    .first();
-  const discovered = Number(discoveredRow?.count ?? 0);
+  const discovered = Number(discoveredResult.results?.[0]?.count ?? 0);
 
-  const trackingResult = await db
-    .prepare(
-      `SELECT section, MIN(first_seen) AS first_seen
-       FROM visitor_sections
-       GROUP BY section`,
-    )
-    .all();
   const trackingStarted = { site: null, game: null };
   for (const row of trackingResult.results ?? []) {
     if (VALID_SECTIONS.has(row.section)) {
@@ -183,15 +203,6 @@ async function getAnalytics(db, view) {
     }
   }
 
-  const todayResult = await db
-    .prepare(
-      `SELECT section, COUNT(*) AS count
-       FROM visitor_daily
-       WHERE visit_date = ?
-       GROUP BY section`,
-    )
-    .bind(today)
-    .all();
   const todayCounts = { site: 0, game: 0 };
   for (const row of todayResult.results ?? []) {
     if (VALID_SECTIONS.has(row.section)) {
@@ -239,20 +250,19 @@ async function recordVisit(env, visitorId, section) {
       .run();
   }
 
-  await env.DB
-    .prepare(
-      "INSERT OR IGNORE INTO visitor_sections (visitor_id, section) VALUES (?, ?)",
-    )
-    .bind(normalizedId, section)
-    .run();
-
-  await env.DB
-    .prepare(
-      `INSERT OR IGNORE INTO visitor_daily (visitor_id, section, visit_date)
-       VALUES (?, ?, ?)`,
-    )
-    .bind(normalizedId, section, visitDate)
-    .run();
+  await env.DB.batch([
+    env.DB
+      .prepare(
+        "INSERT OR IGNORE INTO visitor_sections (visitor_id, section) VALUES (?, ?)",
+      )
+      .bind(normalizedId, section),
+    env.DB
+      .prepare(
+        `INSERT OR IGNORE INTO visitor_daily (visitor_id, section, visit_date)
+         VALUES (?, ?, ?)`,
+      )
+      .bind(normalizedId, section, visitDate),
+  ]);
 }
 
 export default {
