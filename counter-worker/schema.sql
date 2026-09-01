@@ -37,8 +37,7 @@ ON visitor_sections(section, first_seen);
 INSERT OR IGNORE INTO visitor_sections (visitor_id, section, first_seen)
 SELECT visitor_id, 'site', first_seen FROM visitors;
 
--- One row per browser, section, and Chicago calendar day. This lets the
--- analytics API calculate true unique visitors for daily/weekly/monthly buckets.
+-- One row per browser, section, and Chicago calendar day.
 CREATE TABLE IF NOT EXISTS visitor_daily (
   visitor_id TEXT NOT NULL,
   section TEXT NOT NULL CHECK (section IN ('site', 'game')),
@@ -50,8 +49,7 @@ CREATE TABLE IF NOT EXISTS visitor_daily (
 CREATE INDEX IF NOT EXISTS idx_visitor_daily_date_section
 ON visitor_daily(visit_date, section);
 
--- The pre-analytics data was collected during Central Daylight Time, so this
--- accurately backfills the small amount of existing history into Chicago dates.
+-- The original pre-analytics data was collected during Central Daylight Time.
 INSERT OR IGNORE INTO visitor_daily (visitor_id, section, visit_date, first_seen)
 SELECT visitor_id, 'site', date(first_seen, '-5 hours'), first_seen
 FROM visitors;
@@ -76,8 +74,8 @@ BEGIN
   WHERE section = NEW.section;
 END;
 
--- Record when acquisition-source tracking actually began. Existing game
--- visitors stay unclassified rather than being retroactively guessed.
+-- Small timestamps marking when richer analytics started. Existing records are
+-- never retroactively guessed for data that was not collected at the time.
 CREATE TABLE IF NOT EXISTS tracking_meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -86,8 +84,14 @@ CREATE TABLE IF NOT EXISTS tracking_meta (
 INSERT OR IGNORE INTO tracking_meta (key, value)
 VALUES ('game_source_started_at', CURRENT_TIMESTAMP);
 
+INSERT OR IGNORE INTO tracking_meta (key, value)
+VALUES ('visit_context_started_at', CURRENT_TIMESTAMP);
+
+INSERT OR IGNORE INTO tracking_meta (key, value)
+VALUES ('game_stats_started_at', CURRENT_TIMESTAMP);
+
 -- First known acquisition source for each game browser. Browsers that first
--- visited the game before source tracking began are permanently marked unknown.
+-- visited before source tracking began remain unclassified.
 CREATE TABLE IF NOT EXISTS game_source_first (
   visitor_id TEXT PRIMARY KEY,
   source TEXT NOT NULL CHECK (source IN ('site', 'direct', 'unknown')),
@@ -98,7 +102,6 @@ CREATE INDEX IF NOT EXISTS idx_game_source_first_source
 ON game_source_first(source);
 
 -- First acquisition source seen for a browser on each Chicago calendar day.
--- Pre-source-tracking game visits are intentionally left absent/unclassified.
 CREATE TABLE IF NOT EXISTS game_source_daily (
   visitor_id TEXT NOT NULL,
   visit_date TEXT NOT NULL,
@@ -109,3 +112,83 @@ CREATE TABLE IF NOT EXISTS game_source_daily (
 
 CREATE INDEX IF NOT EXISTS idx_game_source_daily_date_source
 ON game_source_daily(visit_date, source);
+
+-- Unique browser-hour visits. A browser can count at most once per section in
+-- an hour, so refreshing cannot manufacture an hourly traffic spike.
+CREATE TABLE IF NOT EXISTS visitor_hourly (
+  visitor_id TEXT NOT NULL,
+  section TEXT NOT NULL CHECK (section IN ('site', 'game')),
+  visit_date TEXT NOT NULL,
+  visit_hour INTEGER NOT NULL CHECK (visit_hour BETWEEN 0 AND 23),
+  first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (visitor_id, section, visit_date, visit_hour)
+);
+
+CREATE INDEX IF NOT EXISTS idx_visitor_hourly_section_hour
+ON visitor_hourly(section, visit_hour);
+
+-- Coarse first-observed geography for each anonymous browser/section. No IP
+-- addresses are stored. Coordinates are rounded before insertion by the Worker.
+CREATE TABLE IF NOT EXISTS visitor_locations (
+  visitor_id TEXT NOT NULL,
+  section TEXT NOT NULL CHECK (section IN ('site', 'game')),
+  country_code TEXT,
+  region TEXT,
+  city TEXT,
+  latitude REAL,
+  longitude REAL,
+  first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (visitor_id, section)
+);
+
+CREATE INDEX IF NOT EXISTS idx_visitor_locations_section_country
+ON visitor_locations(section, country_code);
+
+-- Every distinct game start gets a UUID. Abandoned/reset runs remain starts but
+-- do not become completed runs, which makes completion-rate reporting honest.
+CREATE TABLE IF NOT EXISTS game_starts (
+  run_id TEXT PRIMARY KEY,
+  visitor_id TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK (mode IN ('NORMAL', 'HARDCORE')),
+  visit_date TEXT NOT NULL,
+  started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_starts_visitor
+ON game_starts(visitor_id, started_at);
+
+CREATE INDEX IF NOT EXISTS idx_game_starts_date_mode
+ON game_starts(visit_date, mode);
+
+-- Completed run summaries. These are the same anonymous statistics already
+-- calculated by the game-over screen, now retained for aggregate reporting.
+CREATE TABLE IF NOT EXISTS game_runs (
+  run_id TEXT PRIMARY KEY,
+  visitor_id TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK (mode IN ('NORMAL', 'HARDCORE')),
+  visit_date TEXT NOT NULL,
+  score INTEGER NOT NULL DEFAULT 0 CHECK (score >= 0),
+  longest_streak INTEGER NOT NULL DEFAULT 0 CHECK (longest_streak >= 0),
+  game_time_seconds INTEGER NOT NULL DEFAULT 0 CHECK (game_time_seconds >= 0),
+  popcorn_collected INTEGER NOT NULL DEFAULT 0 CHECK (popcorn_collected >= 0),
+  popcorn_missed INTEGER NOT NULL DEFAULT 0 CHECK (popcorn_missed >= 0),
+  garbage_destroyed INTEGER NOT NULL DEFAULT 0 CHECK (garbage_destroyed >= 0),
+  destroyed_by_stars INTEGER NOT NULL DEFAULT 0 CHECK (destroyed_by_stars >= 0),
+  destroyed_by_blasts INTEGER NOT NULL DEFAULT 0 CHECK (destroyed_by_blasts >= 0),
+  stars_fired INTEGER NOT NULL DEFAULT 0 CHECK (stars_fired >= 0),
+  stars_hit INTEGER NOT NULL DEFAULT 0 CHECK (stars_hit >= 0),
+  hits_taken INTEGER NOT NULL DEFAULT 0 CHECK (hits_taken >= 0),
+  shield_blocks INTEGER NOT NULL DEFAULT 0 CHECK (shield_blocks >= 0),
+  blasts_used INTEGER NOT NULL DEFAULT 0 CHECK (blasts_used >= 0),
+  powerup_shield INTEGER NOT NULL DEFAULT 0 CHECK (powerup_shield >= 0),
+  powerup_speed INTEGER NOT NULL DEFAULT 0 CHECK (powerup_speed >= 0),
+  powerup_super INTEGER NOT NULL DEFAULT 0 CHECK (powerup_super >= 0),
+  powerup_magnet INTEGER NOT NULL DEFAULT 0 CHECK (powerup_magnet >= 0),
+  finished_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_runs_score
+ON game_runs(score DESC, longest_streak DESC);
+
+CREATE INDEX IF NOT EXISTS idx_game_runs_visitor
+ON game_runs(visitor_id, finished_at);
