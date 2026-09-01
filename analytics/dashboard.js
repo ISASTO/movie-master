@@ -511,6 +511,7 @@
       if (error?.name !== "AbortError") {
         console.error("Unable to load Movie Master analytics", error);
       }
+      setViewControls(state.view);
       elements.updatedStatus.textContent = "ANALYTICS UNAVAILABLE";
       elements.chartMessage.textContent = "The analytics service could not be reached. Try refreshing in a moment.";
       elements.chartMessage.hidden = false;
