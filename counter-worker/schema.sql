@@ -90,6 +90,9 @@ VALUES ('visit_context_started_at', CURRENT_TIMESTAMP);
 INSERT OR IGNORE INTO tracking_meta (key, value)
 VALUES ('game_stats_started_at', CURRENT_TIMESTAMP);
 
+INSERT OR IGNORE INTO tracking_meta (key, value)
+VALUES ('store_click_started_at', CURRENT_TIMESTAMP);
+
 -- First known acquisition source for each game browser. Browsers that first
 -- visited before source tracking began remain unclassified.
 CREATE TABLE IF NOT EXISTS game_source_first (
@@ -192,3 +195,18 @@ ON game_runs(score DESC, longest_streak DESC);
 
 CREATE INDEX IF NOT EXISTS idx_game_runs_visitor
 ON game_runs(visitor_id, finished_at);
+
+-- Every click on the outbound official merch-store button. The anonymous browser
+-- ID lets the dashboard show both raw click events and unique clickers.
+CREATE TABLE IF NOT EXISTS store_clicks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  visitor_id TEXT NOT NULL,
+  click_date TEXT NOT NULL,
+  clicked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_store_clicks_visitor
+ON store_clicks(visitor_id, clicked_at);
+
+CREATE INDEX IF NOT EXISTS idx_store_clicks_date
+ON store_clicks(click_date);
