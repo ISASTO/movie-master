@@ -36,7 +36,7 @@
 .mode-leaderboard-board th,
 .mode-leaderboard-board td {
   min-width: 0;
-  padding: 0.9rem clamp(0.3rem, 0.7vw, 0.7rem);
+  padding: 0.9rem clamp(0.28rem, 0.62vw, 0.62rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -51,19 +51,25 @@
 }
 
 .mode-leaderboard-board th:nth-child(1),
-.mode-leaderboard-board td:nth-child(1) { width: 12%; }
+.mode-leaderboard-board td:nth-child(1) { width: 10%; }
 
 .mode-leaderboard-board th:nth-child(2),
-.mode-leaderboard-board td:nth-child(2) { width: 30%; }
+.mode-leaderboard-board td:nth-child(2) { width: 36%; }
 
 .mode-leaderboard-board th:nth-child(3),
-.mode-leaderboard-board td:nth-child(3) { width: 25%; }
+.mode-leaderboard-board td:nth-child(3) { width: 24%; }
 
 .mode-leaderboard-board th:nth-child(4),
-.mode-leaderboard-board td:nth-child(4) { width: 16%; }
+.mode-leaderboard-board td:nth-child(4) { width: 14%; }
 
 .mode-leaderboard-board th:nth-child(5),
-.mode-leaderboard-board td:nth-child(5) { width: 17%; }
+.mode-leaderboard-board td:nth-child(5) { width: 16%; }
+
+.mode-leaderboard-board .leaderboard-player {
+  font-size: clamp(0.7rem, 0.94vw, 0.92rem);
+  letter-spacing: -0.01em;
+  text-overflow: clip;
+}
 
 .mode-leaderboard-board .leaderboard-score {
   font-size: clamp(0.68rem, 0.92vw, 0.9rem);
@@ -91,6 +97,7 @@
     padding-inline: clamp(0.4rem, 2vw, 1rem);
   }
 
+  .mode-leaderboard-board .leaderboard-player,
   .mode-leaderboard-board .leaderboard-score {
     font-size: clamp(0.72rem, 1.5vw, 0.95rem);
   }
