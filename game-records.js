@@ -90,7 +90,7 @@
 
   const gameIsActivelyUnpaused = () => {
     const pauseButton = document.getElementById("pause-button");
-    if (!runActive || !pauseButton || pauseButton.disabled) return false;
+    if (!pauseButton || pauseButton.disabled) return false;
     if (document.documentElement.classList.contains("game-paused")) return false;
     if (document.getElementById("start-overlay")?.hidden === false) return false;
     if (document.getElementById("gameover-overlay")?.hidden === false) return false;
