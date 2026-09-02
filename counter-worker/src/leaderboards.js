@@ -7,7 +7,11 @@ const ALLOWED_ORIGINS = new Set([
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CHICAGO_TIME_ZONE = "America/Chicago";
 const PUBLIC_TOP_LIMIT = 5;
+const LEGACY_IMPORT_CUTOFF = "2026-09-02 19:00:00";
+const LEGACY_SCORE_MAX = 100_000_000;
 export const LEADERBOARD_NAME_MAX_LENGTH = 24;
+
+const readyDatabases = new WeakSet();
 
 const BLOCKED_NAME_WORDS = new Set([
   "asshole", "bastard", "bitch", "bullshit", "cocksucker", "cunt", "dickhead",
@@ -58,10 +62,48 @@ function playerTag(visitorId) {
   return `PLAYER ${(hash >>> 0).toString(16).toUpperCase().padStart(8, "0").slice(-6)}`;
 }
 
+async function ensureLeaderboardInfrastructure(db) {
+  if (readyDatabases.has(db)) return;
+
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS legacy_leaderboard_scores (
+      visitor_id TEXT NOT NULL,
+      mode TEXT NOT NULL CHECK (mode IN ('NORMAL', 'HARDCORE')),
+      score INTEGER NOT NULL CHECK (score >= 0),
+      imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (visitor_id, mode)
+    )`,
+  ).run();
+
+  await db.prepare(
+    `CREATE TABLE IF NOT EXISTS leaderboard_name_claims (
+      normalized_name TEXT PRIMARY KEY,
+      visitor_id TEXT NOT NULL,
+      claimed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`,
+  ).run();
+
+  await db.prepare(
+    `INSERT OR IGNORE INTO leaderboard_name_claims (normalized_name, visitor_id)
+     SELECT UPPER(TRIM(display_name)), visitor_id
+     FROM leaderboard_profiles
+     WHERE UPPER(TRIM(display_name)) <> 'ANONYMOUS'`,
+  ).run();
+
+  readyDatabases.add(db);
+}
+
+function analyticsPlayerName(row) {
+  const displayName = String(row.display_name ?? "").trim().toUpperCase();
+  return displayName && displayName !== "ANONYMOUS"
+    ? displayName
+    : playerTag(row.visitor_id);
+}
+
 function normalizeAnalyticsRows(rows) {
   return (rows ?? []).map((row, index) => ({
     rank: index + 1,
-    player: playerTag(row.visitor_id),
+    player: analyticsPlayerName(row),
     score: Number(row.score ?? 0),
     longestStreak: Number(row.longest_streak ?? 0),
     gameTimeSeconds: Number(row.game_time_seconds ?? 0),
@@ -84,10 +126,21 @@ function bestRunsForMode(mode) {
       FROM game_runs
       WHERE mode = '${mode}'
     )
-    SELECT visitor_id, score, longest_streak, game_time_seconds, finished_at
+    SELECT
+      ranked_runs.visitor_id,
+      ranked_runs.score,
+      ranked_runs.longest_streak,
+      ranked_runs.game_time_seconds,
+      ranked_runs.finished_at,
+      leaderboard_profiles.display_name
     FROM ranked_runs
-    WHERE player_rank = 1
-    ORDER BY score DESC, longest_streak DESC, game_time_seconds DESC, finished_at ASC
+    LEFT JOIN leaderboard_profiles
+      ON leaderboard_profiles.visitor_id = ranked_runs.visitor_id
+    WHERE ranked_runs.player_rank = 1
+    ORDER BY ranked_runs.score DESC,
+             ranked_runs.longest_streak DESC,
+             ranked_runs.game_time_seconds DESC,
+             ranked_runs.finished_at ASC
     LIMIT 10
   `;
 }
@@ -127,7 +180,8 @@ export function validateLeaderboardName(value) {
     .normalize("NFKC")
     .replace(/[\p{Cc}\p{Cf}]/gu, "")
     .trim()
-    .replace(/\s+/g, " ");
+    .replace(/\s+/g, " ")
+    .toUpperCase();
 
   if (!name) return { ok: true, name: "ANONYMOUS" };
   if ([...name].length > LEADERBOARD_NAME_MAX_LENGTH) {
@@ -159,8 +213,26 @@ export function validateLeaderboardName(value) {
 
 function publicBoardSql(daily) {
   const dateFilter = daily ? "AND visit_date = ?" : "";
+  const legacyUnion = daily
+    ? ""
+    : `
+      UNION ALL
+      SELECT
+        'legacy:' || visitor_id || ':' || mode AS run_id,
+        visitor_id,
+        score,
+        imported_at AS finished_at
+      FROM legacy_leaderboard_scores
+      WHERE mode = ?`;
+
   return `
     WITH parameters(viewer_id) AS (VALUES (?)),
+    source_runs AS (
+      SELECT run_id, visitor_id, score, finished_at
+      FROM game_runs
+      WHERE mode = ? ${dateFilter}
+      ${legacyUnion}
+    ),
     personal_runs AS (
       SELECT
         run_id,
@@ -171,8 +243,7 @@ function publicBoardSql(daily) {
           PARTITION BY visitor_id
           ORDER BY score DESC, finished_at ASC, run_id ASC
         ) AS personal_order
-      FROM game_runs
-      WHERE mode = ? ${dateFilter}
+      FROM source_runs
     ),
     best_runs AS (
       SELECT run_id, visitor_id, score, finished_at
@@ -221,14 +292,14 @@ function publicBoardStatement(db, mode, period, dateKey, visitorId) {
   const statement = db.prepare(publicBoardSql(daily));
   return daily
     ? statement.bind(visitorId, mode, dateKey)
-    : statement.bind(visitorId, mode);
+    : statement.bind(visitorId, mode, mode);
 }
 
 function normalizePublicEntry(row) {
   return {
     rank: Number(row.display_rank ?? 0),
     order: Number(row.order_index ?? 0),
-    name: String(row.display_name || "ANONYMOUS"),
+    name: String(row.display_name || "ANONYMOUS").toUpperCase(),
     score: Number(row.score ?? 0),
     isViewer: Boolean(row.is_viewer),
   };
@@ -249,6 +320,7 @@ function normalizePublicBoard(rows) {
 }
 
 export async function buildPublicLeaderboardPayload(db, visitorId, now = new Date()) {
+  await ensureLeaderboardInfrastructure(db);
   const viewerId = typeof visitorId === "string" && UUID_PATTERN.test(visitorId)
     ? visitorId.toLowerCase()
     : "";
@@ -266,7 +338,7 @@ export async function buildPublicLeaderboardPayload(db, visitorId, now = new Dat
     generatedAt: new Date().toISOString(),
     dailyDate: dateKey,
     timeZone: CHICAGO_TIME_ZONE,
-    profile: { name: String(profileName || "ANONYMOUS") },
+    profile: { name: String(profileName || "ANONYMOUS").toUpperCase() },
     boards: {
       NORMAL: {
         allTime: normalizePublicBoard(results[0]?.results),
@@ -317,6 +389,50 @@ async function handlePublicLeaderboard(request, env, origin) {
   return jsonResponse(await buildPublicLeaderboardPayload(env.DB, visitorId), 200, origin);
 }
 
+async function saveProfileName(db, visitorId, name) {
+  await ensureLeaderboardInfrastructure(db);
+
+  if (name === "ANONYMOUS") {
+    await db.prepare(
+      `INSERT INTO leaderboard_profiles (visitor_id, display_name, updated_at)
+       VALUES (?, 'ANONYMOUS', CURRENT_TIMESTAMP)
+       ON CONFLICT(visitor_id) DO UPDATE SET
+         display_name = 'ANONYMOUS',
+         updated_at = CURRENT_TIMESTAMP`,
+    ).bind(visitorId).run();
+    await db.prepare(
+      "DELETE FROM leaderboard_name_claims WHERE visitor_id = ?",
+    ).bind(visitorId).run();
+    return { ok: true };
+  }
+
+  await db.prepare(
+    `INSERT OR IGNORE INTO leaderboard_name_claims (normalized_name, visitor_id)
+     VALUES (?, ?)`,
+  ).bind(name, visitorId).run();
+
+  const claim = await db.prepare(
+    "SELECT visitor_id FROM leaderboard_name_claims WHERE normalized_name = ?",
+  ).bind(name).first();
+  if (!claim || claim.visitor_id !== visitorId) {
+    return { ok: false, code: "NAME_ALREADY_TAKEN", message: "NAME ALREADY TAKEN" };
+  }
+
+  await db.prepare(
+    `INSERT INTO leaderboard_profiles (visitor_id, display_name, updated_at)
+     VALUES (?, ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(visitor_id) DO UPDATE SET
+       display_name = excluded.display_name,
+       updated_at = CURRENT_TIMESTAMP`,
+  ).bind(visitorId, name).run();
+
+  await db.prepare(
+    `DELETE FROM leaderboard_name_claims
+     WHERE visitor_id = ? AND normalized_name <> ?`,
+  ).bind(visitorId, name).run();
+  return { ok: true };
+}
+
 async function handleLeaderboardProfile(request, env, origin) {
   if (request.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405, origin);
@@ -333,23 +449,85 @@ async function handleLeaderboardProfile(request, env, origin) {
   }
 
   const visitorId = body.visitorId.toLowerCase();
-  await env.DB
-    .prepare(
-      `INSERT INTO leaderboard_profiles (visitor_id, display_name, updated_at)
-       VALUES (?, ?, CURRENT_TIMESTAMP)
-       ON CONFLICT(visitor_id) DO UPDATE SET
-         display_name = excluded.display_name,
-         updated_at = CURRENT_TIMESTAMP`,
-    )
-    .bind(visitorId, validated.name)
-    .run();
+  const result = await saveProfileName(env.DB, visitorId, validated.name);
+  if (!result.ok) {
+    return jsonResponse({ error: result.code, message: result.message }, 409, origin);
+  }
 
   return jsonResponse(await buildPublicLeaderboardPayload(env.DB, visitorId), 200, origin);
 }
 
+function legacyScore(value) {
+  const score = Number(value);
+  if (!Number.isFinite(score)) return 0;
+  return Math.max(0, Math.min(LEGACY_SCORE_MAX, Math.floor(score)));
+}
+
+async function handleLegacyLeaderboardImport(request, env, origin) {
+  if (request.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405, origin);
+  }
+  const body = await readJsonBody(request);
+  if (!body) return jsonResponse({ error: "Invalid JSON" }, 400, origin);
+  if (typeof body.visitorId !== "string" || !UUID_PATTERN.test(body.visitorId)) {
+    return jsonResponse({ error: "Invalid visitor ID" }, 400, origin);
+  }
+
+  await ensureLeaderboardInfrastructure(env.DB);
+  const visitorId = body.visitorId.toLowerCase();
+  const priorGameVisitor = await env.DB.prepare(
+    `SELECT first_seen
+     FROM visitor_sections
+     WHERE visitor_id = ? AND section = 'game' AND first_seen <= ?`,
+  ).bind(visitorId, LEGACY_IMPORT_CUTOFF).first();
+
+  if (!priorGameVisitor) {
+    return jsonResponse({
+      ok: true,
+      eligible: false,
+      imported: 0,
+      leaderboards: await buildPublicLeaderboardPayload(env.DB, visitorId),
+    }, 200, origin);
+  }
+
+  const scores = body.scores && typeof body.scores === "object" ? body.scores : {};
+  const statements = [];
+  for (const mode of ["NORMAL", "HARDCORE"]) {
+    const score = legacyScore(scores[mode]);
+    if (score <= 0) continue;
+    statements.push(
+      env.DB.prepare(
+        `INSERT OR IGNORE INTO legacy_leaderboard_scores (visitor_id, mode, score)
+         VALUES (?, ?, ?)`,
+      ).bind(visitorId, mode, score),
+    );
+  }
+
+  let imported = 0;
+  if (statements.length) {
+    const results = await env.DB.batch(statements);
+    imported = results.reduce(
+      (sum, result) => sum + Number(result?.meta?.changes ?? 0),
+      0,
+    );
+  }
+
+  return jsonResponse({
+    ok: true,
+    eligible: true,
+    imported,
+    leaderboards: await buildPublicLeaderboardPayload(env.DB, visitorId),
+  }, 200, origin);
+}
+
 export async function handleLeaderboardRequest(request, env) {
   const url = new URL(request.url);
-  if (!["/mode-leaderboards", "/public-leaderboards", "/leaderboard-profile"].includes(url.pathname)) {
+  if (![
+    "/mode-leaderboards",
+    "/public-leaderboards",
+    "/leaderboard-profile",
+    "/legacy-leaderboard-import",
+  ].includes(url.pathname)) {
     return null;
   }
 
@@ -367,6 +545,9 @@ export async function handleLeaderboardRequest(request, env) {
     }
     if (url.pathname === "/public-leaderboards") {
       return await handlePublicLeaderboard(request, env, origin);
+    }
+    if (url.pathname === "/legacy-leaderboard-import") {
+      return await handleLegacyLeaderboardImport(request, env, origin);
     }
     return await handleLeaderboardProfile(request, env, origin);
   } catch (error) {
