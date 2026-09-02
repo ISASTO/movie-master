@@ -316,7 +316,6 @@ async function getDetails(env) {
     returningResult,
     gameVisitorsResult,
     modeResult,
-    leaderboardResult,
   ] = await env.DB.batch([
     env.DB.prepare(
       `SELECT section, visit_hour AS hour, COUNT(*) AS count
@@ -419,12 +418,6 @@ async function getDetails(env) {
        FROM game_starts
        GROUP BY mode`,
     ),
-    env.DB.prepare(
-      `SELECT visitor_id, mode, score, longest_streak, game_time_seconds, finished_at
-       FROM game_runs
-       ORDER BY score DESC, longest_streak DESC, game_time_seconds DESC, finished_at ASC
-       LIMIT 10`,
-    ),
   ]);
 
   const tracking = {};
@@ -496,15 +489,6 @@ async function getDetails(env) {
         },
       },
       modeStarts,
-      leaderboard: (leaderboardResult.results ?? []).map((row, index) => ({
-        rank: index + 1,
-        player: playerTag(row.visitor_id),
-        mode: row.mode,
-        score: Number(row.score ?? 0),
-        longestStreak: Number(row.longest_streak ?? 0),
-        gameTimeSeconds: Number(row.game_time_seconds ?? 0),
-        finishedAt: sqliteTimestampToIso(row.finished_at),
-      })),
     },
   };
 }
