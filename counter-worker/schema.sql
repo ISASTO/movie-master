@@ -93,6 +93,9 @@ VALUES ('game_stats_started_at', CURRENT_TIMESTAMP);
 INSERT OR IGNORE INTO tracking_meta (key, value)
 VALUES ('store_click_started_at', CURRENT_TIMESTAMP);
 
+INSERT OR IGNORE INTO tracking_meta (key, value)
+VALUES ('run_telemetry_started_at', CURRENT_TIMESTAMP);
+
 -- First known acquisition source for each game browser. Browsers that first
 -- visited before source tracking began remain unclassified.
 CREATE TABLE IF NOT EXISTS game_source_first (
@@ -168,8 +171,8 @@ ON game_starts(visit_date, mode);
 CREATE INDEX IF NOT EXISTS idx_game_starts_visitor_started
 ON game_starts(visitor_id, started_at DESC);
 
--- Completed run summaries. These are the same anonymous statistics already
--- calculated by the game-over screen, now retained for aggregate reporting.
+-- Completed run summaries. Run metadata is intentionally coarse: no IP address,
+-- full user agent, hardware fingerprint, or exact screen characteristics are stored.
 CREATE TABLE IF NOT EXISTS game_runs (
   run_id TEXT PRIMARY KEY,
   visitor_id TEXT NOT NULL,
@@ -192,6 +195,16 @@ CREATE TABLE IF NOT EXISTS game_runs (
   powerup_speed INTEGER NOT NULL DEFAULT 0 CHECK (powerup_speed >= 0),
   powerup_super INTEGER NOT NULL DEFAULT 0 CHECK (powerup_super >= 0),
   powerup_magnet INTEGER NOT NULL DEFAULT 0 CHECK (powerup_magnet >= 0),
+  device_type TEXT,
+  browser_name TEXT,
+  control_method TEXT,
+  quality_level TEXT,
+  country_code TEXT,
+  region TEXT,
+  region_code TEXT,
+  city TEXT,
+  latitude REAL,
+  longitude REAL,
   finished_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -200,6 +213,9 @@ ON game_runs(score DESC, longest_streak DESC);
 
 CREATE INDEX IF NOT EXISTS idx_game_runs_visitor
 ON game_runs(visitor_id, finished_at);
+
+CREATE INDEX IF NOT EXISTS idx_game_runs_finished_at
+ON game_runs(finished_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_game_runs_public_all_time
 ON game_runs(mode, visitor_id, score DESC, finished_at ASC);
@@ -214,6 +230,33 @@ CREATE TABLE IF NOT EXISTS leaderboard_profiles (
   display_name TEXT NOT NULL DEFAULT 'ANONYMOUS',
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Non-anonymous names are exclusive. ANONYMOUS is deliberately not claimed so
+-- any number of players can leave the default public name unchanged.
+CREATE TABLE IF NOT EXISTS leaderboard_name_claims (
+  normalized_name TEXT PRIMARY KEY,
+  visitor_id TEXT NOT NULL,
+  claimed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT OR IGNORE INTO leaderboard_name_claims (normalized_name, visitor_id)
+SELECT UPPER(TRIM(display_name)), visitor_id
+FROM leaderboard_profiles
+WHERE UPPER(TRIM(display_name)) <> 'ANONYMOUS';
+
+-- One-time compatibility bridge for browser high scores saved before the public
+-- leaderboard existed. These affect only all-time public rankings and never
+-- masquerade as completed runs in analytics.
+CREATE TABLE IF NOT EXISTS legacy_leaderboard_scores (
+  visitor_id TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK (mode IN ('NORMAL', 'HARDCORE')),
+  score INTEGER NOT NULL CHECK (score >= 0),
+  imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (visitor_id, mode)
+);
+
+CREATE INDEX IF NOT EXISTS idx_legacy_leaderboard_scores_mode_score
+ON legacy_leaderboard_scores(mode, score DESC);
 
 -- Every click on the outbound official merch-store button. The anonymous browser
 -- ID lets the dashboard show both raw click events and unique clickers.
