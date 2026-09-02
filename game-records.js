@@ -11,6 +11,9 @@
   let runActive = false;
   let activeGamepadIndex = null;
 
+  const shareRunStatus = document.getElementById("share-run-status");
+  if (shareRunStatus) shareRunStatus.style.marginTop = "28px";
+
   const createUuid = () => {
     if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
     if (typeof crypto?.getRandomValues !== "function") return null;
