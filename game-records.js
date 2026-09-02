@@ -6,7 +6,9 @@
   const startButtons = ["start-button", "restart-button", "reset-confirm-button"];
   const GAMEPAD_DEAD_ZONE = 0.18;
   const GAMEPAD_BUTTON_THRESHOLD = 0.5;
-  const GAMEPAD_SCAN_INTERVAL = 50;
+  // Disconnect events are immediate; this low-frequency scan is only a fallback
+  // and a way to identify which connected pad is actually being used.
+  const GAMEPAD_SCAN_INTERVAL = 250;
   let activeRun = null;
   let runActive = false;
   let activeGamepadIndex = null;
@@ -152,7 +154,7 @@
   };
 
   const scanGamepads = () => {
-    if (document.visibilityState !== "visible") return;
+    if (!runActive || document.visibilityState !== "visible") return;
     const gamepads = readConnectedGamepads();
     if (
       activeGamepadIndex !== null
@@ -169,6 +171,44 @@
     if (!runActive) return;
     if (event.type === "keydown" && event.repeat) return;
     activeGamepadIndex = null;
+  };
+
+  const detectDeviceType = () => {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.userAgentData?.platform || navigator.platform || "";
+    if (/iPad/i.test(ua) || (/Mac/i.test(platform) && navigator.maxTouchPoints > 1)) return "IPAD";
+    if (/iPhone|iPod/i.test(ua)) return "IPHONE";
+    if (/Android/i.test(ua)) return /Mobile/i.test(ua) ? "ANDROID PHONE" : "ANDROID TABLET";
+    if (/Win/i.test(platform) || /Windows/i.test(ua)) return "WINDOWS PC";
+    if (/Mac/i.test(platform) || /Macintosh/i.test(ua)) return "MAC";
+    if (/Linux/i.test(platform) || /Linux/i.test(ua)) return "LINUX PC";
+    return "OTHER";
+  };
+
+  const detectBrowserName = () => {
+    const ua = navigator.userAgent || "";
+    if (/Edg\//i.test(ua)) return "EDGE";
+    if (/OPR\//i.test(ua)) return "OPERA";
+    if (/Firefox\//i.test(ua)) return "FIREFOX";
+    if (/Chrome\//i.test(ua) || /CriOS\//i.test(ua)) return "CHROME";
+    if (/Safari\//i.test(ua)) return "SAFARI";
+    return "OTHER";
+  };
+
+  const detectControlMethod = () => {
+    if (activeGamepadIndex !== null || document.documentElement.classList.contains("controller-input")) {
+      return "CONTROLLER";
+    }
+    const label = (document.getElementById("movement-button")?.textContent || "").toUpperCase();
+    if (label.includes("TOUCH")) return "TOUCH";
+    if (label.includes("KEYS")) return "KEYBOARD";
+    if (label.includes("MOUSE")) return "MOUSE";
+    return window.matchMedia?.("(hover: none), (pointer: coarse)")?.matches ? "TOUCH" : "UNKNOWN";
+  };
+
+  const detectQualityLevel = () => {
+    const quality = String(document.documentElement.dataset.gameQuality || "UNKNOWN").toUpperCase();
+    return ["HIGH", "MEDIUM", "LOW"].includes(quality) ? quality : "UNKNOWN";
   };
 
   const beginRun = () => {
@@ -197,6 +237,11 @@
   };
 
   const finishRun = async () => {
+    const controlMethod = detectControlMethod();
+    const deviceType = detectDeviceType();
+    const browserName = detectBrowserName();
+    const qualityLevel = detectQualityLevel();
+
     runActive = false;
     activeGamepadIndex = null;
     const runRecord = activeRun;
@@ -230,6 +275,10 @@
       powerupSpeed: readInteger("stat-powerup-speed"),
       powerupSuper: readInteger("stat-powerup-super"),
       powerupMagnet: readInteger("stat-powerup-magnet"),
+      deviceType,
+      browserName,
+      controlMethod,
+      qualityLevel,
     };
 
     try {
