@@ -4,14 +4,23 @@
   const apiBase = "https://movie-master-visitor-counter.isasto.workers.dev";
   const visitorIdKey = "movie-master-visitor-id";
   const nameCookie = "movie-master-leaderboard-name";
+  const legacyImportMarker = "movie-master-public-leaderboard-import-v1";
+  const legacyScoreKey = "movie-master-vs-garbage-high-score-v1";
+  const standardScoreKey = "movie-master-vs-garbage-high-score-easy-v1";
+  const hardcoreScoreKey = "movie-master-vs-garbage-high-score-hardcore-v1";
   const numberFormatter = new Intl.NumberFormat("en-US");
   const template = document.getElementById("leaderboard-card-template");
   const mounts = [...document.querySelectorAll("[data-leaderboard-mount]")];
   const forms = [...document.querySelectorAll("[data-leaderboard-name-form]")];
   const nameInputs = [...document.querySelectorAll("[data-leaderboard-name-input]")];
   const nameStatuses = [...document.querySelectorAll("[data-leaderboard-name-status]")];
-  const placementStatus = document.getElementById("leaderboard-placement-status");
   const modeTabs = [...document.querySelectorAll("[data-leaderboard-mode-tab]")];
+
+  // These were useful while the leaderboard was being built, but they make the
+  // finished UI noisier and the placement sentence is easy to misread.
+  document.getElementById("leaderboard-placement-status")?.remove();
+  document.querySelector(".leaderboards-panel > .poster-kicker")?.remove();
+  document.querySelector(".leaderboard-reset-copy")?.remove();
 
   if (!template || !mounts.length) return;
 
@@ -29,13 +38,22 @@
     }
   };
 
+  const readStoredScore = (key) => {
+    try {
+      const value = Number.parseInt(window.localStorage.getItem(key) ?? "", 10);
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    } catch {
+      return 0;
+    }
+  };
+
   const readNameCookie = () => {
     const prefix = `${nameCookie}=`;
     for (const part of document.cookie.split(";")) {
       const cookie = part.trim();
       if (!cookie.startsWith(prefix)) continue;
       try {
-        return decodeURIComponent(cookie.slice(prefix.length));
+        return (decodeURIComponent(cookie.slice(prefix.length)) || "ANONYMOUS").toUpperCase();
       } catch {
         return "ANONYMOUS";
       }
@@ -44,11 +62,12 @@
   };
 
   const writeNameCookie = (name) => {
-    document.cookie = `${nameCookie}=${encodeURIComponent(name)}; Max-Age=31536000; Path=/; SameSite=Lax; Secure`;
+    const value = String(name || "ANONYMOUS").toUpperCase();
+    document.cookie = `${nameCookie}=${encodeURIComponent(value)}; Max-Age=31536000; Path=/; SameSite=Lax; Secure`;
   };
 
   const syncNameInputs = (name) => {
-    const value = name || "ANONYMOUS";
+    const value = String(name || "ANONYMOUS").toUpperCase();
     for (const input of nameInputs) input.value = value;
   };
 
@@ -98,7 +117,7 @@
 
     const name = document.createElement("td");
     name.className = "leaderboard-player-name";
-    name.textContent = entry.name || "ANONYMOUS";
+    name.textContent = String(entry.name || "ANONYMOUS").toUpperCase();
 
     const score = document.createElement("td");
     score.className = "leaderboard-score";
@@ -145,26 +164,6 @@
     }
   };
 
-  const renderPlacement = () => {
-    if (!placementStatus) return;
-    if (!payload) {
-      placementStatus.textContent = loadingPromise
-        ? "CHECKING LEADERBOARD POSITION…"
-        : "LEADERBOARD POSITION UNAVAILABLE";
-      return;
-    }
-    const boards = payload.boards?.[activeRunMode];
-    const daily = boards?.daily?.viewer?.rank;
-    const allTime = boards?.allTime?.viewer?.rank;
-    if (!daily && !allTime) {
-      placementStatus.textContent = "YOUR FIRST QUALIFYING SCORE WILL SET YOUR RANK";
-      return;
-    }
-    const dailyCopy = daily ? `DAILY #${numberFormatter.format(daily)}` : "DAILY —";
-    const allTimeCopy = allTime ? `ALL-TIME #${numberFormatter.format(allTime)}` : "ALL-TIME —";
-    placementStatus.textContent = `YOUR ${modeLabel(activeRunMode)} BEST · ${dailyCopy} · ${allTimeCopy}`;
-  };
-
   const selectMobileMode = (mode) => {
     activeMobileMode = mode === "HARDCORE" ? "HARDCORE" : "NORMAL";
     for (const tab of modeTabs) {
@@ -179,7 +178,6 @@
 
   const render = () => {
     for (const card of document.querySelectorAll(".leaderboard-card")) renderCard(card);
-    renderPlacement();
   };
 
   const request = async (path, options = {}) => {
@@ -203,6 +201,15 @@
     }
   };
 
+  const applyPayload = (nextPayload) => {
+    if (!nextPayload) return;
+    payload = nextPayload;
+    const profileName = payload?.profile?.name || readNameCookie();
+    syncNameInputs(profileName);
+    writeNameCookie(profileName);
+    render();
+  };
+
   const loadLeaderboards = async (force = false) => {
     if (loadingPromise) return loadingPromise;
     if (payload && !force) return payload;
@@ -212,18 +219,42 @@
     });
     render();
     try {
-      payload = await loadingPromise;
-      const profileName = payload?.profile?.name || readNameCookie();
-      syncNameInputs(profileName);
-      writeNameCookie(profileName);
-      render();
-      return payload;
+      const result = await loadingPromise;
+      applyPayload(result);
+      return result;
     } catch (error) {
       payload = null;
       throw error;
     } finally {
       loadingPromise = null;
       render();
+    }
+  };
+
+  const importLegacyBests = async () => {
+    const visitorId = getVisitorId();
+    if (!visitorId) return;
+    try {
+      if (window.localStorage.getItem(legacyImportMarker) === "1") return;
+    } catch {
+      return;
+    }
+
+    const normal = Math.max(readStoredScore(legacyScoreKey), readStoredScore(standardScoreKey));
+    const hardcore = readStoredScore(hardcoreScoreKey);
+    const result = await request("/legacy-leaderboard-import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        visitorId,
+        scores: { NORMAL: normal, HARDCORE: hardcore },
+      }),
+    });
+    applyPayload(result.leaderboards);
+    try {
+      window.localStorage.setItem(legacyImportMarker, "1");
+    } catch {
+      // A failed marker only means the harmless one-time import may be retried.
     }
   };
 
@@ -235,25 +266,32 @@
       setNameStatus("LEADERBOARD IDENTITY IS UNAVAILABLE", true);
       return;
     }
+    input.value = input.value.toUpperCase();
     submit.disabled = true;
     setNameStatus("SAVING…");
     try {
-      payload = await request("/leaderboard-profile", {
+      const result = await request("/leaderboard-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visitorId, name: input.value }),
       });
-      const name = payload?.profile?.name || "ANONYMOUS";
-      syncNameInputs(name);
-      writeNameCookie(name);
+      applyPayload(result);
       setNameStatus("NAME SAVED");
-      render();
     } catch (error) {
       setNameStatus(String(error.message || "UNABLE TO SAVE NAME").toUpperCase(), true);
     } finally {
       submit.disabled = false;
     }
   };
+
+  for (const input of nameInputs) {
+    input.addEventListener("input", () => {
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.toUpperCase();
+      if (start !== null && end !== null) input.setSelectionRange(start, end);
+    });
+  }
 
   for (const form of forms) {
     form.addEventListener("submit", (event) => {
@@ -268,32 +306,27 @@
 
   window.addEventListener("movie-master:run-started", (event) => {
     activeRunMode = event.detail?.mode === "HARDCORE" ? "HARDCORE" : "NORMAL";
-    if (placementStatus) placementStatus.textContent = "CHECKING LEADERBOARD POSITION…";
   });
 
   window.addEventListener("movie-master:run-recorded", (event) => {
     if (event.detail?.leaderboards) {
-      payload = event.detail.leaderboards;
-      const name = payload?.profile?.name || readNameCookie();
-      syncNameInputs(name);
-      writeNameCookie(name);
-      render();
+      applyPayload(event.detail.leaderboards);
       return;
     }
     void loadLeaderboards(true).catch(() => {});
   });
 
   window.addEventListener("movie-master:run-record-failed", () => {
-    if (placementStatus) placementStatus.textContent = "LEADERBOARD POSITION UNAVAILABLE";
     void loadLeaderboards(true).catch(() => {});
   });
 
   window.addEventListener("movie-master:leaderboards-opened", (event) => {
-    selectMobileMode(event.detail?.mode);
+    selectMobileMode(event.detail?.mode || activeRunMode);
     void loadLeaderboards(true).catch(() => {});
   });
 
   syncNameInputs(readNameCookie());
   selectMobileMode(activeMobileMode);
   render();
+  void importLegacyBests().catch(() => {});
 })();
