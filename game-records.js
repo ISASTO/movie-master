@@ -6,12 +6,13 @@
   const startButtons = ["start-button", "restart-button", "reset-confirm-button"];
   const GAMEPAD_DEAD_ZONE = 0.18;
   const GAMEPAD_BUTTON_THRESHOLD = 0.5;
-  // Disconnect events are immediate; this low-frequency scan is only a fallback
-  // and a way to identify which connected pad is actually being used.
+  // The browser's disconnect event is immediate. This scan only identifies the
+  // pad actually in use and provides a fallback for unusual browser behavior.
   const GAMEPAD_SCAN_INTERVAL = 250;
   let activeRun = null;
   let runActive = false;
   let activeGamepadIndex = null;
+  let gamepadScanTimer = null;
 
   const shareRunStatus = document.getElementById("share-run-status");
   if (shareRunStatus) shareRunStatus.style.marginTop = "28px";
@@ -167,6 +168,17 @@
     }
   };
 
+  const stopGamepadScanner = () => {
+    if (gamepadScanTimer !== null) window.clearInterval(gamepadScanTimer);
+    gamepadScanTimer = null;
+  };
+
+  const startGamepadScanner = () => {
+    stopGamepadScanner();
+    scanGamepads();
+    gamepadScanTimer = window.setInterval(scanGamepads, GAMEPAD_SCAN_INTERVAL);
+  };
+
   const markNonGamepadInput = (event) => {
     if (!runActive) return;
     if (event.type === "keydown" && event.repeat) return;
@@ -213,7 +225,8 @@
 
   const beginRun = () => {
     runActive = true;
-    scanGamepads();
+    activeGamepadIndex = null;
+    startGamepadScanner();
     const visitorId = getVisitorId();
     const runId = createUuid();
     if (!visitorId || !runId) {
@@ -243,6 +256,7 @@
     const qualityLevel = detectQualityLevel();
 
     runActive = false;
+    stopGamepadScanner();
     activeGamepadIndex = null;
     const runRecord = activeRun;
     activeRun = null;
@@ -302,7 +316,6 @@
   });
   window.addEventListener("keydown", markNonGamepadInput, { capture: true });
   window.addEventListener("pointerdown", markNonGamepadInput, { capture: true });
-  window.setInterval(scanGamepads, GAMEPAD_SCAN_INTERVAL);
 
   const gameover = document.getElementById("gameover-overlay");
   if (gameover) {
