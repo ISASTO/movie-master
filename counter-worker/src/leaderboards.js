@@ -7,7 +7,7 @@ const ALLOWED_ORIGINS = new Set([
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CHICAGO_TIME_ZONE = "America/Chicago";
 const PUBLIC_TOP_LIMIT = 5;
-const LEGACY_IMPORT_CUTOFF = "2026-09-02 19:00:00";
+const LEGACY_IMPORT_CUTOFF = "2026-09-02 16:53:41";
 const LEGACY_SCORE_MAX = 100_000_000;
 export const LEADERBOARD_NAME_MAX_LENGTH = 24;
 
@@ -51,6 +51,12 @@ function chicagoDateKey(date = new Date()) {
   }).formatToParts(date);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
+}
+
+function sqliteTimestampToIso(value) {
+  if (!value) return null;
+  const parsed = new Date(`${String(value).replace(" ", "T")}Z`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
 function playerTag(visitorId) {
@@ -100,13 +106,16 @@ function analyticsPlayerName(row) {
     : playerTag(row.visitor_id);
 }
 
-function normalizeAnalyticsRows(rows) {
+function normalizeAnalyticsRows(rows, includeRank = true) {
   return (rows ?? []).map((row, index) => ({
-    rank: index + 1,
+    ...(includeRank ? { rank: index + 1 } : {}),
+    runId: row.run_id,
     player: analyticsPlayerName(row),
+    mode: row.mode,
     score: Number(row.score ?? 0),
     longestStreak: Number(row.longest_streak ?? 0),
     gameTimeSeconds: Number(row.game_time_seconds ?? 0),
+    finishedAt: sqliteTimestampToIso(row.finished_at),
   }));
 }
 
@@ -114,7 +123,9 @@ function bestRunsForMode(mode) {
   return `
     WITH ranked_runs AS (
       SELECT
+        run_id,
         visitor_id,
+        mode,
         score,
         longest_streak,
         game_time_seconds,
@@ -127,7 +138,9 @@ function bestRunsForMode(mode) {
       WHERE mode = '${mode}'
     )
     SELECT
+      ranked_runs.run_id,
       ranked_runs.visitor_id,
+      ranked_runs.mode,
       ranked_runs.score,
       ranked_runs.longest_streak,
       ranked_runs.game_time_seconds,
@@ -142,6 +155,25 @@ function bestRunsForMode(mode) {
              ranked_runs.game_time_seconds DESC,
              ranked_runs.finished_at ASC
     LIMIT 10
+  `;
+}
+
+function recentRunsSql() {
+  return `
+    SELECT
+      game_runs.run_id,
+      game_runs.visitor_id,
+      game_runs.mode,
+      game_runs.score,
+      game_runs.longest_streak,
+      game_runs.game_time_seconds,
+      game_runs.finished_at,
+      leaderboard_profiles.display_name
+    FROM game_runs
+    LEFT JOIN leaderboard_profiles
+      ON leaderboard_profiles.visitor_id = game_runs.visitor_id
+    ORDER BY game_runs.finished_at DESC, game_runs.run_id DESC
+    LIMIT 15
   `;
 }
 
@@ -367,14 +399,16 @@ async function handleAnalyticsLeaderboard(request, env, origin) {
   if (request.method !== "GET") {
     return jsonResponse({ error: "Method not allowed" }, 405, origin);
   }
-  const [standardResult, hardcoreResult] = await env.DB.batch([
+  const [standardResult, hardcoreResult, recentResult] = await env.DB.batch([
     env.DB.prepare(bestRunsForMode("NORMAL")),
     env.DB.prepare(bestRunsForMode("HARDCORE")),
+    env.DB.prepare(recentRunsSql()),
   ]);
   return jsonResponse({
     generatedAt: new Date().toISOString(),
     standard: normalizeAnalyticsRows(standardResult.results),
     hardcore: normalizeAnalyticsRows(hardcoreResult.results),
+    recent: normalizeAnalyticsRows(recentResult.results, false),
   }, 200, origin);
 }
 
