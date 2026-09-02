@@ -8,7 +8,7 @@
     document.head.append(script);
   };
 
-  load("./site-core.js?v=20260901-2");
+  load("./site-core.js?v=20260902-perf-1");
   load("./payment-options.js?v=20260901-1");
   load("./store-click.js?v=20260901-1");
 })();

@@ -9,6 +9,7 @@
   const standardScoreKey = "movie-master-vs-garbage-high-score-easy-v1";
   const hardcoreScoreKey = "movie-master-vs-garbage-high-score-hardcore-v1";
   const numberFormatter = new Intl.NumberFormat("en-US");
+  const leaderboardFreshMs = 60 * 1000;
   const template = document.getElementById("leaderboard-card-template");
   const mounts = [...document.querySelectorAll("[data-leaderboard-mount]")];
   const forms = [...document.querySelectorAll("[data-leaderboard-name-form]")];
@@ -21,41 +22,6 @@
   document.querySelector(".leaderboards-panel > .poster-kicker")?.remove();
   document.querySelector(".leaderboard-reset-copy")?.remove();
 
-  // Keep the leaderboard readable in the narrow side docks as well as the full
-  // overlay. Names may wrap rather than being silently clipped.
-  const readabilityStyle = document.createElement("style");
-  readabilityStyle.textContent = `
-    .leaderboard-card { container-type: inline-size; }
-    .leaderboard-card-header { padding: 15px 14px 12px; }
-    .leaderboard-card-header p { font-size: clamp(.58rem, 1vw, .7rem); }
-    .leaderboard-card-header h2 { font-size: clamp(1.35rem, 2.4vw, 2rem); }
-    .leaderboard-period-tabs button { min-height: 38px; font-size: clamp(.6rem, 1vw, .7rem); }
-    .leaderboard-card thead th { font-size: clamp(.54rem, .9vw, .66rem); }
-    .leaderboard-card tbody th,
-    .leaderboard-card tbody td { font-size: clamp(.68rem, 1.08vw, .9rem); }
-    .leaderboard-card thead th:first-child,
-    .leaderboard-card tbody th { width: 12%; }
-    .leaderboard-card thead th:nth-child(2) { width: 57%; }
-    .leaderboard-card thead th:last-child,
-    .leaderboard-score { width: 31%; }
-    .leaderboard-player-name {
-      overflow: visible !important;
-      text-overflow: clip !important;
-      white-space: normal !important;
-      overflow-wrap: anywhere;
-      line-height: 1.12;
-    }
-    .leaderboard-name-form label { font-size: clamp(.58rem, .9vw, .68rem); }
-    .leaderboard-name-form input { font-size: clamp(.76rem, 1.2vw, .9rem); }
-    .leaderboard-name-form small { font-size: clamp(.52rem, .8vw, .62rem); }
-    @media (max-width: 760px) {
-      .leaderboard-card tbody th,
-      .leaderboard-card tbody td { font-size: clamp(.66rem, 2.7vw, .84rem); }
-      .leaderboard-card-header p { font-size: .6rem; }
-      .leaderboard-period-tabs button { font-size: .62rem; }
-    }
-  `;
-  document.head.append(readabilityStyle);
 
   if (!template || !mounts.length) return;
 
@@ -63,6 +29,7 @@
   let activeMobileMode = "NORMAL";
   let activeRunMode = "NORMAL";
   let payload = null;
+  let payloadLoadedAt = 0;
   let loadingPromise = null;
 
   const getVisitorId = () => {
@@ -252,6 +219,7 @@
   const applyPayload = (nextPayload) => {
     if (!nextPayload) return;
     payload = nextPayload;
+    payloadLoadedAt = Date.now();
     const profileName = payload?.profile?.name || readNameCookie();
     syncNameInputs(profileName);
     writeNameCookie(profileName);
@@ -260,7 +228,7 @@
 
   const loadLeaderboards = async (force = false) => {
     if (loadingPromise) return loadingPromise;
-    if (payload && !force) return payload;
+    if (payload && !force && Date.now() - payloadLoadedAt < leaderboardFreshMs) return payload;
     const visitorId = getVisitorId();
     loadingPromise = request("/public-leaderboards", {
       headers: visitorId ? { "X-Visitor-ID": visitorId } : {},
@@ -370,7 +338,7 @@
 
   window.addEventListener("movie-master:leaderboards-opened", (event) => {
     selectMobileMode(event.detail?.mode || activeRunMode);
-    void loadLeaderboards(true).catch(() => {});
+    void loadLeaderboards(false).catch(() => {});
   });
 
   syncNameInputs(readNameCookie());

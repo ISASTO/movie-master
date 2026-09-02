@@ -542,7 +542,7 @@ export async function handleGameEvent(request, env) {
 
     const usesReceipt = Number(body.receiptVersion ?? 0) >= 2;
     const runToken = usesReceipt ? createRunToken() : null;
-    await env.DB
+    const inserted = await env.DB
       .prepare(
         `INSERT OR IGNORE INTO game_starts
           (run_id, visitor_id, mode, visit_date, run_token)
@@ -551,25 +551,13 @@ export async function handleGameEvent(request, env) {
       .bind(run, visitor, mode, date, runToken)
       .run();
 
-    const startRow = await env.DB
-      .prepare(
-        `SELECT visitor_id, mode, run_token, completed_at
-         FROM game_starts WHERE run_id = ?`,
-      )
-      .bind(run)
-      .first();
-    if (
-      !startRow
-      || startRow.visitor_id !== visitor
-      || startRow.mode !== mode
-      || startRow.completed_at
-    ) {
+    if (Number(inserted?.meta?.changes ?? 0) < 1) {
       return jsonResponse({ error: "Run ID is unavailable" }, 409, origin);
     }
     return jsonResponse({
       ok: true,
-      receiptVersion: startRow.run_token ? 2 : 1,
-      runToken: startRow.run_token || null,
+      receiptVersion: runToken ? 2 : 1,
+      runToken,
     }, 200, origin);
   }
 

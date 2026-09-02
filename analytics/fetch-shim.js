@@ -5,7 +5,7 @@
   const workerHost = "movie-master-visitor-counter.isasto.workers.dev";
   const snapshotUrl = `https://${workerHost}/dashboard-snapshot`;
   const validViews = new Set(["daily", "weekly", "monthly"]);
-  const maxCacheAge = 70 * 1000;
+  const maxCacheAge = 130 * 1000;
   const snapshotCache = new Map();
   const inFlight = new Map();
   let latestView = null;

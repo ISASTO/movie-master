@@ -8,7 +8,7 @@
   const GAMEPAD_BUTTON_THRESHOLD = 0.5;
   // The browser's disconnect event is immediate. This scan only identifies the
   // pad actually in use and provides a fallback for unusual browser behavior.
-  const GAMEPAD_SCAN_INTERVAL = 250;
+  const GAMEPAD_SCAN_INTERVAL = 500;
   let activeRun = null;
   let runActive = false;
   let activeGamepadIndex = null;
@@ -157,6 +157,11 @@
   const scanGamepads = () => {
     if (!runActive || document.visibilityState !== "visible") return;
     const gamepads = readConnectedGamepads();
+    if (!gamepads.length) {
+      if (activeGamepadIndex !== null) handleActiveGamepadDisconnect(activeGamepadIndex);
+      stopGamepadScanner();
+      return;
+    }
     if (
       activeGamepadIndex !== null
       && !gamepads.some((gamepad) => gamepad.index === activeGamepadIndex)
@@ -175,8 +180,11 @@
 
   const startGamepadScanner = () => {
     stopGamepadScanner();
+    if (!runActive || !readConnectedGamepads().length) return;
     scanGamepads();
-    gamepadScanTimer = window.setInterval(scanGamepads, GAMEPAD_SCAN_INTERVAL);
+    if (runActive && readConnectedGamepads().length) {
+      gamepadScanTimer = window.setInterval(scanGamepads, GAMEPAD_SCAN_INTERVAL);
+    }
   };
 
   const markNonGamepadInput = (event) => {
@@ -311,8 +319,12 @@
   for (const id of startButtons) {
     document.getElementById(id)?.addEventListener("click", beginRun);
   }
+  window.addEventListener("gamepadconnected", () => {
+    if (runActive) startGamepadScanner();
+  });
   window.addEventListener("gamepaddisconnected", (event) => {
     handleActiveGamepadDisconnect(event.gamepad.index);
+    if (runActive && !readConnectedGamepads().length) stopGamepadScanner();
   });
   window.addEventListener("keydown", markNonGamepadInput, { capture: true });
   window.addEventListener("pointerdown", markNonGamepadInput, { capture: true });

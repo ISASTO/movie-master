@@ -159,12 +159,13 @@
 
     const apiBase = "https://movie-master-visitor-counter.isasto.workers.dev";
     const visitorIdKey = "movie-master-visitor-id";
-    const pollInterval = 5000;
+    const pollInterval = 60 * 1000;
     let priorFormatted = "";
     let counterIsVisible = false;
     let initialRequestDone = false;
     let pollTimer = null;
     let pollInFlight = false;
+    let lastSuccessfulFetchAt = 0;
 
     const render = (count) => {
       const formatted = count.toLocaleString("en-US");
@@ -226,7 +227,9 @@
       const visitorId = getVisitorId();
 
       if (!visitorId) {
-        render(await fetchCount());
+        const count = await fetchCount();
+        lastSuccessfulFetchAt = Date.now();
+        render(count);
         return;
       }
 
@@ -242,6 +245,7 @@
       if (!Number.isSafeInteger(data.count) || data.count < 0) {
         throw new Error("Counter returned an invalid count");
       }
+      lastSuccessfulFetchAt = Date.now();
       render(data.count);
     };
 
@@ -270,7 +274,9 @@
 
       pollInFlight = true;
       try {
-        render(await fetchCount());
+        const count = await fetchCount();
+        lastSuccessfulFetchAt = Date.now();
+        render(count);
       } catch (error) {
         console.error("Unable to refresh Movie Master visitor count", error);
       } finally {
@@ -281,7 +287,12 @@
 
     const syncPolling = () => {
       stopPolling();
-      if (shouldPoll()) runPoll();
+      if (!shouldPoll()) return;
+      if (lastSuccessfulFetchAt && Date.now() - lastSuccessfulFetchAt >= pollInterval) {
+        runPoll();
+        return;
+      }
+      scheduleNextPoll();
     };
 
     if ("IntersectionObserver" in window) {
@@ -316,7 +327,9 @@
       .catch(async (error) => {
         console.error("Unable to register Movie Master visitor", error);
         try {
-          render(await fetchCount());
+          const count = await fetchCount();
+          lastSuccessfulFetchAt = Date.now();
+          render(count);
         } catch (fallbackError) {
           console.error("Unable to load Movie Master visitor count", fallbackError);
         }

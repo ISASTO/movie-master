@@ -1,12 +1,14 @@
 (() => {
   "use strict";
 
-  let lastQuietRefresh = 0;
+  const AUTO_REFRESH_MS = 2 * 60 * 1000;
+  const QUIET_MIN_AGE_MS = 60 * 1000;
+  let lastRefreshRequest = Date.now();
 
   const requestRefresh = ({ quiet = false } = {}) => {
     if (quiet && (document.hidden || !document.hasFocus())) return;
-    if (quiet && Date.now() - lastQuietRefresh < 15000) return;
-    if (quiet) lastQuietRefresh = Date.now();
+    if (quiet && Date.now() - lastRefreshRequest < QUIET_MIN_AGE_MS) return;
+    lastRefreshRequest = Date.now();
     window.__invalidateAnalyticsSnapshot?.();
     window.dispatchEvent(new CustomEvent("analytics:refresh", { detail: { quiet } }));
   };
@@ -85,7 +87,7 @@
     requestRefresh({ quiet: false });
   });
 
-  window.setInterval(() => requestRefresh({ quiet: true }), 60 * 1000);
+  window.setInterval(() => requestRefresh({ quiet: true }), AUTO_REFRESH_MS);
   window.addEventListener("focus", () => requestRefresh({ quiet: true }));
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) requestRefresh({ quiet: true });
