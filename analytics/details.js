@@ -335,6 +335,7 @@
     const completed = Number(game.completed ?? 0);
     const gameVisitors = Number(game.gameVisitors ?? 0);
     const returning = Number(game.returningPlayers ?? 0);
+    const averageRunsPerPlayer = Number(game.averageRunsPerPlayer ?? 0);
 
     setText(summaryIds.starts, numberFormatter.format(starts));
     setText(summaryIds.completed, numberFormatter.format(completed));
@@ -358,7 +359,7 @@
     );
     setText(
       "game-players-detail",
-      `${oneDecimalFormatter.format(game.averageRunsPerPlayer ?? 0)} completed runs per finishing player`,
+      `${oneDecimalFormatter.format(averageRunsPerPlayer)} completed ${averageRunsPerPlayer === 1 ? "run" : "runs"} per finishing player`,
     );
     setText(
       "game-returning-detail",

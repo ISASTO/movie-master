@@ -218,8 +218,9 @@
 }
 
 .mini-bar-chart-hours {
-  grid-template-columns: repeat(24, minmax(31px, 1fr));
-  min-width: 820px;
+  grid-template-columns: repeat(24, minmax(20px, 1fr));
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .mini-bar-chart-weekdays {
@@ -566,6 +567,12 @@
 
   .scroll-hint {
     display: block;
+  }
+
+  .mini-bar-chart-hours {
+    grid-template-columns: repeat(24, minmax(31px, 1fr));
+    gap: 0.35rem;
+    min-width: 820px;
   }
 }
 
