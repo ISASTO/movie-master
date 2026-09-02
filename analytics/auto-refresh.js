@@ -2,7 +2,7 @@
   "use strict";
 
   const AUTO_REFRESH_MS = 2 * 60 * 1000;
-  const QUIET_MIN_AGE_MS = 60 * 1000;
+  const QUIET_MIN_AGE_MS = AUTO_REFRESH_MS;
   let lastRefreshRequest = Date.now();
 
   const requestRefresh = ({ quiet = false } = {}) => {

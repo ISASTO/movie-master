@@ -258,6 +258,14 @@
 
     const normal = Math.max(readStoredScore(legacyScoreKey), readStoredScore(standardScoreKey));
     const hardcore = readStoredScore(hardcoreScoreKey);
+    if (normal <= 0 && hardcore <= 0) {
+      try {
+        window.localStorage.setItem(legacyImportMarker, "1");
+      } catch {
+        // No marker means this harmless local check may run again next load.
+      }
+      return;
+    }
     const result = await request("/legacy-leaderboard-import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -333,7 +341,7 @@
   });
 
   window.addEventListener("movie-master:run-record-failed", () => {
-    void loadLeaderboards(true).catch(() => {});
+    void loadLeaderboards(false).catch(() => {});
   });
 
   window.addEventListener("movie-master:leaderboards-opened", (event) => {
