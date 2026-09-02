@@ -1,0 +1,60 @@
+name: Temporary Cloudflare Performance Slim
+
+on:
+  push:
+    branches:
+      - cloudflare-performance-slim
+
+permissions:
+  contents: write
+
+jobs:
+  optimize-and-test:
+    if: github.event.head_commit.message != 'Apply Cloudflare performance slim pass'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout optimization branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply deterministic performance pass
+        run: python scripts/perf_slim.py
+
+      - name: Run Worker regression tests
+        working-directory: counter-worker
+        run: npm test
+
+      - name: Check changed browser script syntax
+        run: |
+          node --check site-core.js
+          node --check visitor-tracker.js
+          node --check game-records.js
+          node --check game/leaderboard.js
+          node --check analytics/auto-refresh.js
+          node --check analytics/fetch-shim.js
+
+      - name: Verify request/performance targets
+        run: |
+          grep -q 'const pollInterval = 60 \* 1000' site-core.js
+          ! grep -q 'const pollInterval = 5000' site-core.js
+          grep -q 'visitBucketKey' visitor-tracker.js
+          grep -q 'GAMEPAD_SCAN_INTERVAL = 500' game-records.js
+          grep -q 'leaderboardFreshMs = 60 \* 1000' game/leaderboard.js
+          ! grep -q 'readabilityStyle' game/leaderboard.js
+          grep -q 'AUTO_REFRESH_MS = 2 \* 60 \* 1000' analytics/auto-refresh.js
+          grep -q 'maxCacheAge = 130 \* 1000' analytics/fetch-shim.js
+          grep -q 'Refreshes automatically every 2 minutes' analytics/index.html
+          ! grep -q 'SELECT visitor_id, mode, run_token, completed_at' counter-worker/src/insights.js
+
+      - name: Commit optimized production files
+        run: |
+          git config user.name ISASTO
+          git config user.email 54598558+ISASTO@users.noreply.github.com
+          git add \
+            site-core.js script.js index.html visitor-tracker.js game-records.js \
+            game/leaderboard.js game/index.html analytics/auto-refresh.js \
+            analytics/fetch-shim.js analytics/index.html counter-worker/src/insights.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'Apply Cloudflare performance slim pass'
+          git push origin HEAD:cloudflare-performance-slim
