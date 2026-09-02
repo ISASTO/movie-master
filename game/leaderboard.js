@@ -16,11 +16,46 @@
   const nameStatuses = [...document.querySelectorAll("[data-leaderboard-name-status]")];
   const modeTabs = [...document.querySelectorAll("[data-leaderboard-mode-tab]")];
 
-  // These were useful while the leaderboard was being built, but they make the
-  // finished UI noisier and the placement sentence is easy to misread.
+  // Remove build-time explanatory copy that no longer helps players.
   document.getElementById("leaderboard-placement-status")?.remove();
   document.querySelector(".leaderboards-panel > .poster-kicker")?.remove();
   document.querySelector(".leaderboard-reset-copy")?.remove();
+
+  // Keep the leaderboard readable in the narrow side docks as well as the full
+  // overlay. Names may wrap rather than being silently clipped.
+  const readabilityStyle = document.createElement("style");
+  readabilityStyle.textContent = `
+    .leaderboard-card { container-type: inline-size; }
+    .leaderboard-card-header { padding: 15px 14px 12px; }
+    .leaderboard-card-header p { font-size: clamp(.58rem, 1vw, .7rem); }
+    .leaderboard-card-header h2 { font-size: clamp(1.35rem, 2.4vw, 2rem); }
+    .leaderboard-period-tabs button { min-height: 38px; font-size: clamp(.6rem, 1vw, .7rem); }
+    .leaderboard-card thead th { font-size: clamp(.54rem, .9vw, .66rem); }
+    .leaderboard-card tbody th,
+    .leaderboard-card tbody td { font-size: clamp(.68rem, 1.08vw, .9rem); }
+    .leaderboard-card thead th:first-child,
+    .leaderboard-card tbody th { width: 12%; }
+    .leaderboard-card thead th:nth-child(2) { width: 57%; }
+    .leaderboard-card thead th:last-child,
+    .leaderboard-score { width: 31%; }
+    .leaderboard-player-name {
+      overflow: visible !important;
+      text-overflow: clip !important;
+      white-space: normal !important;
+      overflow-wrap: anywhere;
+      line-height: 1.12;
+    }
+    .leaderboard-name-form label { font-size: clamp(.58rem, .9vw, .68rem); }
+    .leaderboard-name-form input { font-size: clamp(.76rem, 1.2vw, .9rem); }
+    .leaderboard-name-form small { font-size: clamp(.52rem, .8vw, .62rem); }
+    @media (max-width: 760px) {
+      .leaderboard-card tbody th,
+      .leaderboard-card tbody td { font-size: clamp(.66rem, 2.7vw, .84rem); }
+      .leaderboard-card-header p { font-size: .6rem; }
+      .leaderboard-period-tabs button { font-size: .62rem; }
+    }
+  `;
+  document.head.append(readabilityStyle);
 
   if (!template || !mounts.length) return;
 
@@ -38,13 +73,26 @@
     }
   };
 
+  const readCookieScore = (key) => {
+    const prefix = `${key}=`;
+    for (const part of document.cookie.split(";")) {
+      const cookie = part.trim();
+      if (!cookie.startsWith(prefix)) continue;
+      const value = Number.parseInt(decodeURIComponent(cookie.slice(prefix.length)), 10);
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    }
+    return 0;
+  };
+
   const readStoredScore = (key) => {
+    let localValue = 0;
     try {
       const value = Number.parseInt(window.localStorage.getItem(key) ?? "", 10);
-      return Number.isFinite(value) ? Math.max(0, value) : 0;
+      localValue = Number.isFinite(value) ? Math.max(0, value) : 0;
     } catch {
-      return 0;
+      localValue = 0;
     }
+    return Math.max(localValue, readCookieScore(key));
   };
 
   const readNameCookie = () => {
