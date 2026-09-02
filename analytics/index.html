@@ -12,13 +12,14 @@
     <link rel="stylesheet" href="./analytics.css?v=20260901-6">
     <link rel="stylesheet" href="./details.css?v=20260901-4">
     <link rel="stylesheet" href="./traffic-series.css?v=20260901-2">
-    <link rel="stylesheet" href="./mode-leaderboards.css?v=20260902-1">
+    <link rel="stylesheet" href="./mode-leaderboards.css?v=20260902-run-details-2">
+    <link rel="stylesheet" href="./run-details-overrides.css?v=20260902-1">
     <script src="./fetch-shim.js?v=20260901-3" defer></script>
     <script src="./dashboard.js?v=20260901-5" defer></script>
     <script src="./details.js?v=20260901-3" defer></script>
     <script src="./source-breakdown.js?v=20260901-2" defer></script>
     <script src="./store-stats.js?v=20260901-3" defer></script>
-    <script src="./mode-leaderboards.js?v=20260901-2" defer></script>
+    <script src="./mode-leaderboards.js?v=20260902-run-details-2" defer></script>
     <script src="./auto-refresh.js?v=20260901-5" defer></script>
     <script src="./ui.js?v=20260901-1" defer></script>
   </head>
@@ -308,7 +309,7 @@
           <p id="tracking-note">Loading traffic tracking history…</p>
           <p id="game-tracking-note">Loading game-stat history…</p>
           <p id="location-note">Loading geography history…</p>
-          <p>Counts use anonymous browser IDs stored locally in each visitor's browser. No names, IP addresses, fingerprints, or user-agent histories are stored. Geography uses coarse Cloudflare IP-geolocation; the IP itself is discarded and map coordinates are rounded before storage.</p>
+          <p>Traffic counts use anonymous browser IDs stored locally in each visitor's browser. Players may optionally publish a leaderboard name. Completed runs may store coarse device, browser, control-method and graphics-quality categories plus approximate Cloudflare location. No IP addresses, full user-agent strings, exact screen dimensions or hardware fingerprints are retained.</p>
         </div>
       </details>
     </main>
