@@ -24,10 +24,10 @@
     <link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">
-    <link rel="stylesheet" href="./game.css?v=20260902-public-leaderboards">
+    <link rel="stylesheet" href="./game.css?v=20260902-run-analytics">
     <script src="../visitor-tracker.js?v=20260901-section-visit" data-visitor-section="game" defer></script>
-    <script src="../game-records.js?v=20260902-public-leaderboards" defer></script>
-    <script src="./leaderboard.js?v=20260902-public-leaderboards" defer></script>
+    <script src="../game-records.js?v=20260902-run-analytics" defer></script>
+    <script src="./leaderboard.js?v=20260902-run-analytics" defer></script>
     <script src="./game.js?v=20260902-public-leaderboards" defer></script>
   </head>
   <body>
@@ -378,17 +378,16 @@
         </div>
         <button class="blast-button" id="judgment-button" type="button" disabled>
           <b>BLOCKBUSTER BLAST</b>
+          <span>0%</span>
         </button>
       </div>
 
-      <div class="game-instructions" aria-hidden="true">
-        <span class="desktop-instructions" id="desktop-instructions">FOLLOW THE MOUSE TO MOVE &nbsp;•&nbsp; COLLECT POPCORN &nbsp;•&nbsp; SPACE OR CLICK FOR BLOCKBUSTER BLAST</span>
-        <span class="mobile-instructions" id="mobile-instructions">KEEP MOVING &nbsp;•&nbsp; COLLECT POPCORN &nbsp;•&nbsp; USE THE GOLD BUTTON WHEN READY</span>
-      </div>
+      <footer class="game-instructions">
+        <span id="desktop-instructions">KEEP MOVING • COLLECT POPCORN &amp; POWER-UPS • SPACE/CLICK FOR BLOCKBUSTER BLAST</span>
+        <span class="mobile-instructions" id="mobile-instructions">KEEP MOVING • COLLECT POPCORN &amp; POWER-UPS • USE THE GOLD BUTTON WHEN READY</span>
+      </footer>
     </main>
 
-    <noscript>
-      <p class="noscript-message">JavaScript is required to defend the world from garbage.</p>
-    </noscript>
+    <noscript>This game requires JavaScript.</noscript>
   </body>
 </html>
