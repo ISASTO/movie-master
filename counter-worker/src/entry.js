@@ -1,7 +1,12 @@
 import worker from "./index.js";
-import { handleEnhancedRequest } from "./insights.js";
+import { handleEnhancedRequest, handleGameEvent } from "./insights.js";
 import { handleLeaderboardRequest } from "./leaderboards.js";
 import { handleStoreRequest } from "./store.js";
+import {
+  captureRunTelemetry,
+  handleRunDetailsRequest,
+  persistRunTelemetry,
+} from "./run-telemetry.js";
 
 const VALID_VIEWS = new Set(["daily", "weekly", "monthly"]);
 
@@ -94,6 +99,25 @@ export default {
         });
       }
     }
+
+    // Capture the tiny categorical run metadata once, at completion. The game
+    // event itself is handled immediately; metadata persistence is deferred so
+    // it cannot add latency to the game-over transition.
+    if (request.method === "POST" && url.pathname === "/game-event") {
+      const telemetry = await captureRunTelemetry(request);
+      const response = await handleGameEvent(request, env);
+      if (response.ok && telemetry) {
+        const task = persistRunTelemetry(env.DB, telemetry).catch((error) => {
+          console.error("Unable to persist run telemetry", error);
+        });
+        if (ctx?.waitUntil) ctx.waitUntil(task);
+        else await task;
+      }
+      return response;
+    }
+
+    const runDetailsResponse = await handleRunDetailsRequest(request, env);
+    if (runDetailsResponse) return runDetailsResponse;
 
     const storeResponse = await handleStoreRequest(request, env);
     if (storeResponse) return storeResponse;
