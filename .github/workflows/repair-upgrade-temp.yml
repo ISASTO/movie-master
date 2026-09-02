@@ -70,9 +70,39 @@ jobs:
           new_privacy = "Traffic counts use anonymous browser IDs stored locally in each visitor's browser. Players may optionally publish a leaderboard name. Completed runs may store coarse device, browser, control-method and graphics-quality categories plus approximate Cloudflare location. No IP addresses, full user-agent strings, exact screen dimensions or hardware fingerprints are retained."
           text = text.replace(old_privacy, new_privacy)
           analytics.write_text(text)
+
+          insights = Path('counter-worker/src/insights.js')
+          text = insights.read_text()
+          text = text.replace('    modeResult,\n    leaderboardResult,\n', '    modeResult,\n')
+          text = text.replace(
+              """    env.DB.prepare(
+      `SELECT visitor_id, mode, score, longest_streak, game_time_seconds, finished_at
+       FROM game_runs
+       ORDER BY score DESC, longest_streak DESC, game_time_seconds DESC, finished_at ASC
+       LIMIT 10`,
+    ),
+""",
+              ''
+          )
+          text = text.replace(
+              """      modeStarts,
+      leaderboard: (leaderboardResult.results ?? []).map((row, index) => ({
+        rank: index + 1,
+        player: playerTag(row.visitor_id),
+        mode: row.mode,
+        score: Number(row.score ?? 0),
+        longestStreak: Number(row.longest_streak ?? 0),
+        gameTimeSeconds: Number(row.game_time_seconds ?? 0),
+        finishedAt: sqliteTimestampToIso(row.finished_at),
+      })),
+""",
+              """      modeStarts,
+"""
+          )
+          insights.write_text(text)
           PY
 
-      - name: Verify intended markup survived
+      - name: Verify intended markup and cleanup
         run: |
           test "$(wc -l < game/index.html)" -gt 350
           grep -q 'leaderboard-upgrades.css?v=20260902-1' game/index.html
@@ -83,11 +113,25 @@ jobs:
           ! grep -q 'leaderboard-placement-status' game/index.html
           grep -q 'run-details-overrides.css?v=20260902-1' analytics/index.html
           grep -q 'mode-leaderboards.js?v=20260902-run-details-2' analytics/index.html
+          ! grep -q 'leaderboardResult' counter-worker/src/insights.js
+          test -f game/leaderboard-upgrades.css
+          test -f analytics/run-details-overrides.css
+
+      - name: Run Worker regression tests
+        working-directory: counter-worker
+        run: npm test
+
+      - name: Check upgraded browser script syntax
+        run: |
+          node --check game-records.js
+          node --check game/leaderboard.js
+          node --check analytics/mode-leaderboards.js
 
       - name: Commit repaired markup
         run: |
           git config user.name ISASTO
           git config user.email 54598558+ISASTO@users.noreply.github.com
-          git add game/index.html analytics/index.html
+          git add game/index.html analytics/index.html counter-worker/src/insights.js
+          git diff --cached --quiet && exit 0
           git commit -m 'Repair game markup and cache busts'
           git push origin HEAD:analytics-run-details-upgrade
