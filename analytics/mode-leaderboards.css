@@ -217,14 +217,8 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.run-detail-meta {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.run-detail-stats {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
+.run-detail-meta,
+.run-detail-stats,
 .run-detail-powerups {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -236,6 +230,10 @@
   min-width: 0;
   padding: 0.85rem;
   background: #1d140e;
+}
+
+.run-detail-run-id {
+  grid-column: span 2;
 }
 
 .run-detail-hero span,
@@ -442,10 +440,31 @@
     padding: 1rem !important;
   }
 
+  .run-detail-dialog {
+    width: calc(100vw - 1rem);
+    max-height: calc(100vh - 1rem);
+  }
+
+  .run-detail-shell {
+    padding: 0.85rem;
+  }
+
+  .run-detail-topbar {
+    align-items: center;
+  }
+
+  .run-detail-topbar h2 {
+    font-size: 1.15rem;
+  }
+
   .run-detail-meta,
   .run-detail-stats,
   .run-detail-hero,
   .run-detail-powerups {
     grid-template-columns: 1fr;
+  }
+
+  .run-detail-run-id {
+    grid-column: auto;
   }
 }
