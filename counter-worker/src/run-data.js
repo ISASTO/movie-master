@@ -44,6 +44,10 @@ function category(value, allowed, fallback) {
   return allowed.has(normalized) ? normalized : fallback;
 }
 
+function isDuplicateColumnError(error) {
+  return /duplicate column name|already exists/i.test(String(error?.message || error || ""));
+}
+
 export async function ensureRunDataSchema(db) {
   if (READY_DATABASES.has(db)) return;
 
@@ -51,7 +55,14 @@ export async function ensureRunDataSchema(db) {
   const present = new Set((info?.results ?? []).map((row) => String(row.name)));
   for (const [name, type] of RUN_COLUMNS) {
     if (present.has(name)) continue;
-    await db.prepare(`ALTER TABLE game_runs ADD COLUMN ${name} ${type}`).run();
+    try {
+      await db.prepare(`ALTER TABLE game_runs ADD COLUMN ${name} ${type}`).run();
+    } catch (error) {
+      // Separate Worker isolates can receive finishes at the same instant. If
+      // another isolate added the column after our PRAGMA read, the schema is
+      // already in the desired state and there is nothing to recover from.
+      if (!isDuplicateColumnError(error)) throw error;
+    }
   }
 
   await db.prepare(
