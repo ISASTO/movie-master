@@ -8,11 +8,20 @@
   const hardcoreBody = document.querySelector("#leaderboard-hardcore-body");
   const chicagoTime = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Chicago",
+    year: "numeric",
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    second: "2-digit",
   });
+
+  const escapeHtml = (value) => String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 
   const formatDuration = (seconds) => {
     const total = Math.max(0, Math.round(Number(seconds) || 0));
@@ -84,9 +93,13 @@
         <div id="run-detail-content" class="run-detail-content"><p>Loading…</p></div>
       </div>`;
     document.body.append(dialog);
-    dialog.querySelector(".run-detail-close")?.addEventListener("click", () => dialog.close());
+    const closeDialog = () => {
+      if (typeof dialog.close === "function") dialog.close();
+      else dialog.removeAttribute("open");
+    };
+    dialog.querySelector(".run-detail-close")?.addEventListener("click", closeDialog);
     dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) dialog.close();
+      if (event.target === dialog) closeDialog();
     });
     return dialog;
   };
@@ -96,26 +109,35 @@
   const runDetailContent = runDialog?.querySelector("#run-detail-content");
   const runDetailTitle = runDialog?.querySelector("#run-detail-title");
 
+  const privacyCopy = document.querySelector(".data-notes p:last-child");
+  if (privacyCopy) {
+    privacyCopy.textContent = "Traffic uses anonymous browser IDs. Players may optionally publish a leaderboard name. Completed runs can store coarse device, browser, control-method and graphics-quality categories plus approximate Cloudflare location. No IP addresses, full user-agent strings, exact screen dimensions or hardware fingerprints are retained.";
+  }
+
   const renderRunDetails = (run) => {
     if (!runDetailContent || !runDetailTitle) return;
     const stats = run.stats || {};
     const powerups = stats.powerups || {};
-    runDetailTitle.textContent = `${run.player || "RUN DETAILS"} • ${run.mode === "HARDCORE" ? "HARDCORE" : "STANDARD"}`;
+    const player = run.player || "RUN DETAILS";
+    runDetailTitle.textContent = `${player} • ${run.mode === "HARDCORE" ? "HARDCORE" : "STANDARD"}`;
     runDetailContent.innerHTML = `
       <section class="run-detail-hero">
         <div><span>SCORE</span><strong>${numberFormatter.format(stats.score || 0)}</strong></div>
         <div><span>LONGEST STREAK</span><strong>${numberFormatter.format(stats.longestStreak || 0)}</strong></div>
-        <div><span>GAME TIME</span><strong>${formatDuration(stats.gameTimeSeconds)}</strong></div>
+        <div><span>GAME TIME</span><strong>${escapeHtml(formatDuration(stats.gameTimeSeconds))}</strong></div>
       </section>
       <section class="run-detail-meta" aria-label="Run metadata">
-        <div><span>RECORDED</span><strong>${formatTimestamp(run.finishedAt)}</strong></div>
-        <div><span>STARTED</span><strong>${formatTimestamp(run.startedAt)}</strong></div>
-        <div><span>LOCATION</span><strong>${locationLabel(run.location)}</strong></div>
-        <div><span>ARRIVAL SOURCE</span><strong>${sourceLabel(run.source)}</strong></div>
-        <div><span>DEVICE</span><strong>${run.device?.type || "NOT RECORDED"}</strong></div>
-        <div><span>BROWSER</span><strong>${run.device?.browser || "NOT RECORDED"}</strong></div>
-        <div><span>CONTROL METHOD</span><strong>${run.device?.controlMethod || "NOT RECORDED"}</strong></div>
-        <div><span>QUALITY</span><strong>${run.device?.quality || "NOT RECORDED"}</strong></div>
+        <div><span>RECORDED</span><strong>${escapeHtml(formatTimestamp(run.finishedAt))}</strong></div>
+        <div><span>STARTED</span><strong>${escapeHtml(formatTimestamp(run.startedAt))}</strong></div>
+        <div><span>PLAYER ID</span><strong>${escapeHtml(run.generatedPlayerId || "NOT RECORDED")}</strong></div>
+        <div><span>PUBLIC NAME</span><strong>${escapeHtml(run.publicName || "ANONYMOUS")}</strong></div>
+        <div><span>LOCATION</span><strong>${escapeHtml(locationLabel(run.location))}</strong></div>
+        <div><span>ARRIVAL SOURCE</span><strong>${escapeHtml(sourceLabel(run.source))}</strong></div>
+        <div><span>DEVICE</span><strong>${escapeHtml(run.device?.type || "NOT RECORDED")}</strong></div>
+        <div><span>BROWSER</span><strong>${escapeHtml(run.device?.browser || "NOT RECORDED")}</strong></div>
+        <div><span>CONTROL METHOD</span><strong>${escapeHtml(run.device?.controlMethod || "NOT RECORDED")}</strong></div>
+        <div><span>QUALITY</span><strong>${escapeHtml(run.device?.quality || "NOT RECORDED")}</strong></div>
+        <div class="run-detail-run-id"><span>RUN ID</span><strong>${escapeHtml(run.runId || "NOT RECORDED")}</strong></div>
       </section>
       <section class="run-detail-stats" aria-label="Full run statistics">
         <div><span>POPCORN COLLECTED</span><strong>${numberFormatter.format(stats.popcornCollected || 0)}</strong></div>
@@ -125,7 +147,7 @@
         <div><span>DESTROYED BY BLASTS</span><strong>${numberFormatter.format(stats.destroyedByBlasts || 0)}</strong></div>
         <div><span>STARS FIRED</span><strong>${numberFormatter.format(stats.starsFired || 0)}</strong></div>
         <div><span>STARS HIT</span><strong>${numberFormatter.format(stats.starsHit || 0)}</strong></div>
-        <div><span>STAR ACCURACY</span><strong>${formatPercent(stats.starAccuracy)}</strong></div>
+        <div><span>STAR ACCURACY</span><strong>${escapeHtml(formatPercent(stats.starAccuracy))}</strong></div>
         <div><span>HITS TAKEN</span><strong>${numberFormatter.format(stats.hitsTaken || 0)}</strong></div>
         <div><span>SHIELD BLOCKS</span><strong>${numberFormatter.format(stats.shieldBlocks || 0)}</strong></div>
         <div><span>BLASTS USED</span><strong>${numberFormatter.format(stats.blastsUsed || 0)}</strong></div>
@@ -143,8 +165,10 @@
     if (!runId || !runDialog || !runDetailContent) return;
     runDetailContent.innerHTML = "<p>Loading run details…</p>";
     runDetailTitle.textContent = "RUN DETAILS";
-    if (typeof runDialog.showModal === "function") runDialog.showModal();
-    else runDialog.setAttribute("open", "");
+    if (!runDialog.open) {
+      if (typeof runDialog.showModal === "function") runDialog.showModal();
+      else runDialog.setAttribute("open", "");
+    }
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 8000);
