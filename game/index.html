@@ -59,13 +59,31 @@
       </header>
 
       <section class="hud" aria-label="Game status">
-        <div class="hud-stat"><span>SCORE</span><strong class="fit-number" id="score-value">0</strong></div>
-        <div class="hud-stat hud-best"><span>BEST</span><strong class="fit-number" id="best-value">0</strong></div>
-        <div class="hud-stat hud-lives"><span id="rating-label">YOUR CURRENT RATING</span><strong id="lives-value" aria-label="Five lives">★★★★★</strong></div>
-        <div class="hud-stat hud-streak"><span>STREAK</span><strong class="fit-number" id="streak-value" aria-label="Current popcorn streak: 0">0</strong></div>
-        <div class="hud-stat hud-best-streak"><span>BEST STREAK</span><strong class="fit-number" id="best-streak-value" aria-label="Best popcorn streak: 0">0</strong></div>
+        <div class="hud-stat">
+          <span>SCORE</span>
+          <strong class="fit-number" id="score-value">0</strong>
+        </div>
+        <div class="hud-stat hud-best">
+          <span>BEST</span>
+          <strong class="fit-number" id="best-value">0</strong>
+        </div>
+        <div class="hud-stat hud-lives">
+          <span id="rating-label">YOUR CURRENT RATING</span>
+          <strong id="lives-value" aria-label="Five lives">★★★★★</strong>
+        </div>
+        <div class="hud-stat hud-streak">
+          <span>STREAK</span>
+          <strong class="fit-number" id="streak-value" aria-label="Current popcorn streak: 0">0</strong>
+        </div>
+        <div class="hud-stat hud-best-streak">
+          <span>BEST STREAK</span>
+          <strong class="fit-number" id="best-streak-value" aria-label="Best popcorn streak: 0">0</strong>
+        </div>
         <div class="blast-meter">
-          <div class="blast-label"><span>BLOCKBUSTER BLAST</span><strong id="mastery-percent">0%</strong></div>
+          <div class="blast-label">
+            <span>BLOCKBUSTER BLAST</span>
+            <strong id="mastery-percent">0%</strong>
+          </div>
           <div class="blast-tracks">
             <div class="blast-track" role="progressbar" aria-label="Blockbuster Blast primary charge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="mastery-track"><span id="mastery-fill"></span></div>
             <div class="blast-track blast-track-reserve" role="progressbar" aria-label="Blockbuster Blast reserve charge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="reserve-mastery-track" hidden><span id="reserve-mastery-fill"></span></div>
@@ -110,11 +128,7 @@
           <section class="gameover-panel" aria-labelledby="gameover-title">
             <p class="poster-kicker">THE END</p><h2 id="gameover-title">OVERWHELMED BY GARBAGE 🗑️</h2>
             <div class="final-stats"><div class="final-stat"><span>FINAL SCORE</span><strong class="fit-number" id="final-score">0</strong></div><div class="final-stat"><span>LONGEST STREAK</span><strong class="fit-number" id="final-longest-streak">0</strong></div></div>
-            <form class="leaderboard-name-form" data-leaderboard-name-form>
-              <label for="gameover-leaderboard-name">LEADERBOARD NAME</label>
-              <div><input id="gameover-leaderboard-name" data-leaderboard-name-input name="leaderboard-name" type="text" value="ANONYMOUS" maxlength="24" autocomplete="nickname" autocapitalize="characters" spellcheck="false"><button class="secondary-button" type="submit">SAVE</button></div>
-              <small data-leaderboard-name-status role="status" aria-live="polite">NAMES ARE PUBLIC. DO NOT USE PERSONAL INFORMATION.</small>
-            </form>
+            <form class="leaderboard-name-form" data-leaderboard-name-form><label for="gameover-leaderboard-name">LEADERBOARD NAME</label><div><input id="gameover-leaderboard-name" data-leaderboard-name-input name="leaderboard-name" type="text" value="ANONYMOUS" maxlength="24" autocomplete="nickname" autocapitalize="characters" spellcheck="false"><button class="secondary-button" type="submit">SAVE</button></div><small data-leaderboard-name-status role="status" aria-live="polite">NAMES ARE PUBLIC. DO NOT USE PERSONAL INFORMATION.</small></form>
             <div class="run-actions"><button class="primary-button" id="restart-button" type="button">TRY AGAIN</button><button class="secondary-button" id="stats-button" type="button">GAME STATS</button><button class="secondary-button" id="share-run-button" type="button">SHARE RUN</button><button class="secondary-button leaderboard-open-button" id="gameover-leaderboards-button" type="button">LEADERBOARDS</button><button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">HARDCORE MODE: OFF</button></div>
             <p class="share-run-status" id="share-run-status" role="status" aria-live="polite"></p>
             <p class="hardcore-warning" id="gameover-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
