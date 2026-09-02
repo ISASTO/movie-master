@@ -126,13 +126,22 @@ export async function handleRunDetailsRequest(request, env) {
        game_runs.*,
        game_starts.started_at,
        leaderboard_profiles.display_name,
-       game_source_first.source AS game_source
+       game_source_first.source AS game_source,
+       COALESCE(game_runs.country_code, visitor_locations.country_code) AS detail_country_code,
+       COALESCE(game_runs.region, visitor_locations.region) AS detail_region,
+       game_runs.region_code AS detail_region_code,
+       COALESCE(game_runs.city, visitor_locations.city) AS detail_city,
+       COALESCE(game_runs.latitude, visitor_locations.latitude) AS detail_latitude,
+       COALESCE(game_runs.longitude, visitor_locations.longitude) AS detail_longitude
      FROM game_runs
      LEFT JOIN game_starts ON game_starts.run_id = game_runs.run_id
      LEFT JOIN leaderboard_profiles
        ON leaderboard_profiles.visitor_id = game_runs.visitor_id
      LEFT JOIN game_source_first
        ON game_source_first.visitor_id = game_runs.visitor_id
+     LEFT JOIN visitor_locations
+       ON visitor_locations.visitor_id = game_runs.visitor_id
+      AND visitor_locations.section = 'game'
      WHERE game_runs.run_id = ?
      LIMIT 1`,
   ).bind(runId.toLowerCase()).first();
@@ -145,6 +154,7 @@ export async function handleRunDetailsRequest(request, env) {
     runId: row.run_id,
     player: displayPlayer(row),
     publicName: String(row.display_name ?? "ANONYMOUS").toUpperCase(),
+    generatedPlayerId: playerTag(row.visitor_id),
     mode: row.mode,
     source: row.game_source || "unknown",
     startedAt: sqliteTimestampToIso(row.started_at),
@@ -156,12 +166,12 @@ export async function handleRunDetailsRequest(request, env) {
       quality: row.quality_level || "UNKNOWN",
     },
     location: {
-      city: row.city || null,
-      region: row.region || null,
-      regionCode: row.region_code || null,
-      countryCode: row.country_code || null,
-      latitude: row.latitude == null ? null : Number(row.latitude),
-      longitude: row.longitude == null ? null : Number(row.longitude),
+      city: row.detail_city || null,
+      region: row.detail_region || null,
+      regionCode: row.detail_region_code || null,
+      countryCode: row.detail_country_code || null,
+      latitude: row.detail_latitude == null ? null : Number(row.detail_latitude),
+      longitude: row.detail_longitude == null ? null : Number(row.detail_longitude),
     },
     stats: {
       score: integer(row, "score"),
