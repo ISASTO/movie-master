@@ -59,84 +59,28 @@
       </header>
 
       <section class="hud" aria-label="Game status">
-        <div class="hud-stat">
-          <span>SCORE</span>
-          <strong class="fit-number" id="score-value">0</strong>
-        </div>
-        <div class="hud-stat hud-best">
-          <span>BEST</span>
-          <strong class="fit-number" id="best-value">0</strong>
-        </div>
-        <div class="hud-stat hud-lives">
-          <span id="rating-label">YOUR CURRENT RATING</span>
-          <strong id="lives-value" aria-label="Five lives">★★★★★</strong>
-        </div>
-        <div class="hud-stat hud-streak">
-          <span>STREAK</span>
-          <strong class="fit-number" id="streak-value" aria-label="Current popcorn streak: 0">0</strong>
-        </div>
-        <div class="hud-stat hud-best-streak">
-          <span>BEST STREAK</span>
-          <strong class="fit-number" id="best-streak-value" aria-label="Best popcorn streak: 0">0</strong>
-        </div>
+        <div class="hud-stat"><span>SCORE</span><strong class="fit-number" id="score-value">0</strong></div>
+        <div class="hud-stat hud-best"><span>BEST</span><strong class="fit-number" id="best-value">0</strong></div>
+        <div class="hud-stat hud-lives"><span id="rating-label">YOUR CURRENT RATING</span><strong id="lives-value" aria-label="Five lives">★★★★★</strong></div>
+        <div class="hud-stat hud-streak"><span>STREAK</span><strong class="fit-number" id="streak-value" aria-label="Current popcorn streak: 0">0</strong></div>
+        <div class="hud-stat hud-best-streak"><span>BEST STREAK</span><strong class="fit-number" id="best-streak-value" aria-label="Best popcorn streak: 0">0</strong></div>
         <div class="blast-meter">
-          <div class="blast-label">
-            <span>BLOCKBUSTER BLAST</span>
-            <strong id="mastery-percent">0%</strong>
-          </div>
+          <div class="blast-label"><span>BLOCKBUSTER BLAST</span><strong id="mastery-percent">0%</strong></div>
           <div class="blast-tracks">
-            <div
-              class="blast-track"
-              role="progressbar"
-              aria-label="Blockbuster Blast primary charge"
-              aria-valuemin="0"
-              aria-valuemax="100"
-              aria-valuenow="0"
-              id="mastery-track"
-            >
-              <span id="mastery-fill"></span>
-            </div>
-            <div
-              class="blast-track blast-track-reserve"
-              role="progressbar"
-              aria-label="Blockbuster Blast reserve charge"
-              aria-valuemin="0"
-              aria-valuemax="100"
-              aria-valuenow="0"
-              id="reserve-mastery-track"
-              hidden
-            >
-              <span id="reserve-mastery-fill"></span>
-            </div>
+            <div class="blast-track" role="progressbar" aria-label="Blockbuster Blast primary charge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="mastery-track"><span id="mastery-fill"></span></div>
+            <div class="blast-track blast-track-reserve" role="progressbar" aria-label="Blockbuster Blast reserve charge" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="reserve-mastery-track" hidden><span id="reserve-mastery-fill"></span></div>
           </div>
         </div>
       </section>
 
-      <div class="mission-banner" id="mission-banner" aria-live="polite">
-        KEEP MOVING TO CONTINUE SHOOTING
-      </div>
-
+      <div class="mission-banner" id="mission-banner" aria-live="polite">KEEP MOVING TO CONTINUE SHOOTING</div>
       <div class="combo-callout" id="combo-callout" aria-hidden="true"></div>
       <div class="status-announcement visually-hidden" id="status-announcement" aria-live="polite"></div>
-
-      <div class="resume-countdown" id="resume-countdown" hidden aria-hidden="true">
-        <div class="resume-dial" id="resume-dial">
-          <span id="resume-countdown-value">3</span>
-        </div>
-      </div>
+      <div class="resume-countdown" id="resume-countdown" hidden aria-hidden="true"><div class="resume-dial" id="resume-dial"><span id="resume-countdown-value">3</span></div></div>
 
       <div class="game-overlay" id="start-overlay">
         <section class="start-poster" aria-labelledby="start-title">
-          <div class="start-master-wrap" aria-hidden="true">
-            <div class="start-rays"></div>
-            <img
-              src="../assets/images/movie-master.webp"
-              alt=""
-              width="705"
-              height="2048"
-            >
-          </div>
-
+          <div class="start-master-wrap" aria-hidden="true"><div class="start-rays"></div><img src="../assets/images/movie-master.webp" alt="" width="705" height="2048"></div>
           <div class="start-copy">
             <h2 id="start-title">MOVIE MASTER vs GARBAGE</h2>
             <p class="poster-deck">Help! The Movie Master is being attacked by garbage🗑!</p>
@@ -147,247 +91,62 @@
               <p><b>DO NOT TOUCH GARBAGE.</b> Each hit costs a star. Reach zero stars and you lose. In Hardcore Mode, one unshielded hit ends the game.</p>
               <p><b>BLOCKBUSTER BLAST.</b> Collect popcorn to charge it. At 100%, press Space, click anywhere in the playable area, or use the gold button to clear the screen.</p>
             </div>
-            <div class="controls-line" aria-label="Controls">
-              <span><b>MOVE</b> <i id="start-move-copy">FOLLOW THE MOUSE</i></span>
-              <span><b>SHOOT</b> <i>AUTOMATIC WHILE MOVING</i></span>
-              <span><b>BLAST</b> SPACE / CLICK / GOLD BUTTON AT 100%</span>
-            </div>
-            <div class="run-actions">
-              <button class="primary-button" id="start-button" type="button">
-                START THE GAME
-              </button>
-              <button class="secondary-button mode-toggle" id="start-mode-button" type="button">
-                HARDCORE MODE: OFF
-              </button>
-              <button class="secondary-button leaderboard-open-button" id="start-leaderboards-button" type="button">
-                LEADERBOARDS
-              </button>
-            </div>
+            <div class="controls-line" aria-label="Controls"><span><b>MOVE</b> <i id="start-move-copy">FOLLOW THE MOUSE</i></span><span><b>SHOOT</b> <i>AUTOMATIC WHILE MOVING</i></span><span><b>BLAST</b> SPACE / CLICK / GOLD BUTTON AT 100%</span></div>
+            <div class="run-actions"><button class="primary-button" id="start-button" type="button">START THE GAME</button><button class="secondary-button mode-toggle" id="start-mode-button" type="button">HARDCORE MODE: OFF</button><button class="secondary-button leaderboard-open-button" id="start-leaderboards-button" type="button">LEADERBOARDS</button></div>
             <p class="hardcore-warning" id="start-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
             <p class="start-best">BEST SCORE <strong class="fit-number" id="start-best">0</strong></p>
           </div>
         </section>
       </div>
 
-      <div class="game-overlay intermission-overlay" id="pause-overlay" hidden>
-        <section class="intermission-panel" aria-labelledby="pause-title">
-          <p>YOU HAVE PAUSED THE MOVIE</p>
-          <h2 id="pause-title">INTERMISSION</h2>
-          <span>PRESS P OR ESCAPE TO RESUME</span>
-          <div class="pause-actions">
-            <button class="primary-button" id="resume-button" type="button">CONTINUE</button>
-            <button class="secondary-button" id="reset-button" type="button">RESET</button>
-            <button class="secondary-button danger-button" id="end-button" type="button">END GAME</button>
-          </div>
-        </section>
-      </div>
-
-      <div class="game-overlay intermission-overlay" id="reset-confirm-overlay" hidden>
-        <section class="intermission-panel reset-confirmation-panel" aria-labelledby="reset-confirm-title">
-          <p>RESET CURRENT GAME</p>
-          <h2 id="reset-confirm-title">ARE YOU SURE?</h2>
-          <span>YOUR CURRENT GAME WILL END.</span>
-          <div class="pause-actions">
-            <button class="primary-button" id="reset-cancel-button" type="button">CANCEL</button>
-            <button class="secondary-button danger-button" id="reset-confirm-button" type="button">RESET GAME</button>
-          </div>
-        </section>
-      </div>
-
-      <div class="game-overlay intermission-overlay" id="end-confirm-overlay" hidden>
-        <section class="intermission-panel reset-confirmation-panel" aria-labelledby="end-confirm-title">
-          <p>END CURRENT RUN</p>
-          <h2 id="end-confirm-title">ARE YOU SURE?</h2>
-          <span>YOUR RUN WILL END AND RESULTS WILL BE SHOWN.</span>
-          <div class="pause-actions">
-            <button class="primary-button" id="end-cancel-button" type="button">CANCEL</button>
-            <button class="secondary-button danger-button" id="end-confirm-button" type="button">END GAME</button>
-          </div>
-        </section>
-      </div>
-
-      <div class="game-overlay intermission-overlay" id="exit-confirm-overlay" hidden>
-        <section class="intermission-panel reset-confirmation-panel" aria-labelledby="exit-confirm-title">
-          <p>LEAVE THE MOVIE?</p>
-          <h2 id="exit-confirm-title">ARE YOU SURE?</h2>
-          <span>YOUR CURRENT GAME WILL END.</span>
-          <div class="pause-actions">
-            <button class="primary-button" id="exit-cancel-button" type="button">CANCEL</button>
-            <button class="secondary-button danger-button" id="exit-confirm-button" type="button">EXIT GAME</button>
-          </div>
-        </section>
-      </div>
+      <div class="game-overlay intermission-overlay" id="pause-overlay" hidden><section class="intermission-panel" aria-labelledby="pause-title"><p>YOU HAVE PAUSED THE MOVIE</p><h2 id="pause-title">INTERMISSION</h2><span>PRESS P OR ESCAPE TO RESUME</span><div class="pause-actions"><button class="primary-button" id="resume-button" type="button">CONTINUE</button><button class="secondary-button" id="reset-button" type="button">RESET</button><button class="secondary-button danger-button" id="end-button" type="button">END GAME</button></div></section></div>
+      <div class="game-overlay intermission-overlay" id="reset-confirm-overlay" hidden><section class="intermission-panel reset-confirmation-panel" aria-labelledby="reset-confirm-title"><p>RESET CURRENT GAME</p><h2 id="reset-confirm-title">ARE YOU SURE?</h2><span>YOUR CURRENT GAME WILL END.</span><div class="pause-actions"><button class="primary-button" id="reset-cancel-button" type="button">CANCEL</button><button class="secondary-button danger-button" id="reset-confirm-button" type="button">RESET GAME</button></div></section></div>
+      <div class="game-overlay intermission-overlay" id="end-confirm-overlay" hidden><section class="intermission-panel reset-confirmation-panel" aria-labelledby="end-confirm-title"><p>END CURRENT RUN</p><h2 id="end-confirm-title">ARE YOU SURE?</h2><span>YOUR RUN WILL END AND RESULTS WILL BE SHOWN.</span><div class="pause-actions"><button class="primary-button" id="end-cancel-button" type="button">CANCEL</button><button class="secondary-button danger-button" id="end-confirm-button" type="button">END GAME</button></div></section></div>
+      <div class="game-overlay intermission-overlay" id="exit-confirm-overlay" hidden><section class="intermission-panel reset-confirmation-panel" aria-labelledby="exit-confirm-title"><p>LEAVE THE MOVIE?</p><h2 id="exit-confirm-title">ARE YOU SURE?</h2><span>YOUR CURRENT GAME WILL END.</span><div class="pause-actions"><button class="primary-button" id="exit-cancel-button" type="button">CANCEL</button><button class="secondary-button danger-button" id="exit-confirm-button" type="button">EXIT GAME</button></div></section></div>
 
       <div class="game-overlay gameover-overlay" id="gameover-overlay" hidden>
         <div class="gameover-layout">
-          <aside class="leaderboard-dock leaderboard-dock-standard" aria-label="Standard leaderboard">
-            <div data-leaderboard-mount="NORMAL"></div>
-          </aside>
-
+          <aside class="leaderboard-dock leaderboard-dock-standard" aria-label="Standard leaderboard"><div data-leaderboard-mount="NORMAL"></div></aside>
           <section class="gameover-panel" aria-labelledby="gameover-title">
-            <p class="poster-kicker">THE END</p>
-            <h2 id="gameover-title">OVERWHELMED BY GARBAGE 🗑️</h2>
-            <div class="final-stats">
-              <div class="final-stat">
-                <span>FINAL SCORE</span>
-                <strong class="fit-number" id="final-score">0</strong>
-              </div>
-              <div class="final-stat">
-                <span>LONGEST STREAK</span>
-                <strong class="fit-number" id="final-longest-streak">0</strong>
-              </div>
-            </div>
-            <p class="leaderboard-placement-status" id="leaderboard-placement-status" role="status" aria-live="polite">
-              CHECKING LEADERBOARD POSITION…
-            </p>
+            <p class="poster-kicker">THE END</p><h2 id="gameover-title">OVERWHELMED BY GARBAGE 🗑️</h2>
+            <div class="final-stats"><div class="final-stat"><span>FINAL SCORE</span><strong class="fit-number" id="final-score">0</strong></div><div class="final-stat"><span>LONGEST STREAK</span><strong class="fit-number" id="final-longest-streak">0</strong></div></div>
             <form class="leaderboard-name-form" data-leaderboard-name-form>
               <label for="gameover-leaderboard-name">LEADERBOARD NAME</label>
-              <div>
-                <input
-                  id="gameover-leaderboard-name"
-                  data-leaderboard-name-input
-                  name="leaderboard-name"
-                  type="text"
-                  value="ANONYMOUS"
-                  maxlength="24"
-                  autocomplete="nickname"
-                  autocapitalize="characters"
-                  spellcheck="false"
-                >
-                <button class="secondary-button" type="submit">SAVE</button>
-              </div>
+              <div><input id="gameover-leaderboard-name" data-leaderboard-name-input name="leaderboard-name" type="text" value="ANONYMOUS" maxlength="24" autocomplete="nickname" autocapitalize="characters" spellcheck="false"><button class="secondary-button" type="submit">SAVE</button></div>
               <small data-leaderboard-name-status role="status" aria-live="polite">NAMES ARE PUBLIC. DO NOT USE PERSONAL INFORMATION.</small>
             </form>
-            <div class="run-actions">
-              <button class="primary-button" id="restart-button" type="button">TRY AGAIN</button>
-              <button class="secondary-button" id="stats-button" type="button">GAME STATS</button>
-              <button class="secondary-button" id="share-run-button" type="button">SHARE RUN</button>
-              <button class="secondary-button leaderboard-open-button" id="gameover-leaderboards-button" type="button">LEADERBOARDS</button>
-              <button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">
-                HARDCORE MODE: OFF
-              </button>
-            </div>
+            <div class="run-actions"><button class="primary-button" id="restart-button" type="button">TRY AGAIN</button><button class="secondary-button" id="stats-button" type="button">GAME STATS</button><button class="secondary-button" id="share-run-button" type="button">SHARE RUN</button><button class="secondary-button leaderboard-open-button" id="gameover-leaderboards-button" type="button">LEADERBOARDS</button><button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">HARDCORE MODE: OFF</button></div>
             <p class="share-run-status" id="share-run-status" role="status" aria-live="polite"></p>
             <p class="hardcore-warning" id="gameover-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
           </section>
-
-          <aside class="leaderboard-dock leaderboard-dock-hardcore" aria-label="Hardcore leaderboard">
-            <div data-leaderboard-mount="HARDCORE"></div>
-          </aside>
+          <aside class="leaderboard-dock leaderboard-dock-hardcore" aria-label="Hardcore leaderboard"><div data-leaderboard-mount="HARDCORE"></div></aside>
         </div>
       </div>
 
       <div class="game-overlay stats-overlay" id="stats-overlay" hidden>
         <section class="game-stats-panel" aria-labelledby="stats-title">
-          <p class="poster-kicker">FULL RUN REPORT</p>
-          <h2 id="stats-title">GAME STATS</h2>
-          <dl class="stats-grid">
-            <div><dt>MODE</dt><dd id="stat-mode">NORMAL</dd></div>
-            <div><dt>GAME TIME</dt><dd id="stat-game-time">0:00</dd></div>
-            <div><dt>FINAL SCORE</dt><dd id="stat-score">0</dd></div>
-            <div><dt>LONGEST STREAK</dt><dd id="stat-longest-streak">0</dd></div>
-            <div><dt>POPCORN COLLECTED</dt><dd id="stat-popcorn-collected">0</dd></div>
-            <div><dt>POPCORN MISSED</dt><dd id="stat-popcorn-missed">0</dd></div>
-            <div><dt>GARBAGE DESTROYED</dt><dd id="stat-garbage-destroyed">0</dd></div>
-            <div><dt>DESTROYED BY STARS</dt><dd id="stat-destroyed-by-stars">0</dd></div>
-            <div><dt>DESTROYED BY BLASTS</dt><dd id="stat-destroyed-by-blasts">0</dd></div>
-            <div><dt>STARS FIRED</dt><dd id="stat-stars-fired">0</dd></div>
-            <div><dt>STARS HIT</dt><dd id="stat-stars-hit">0</dd></div>
-            <div><dt>STAR ACCURACY</dt><dd id="stat-star-accuracy">0%</dd></div>
-            <div><dt>HITS TAKEN</dt><dd id="stat-hits-taken">0</dd></div>
-            <div><dt>SHIELD BLOCKS</dt><dd id="stat-shield-blocks">0</dd></div>
-            <div><dt>BLASTS USED</dt><dd id="stat-blasts-used">0</dd></div>
-          </dl>
-
-          <h3>POWER-UPS USED</h3>
-          <dl class="stats-grid stats-powerups">
-            <div><dt>SHIELD</dt><dd id="stat-powerup-shield">0</dd></div>
-            <div><dt>SUPER SPEED</dt><dd id="stat-powerup-speed">0</dd></div>
-            <div><dt>SUPER STARS</dt><dd id="stat-powerup-super">0</dd></div>
-            <div><dt>MAGNET</dt><dd id="stat-powerup-magnet">0</dd></div>
-          </dl>
-
+          <p class="poster-kicker">FULL RUN REPORT</p><h2 id="stats-title">GAME STATS</h2>
+          <dl class="stats-grid"><div><dt>MODE</dt><dd id="stat-mode">NORMAL</dd></div><div><dt>GAME TIME</dt><dd id="stat-game-time">0:00</dd></div><div><dt>FINAL SCORE</dt><dd id="stat-score">0</dd></div><div><dt>LONGEST STREAK</dt><dd id="stat-longest-streak">0</dd></div><div><dt>POPCORN COLLECTED</dt><dd id="stat-popcorn-collected">0</dd></div><div><dt>POPCORN MISSED</dt><dd id="stat-popcorn-missed">0</dd></div><div><dt>GARBAGE DESTROYED</dt><dd id="stat-garbage-destroyed">0</dd></div><div><dt>DESTROYED BY STARS</dt><dd id="stat-destroyed-by-stars">0</dd></div><div><dt>DESTROYED BY BLASTS</dt><dd id="stat-destroyed-by-blasts">0</dd></div><div><dt>STARS FIRED</dt><dd id="stat-stars-fired">0</dd></div><div><dt>STARS HIT</dt><dd id="stat-stars-hit">0</dd></div><div><dt>STAR ACCURACY</dt><dd id="stat-star-accuracy">0%</dd></div><div><dt>HITS TAKEN</dt><dd id="stat-hits-taken">0</dd></div><div><dt>SHIELD BLOCKS</dt><dd id="stat-shield-blocks">0</dd></div><div><dt>BLASTS USED</dt><dd id="stat-blasts-used">0</dd></div></dl>
+          <h3>POWER-UPS USED</h3><dl class="stats-grid stats-powerups"><div><dt>SHIELD</dt><dd id="stat-powerup-shield">0</dd></div><div><dt>SUPER SPEED</dt><dd id="stat-powerup-speed">0</dd></div><div><dt>SUPER STARS</dt><dd id="stat-powerup-super">0</dd></div><div><dt>MAGNET</dt><dd id="stat-powerup-magnet">0</dd></div></dl>
           <button class="primary-button" id="stats-close-button" type="button">BACK</button>
         </section>
       </div>
 
       <div class="game-overlay leaderboard-overlay" id="leaderboard-overlay" hidden>
         <section class="leaderboards-panel" aria-labelledby="leaderboards-title">
-          <p class="poster-kicker">THE WORLD'S BEST AND MOST CORRECT PLAYERS</p>
           <h2 id="leaderboards-title">LEADERBOARDS</h2>
-          <p class="leaderboard-reset-copy">DAILY BOARDS RESET AT MIDNIGHT CENTRAL TIME</p>
-
-          <form class="leaderboard-name-form leaderboard-name-form-wide" data-leaderboard-name-form>
-            <label for="overlay-leaderboard-name">LEADERBOARD NAME</label>
-            <div>
-              <input
-                id="overlay-leaderboard-name"
-                data-leaderboard-name-input
-                name="leaderboard-name"
-                type="text"
-                value="ANONYMOUS"
-                maxlength="24"
-                autocomplete="nickname"
-                autocapitalize="characters"
-                spellcheck="false"
-              >
-              <button class="secondary-button" type="submit">SAVE</button>
-            </div>
-            <small data-leaderboard-name-status role="status" aria-live="polite">NAMES ARE PUBLIC. DO NOT USE PERSONAL INFORMATION.</small>
-          </form>
-
-          <div class="leaderboard-mode-tabs" role="tablist" aria-label="Leaderboard mode">
-            <button class="leaderboard-mode-tab" type="button" data-leaderboard-mode-tab="NORMAL" aria-selected="true">STANDARD</button>
-            <button class="leaderboard-mode-tab" type="button" data-leaderboard-mode-tab="HARDCORE" aria-selected="false">HARDCORE</button>
-          </div>
-
-          <div class="leaderboard-overlay-grid">
-            <div data-leaderboard-mount="NORMAL"></div>
-            <div data-leaderboard-mount="HARDCORE"></div>
-          </div>
-
+          <form class="leaderboard-name-form leaderboard-name-form-wide" data-leaderboard-name-form><label for="overlay-leaderboard-name">LEADERBOARD NAME</label><div><input id="overlay-leaderboard-name" data-leaderboard-name-input name="leaderboard-name" type="text" value="ANONYMOUS" maxlength="24" autocomplete="nickname" autocapitalize="characters" spellcheck="false"><button class="secondary-button" type="submit">SAVE</button></div><small data-leaderboard-name-status role="status" aria-live="polite">NAMES ARE PUBLIC. DO NOT USE PERSONAL INFORMATION.</small></form>
+          <div class="leaderboard-mode-tabs" role="tablist" aria-label="Leaderboard mode"><button class="leaderboard-mode-tab" type="button" data-leaderboard-mode-tab="NORMAL" aria-selected="true">STANDARD</button><button class="leaderboard-mode-tab" type="button" data-leaderboard-mode-tab="HARDCORE" aria-selected="false">HARDCORE</button></div>
+          <div class="leaderboard-overlay-grid"><div data-leaderboard-mount="NORMAL"></div><div data-leaderboard-mount="HARDCORE"></div></div>
           <button class="primary-button" id="leaderboards-close-button" type="button">BACK</button>
         </section>
       </div>
 
-      <template id="leaderboard-card-template">
-        <section class="leaderboard-card">
-          <header class="leaderboard-card-header">
-            <p>PUBLIC LEADERBOARD</p>
-            <h2 data-leaderboard-title>STANDARD</h2>
-            <div class="leaderboard-period-tabs" role="group" aria-label="Leaderboard period">
-              <button type="button" data-leaderboard-period="allTime" aria-pressed="true">ALL-TIME</button>
-              <button type="button" data-leaderboard-period="daily" aria-pressed="false">DAILY</button>
-            </div>
-          </header>
-          <table>
-            <thead>
-              <tr><th scope="col">#</th><th scope="col">PLAYER</th><th scope="col">SCORE</th></tr>
-            </thead>
-            <tbody data-leaderboard-rows>
-              <tr class="leaderboard-message"><td colspan="3">LOADING…</td></tr>
-            </tbody>
-          </table>
-        </section>
-      </template>
+      <template id="leaderboard-card-template"><section class="leaderboard-card"><header class="leaderboard-card-header"><p>PUBLIC LEADERBOARD</p><h2 data-leaderboard-title>STANDARD</h2><div class="leaderboard-period-tabs" role="group" aria-label="Leaderboard period"><button type="button" data-leaderboard-period="allTime" aria-pressed="true">ALL-TIME</button><button type="button" data-leaderboard-period="daily" aria-pressed="false">DAILY</button></div></header><table><thead><tr><th scope="col">#</th><th scope="col">PLAYER</th><th scope="col">SCORE</th></tr></thead><tbody data-leaderboard-rows><tr class="leaderboard-message"><td colspan="3">LOADING…</td></tr></tbody></table></section></template>
 
-      <div class="touch-controls" aria-label="Touch controls">
-        <div class="joystick" id="joystick" aria-label="Movement joystick">
-          <div class="joystick-cross" aria-hidden="true">◆</div>
-          <div class="joystick-knob" id="joystick-knob"></div>
-        </div>
-        <button class="blast-button" id="judgment-button" type="button" disabled>
-          <b>BLOCKBUSTER BLAST</b>
-          <span>0%</span>
-        </button>
-      </div>
-
-      <footer class="game-instructions">
-        <span id="desktop-instructions">KEEP MOVING • COLLECT POPCORN &amp; POWER-UPS • SPACE/CLICK FOR BLOCKBUSTER BLAST</span>
-        <span class="mobile-instructions" id="mobile-instructions">KEEP MOVING • COLLECT POPCORN &amp; POWER-UPS • USE THE GOLD BUTTON WHEN READY</span>
-      </footer>
+      <div class="touch-controls" aria-label="Touch controls"><div class="joystick" id="joystick" aria-label="Movement joystick"><div class="joystick-cross" aria-hidden="true">◆</div><div class="joystick-knob" id="joystick-knob"></div></div><button class="blast-button" id="judgment-button" type="button" disabled><b>BLOCKBUSTER BLAST</b><span>0%</span></button></div>
+      <footer class="game-instructions"><span id="desktop-instructions">KEEP MOVING • COLLECT POPCORN &amp; POWER-UPS • SPACE/CLICK FOR BLOCKBUSTER BLAST</span><span class="mobile-instructions" id="mobile-instructions">KEEP MOVING • COLLECT POPCORN &amp; POWER-UPS • USE THE GOLD BUTTON WHEN READY</span></footer>
     </main>
-
     <noscript>This game requires JavaScript.</noscript>
   </body>
 </html>
