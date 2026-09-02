@@ -1,0 +1,82 @@
+/* Public leaderboard readability and no-clipping overrides.
+   Kept separate from the main game stylesheet so leaderboard iteration cannot
+   accidentally affect the canvas/gameplay layout. */
+
+.leaderboard-name-form label {
+  font-size: clamp(0.56rem, 0.75vw, 0.68rem);
+}
+
+.leaderboard-name-form input {
+  font-size: clamp(0.78rem, 1vw, 0.9rem);
+}
+
+.leaderboard-name-form small {
+  font-size: clamp(0.5rem, 0.68vw, 0.6rem);
+}
+
+.leaderboard-mode-tab,
+.leaderboard-period-tabs button {
+  font-size: clamp(0.58rem, 0.76vw, 0.68rem);
+}
+
+.leaderboard-card-header p {
+  font-size: clamp(0.52rem, 0.68vw, 0.62rem);
+}
+
+.leaderboard-card thead th {
+  font-size: clamp(0.5rem, 0.7vw, 0.62rem);
+}
+
+.leaderboard-card tbody th,
+.leaderboard-card tbody td {
+  font-size: clamp(0.66rem, 0.92vw, 0.84rem);
+  line-height: 1.2;
+}
+
+.leaderboard-card th,
+.leaderboard-card td {
+  text-overflow: clip;
+}
+
+.leaderboard-card .leaderboard-player-name {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.leaderboard-card .leaderboard-score,
+.leaderboard-card thead th:last-child,
+.leaderboard-card tbody th {
+  white-space: nowrap;
+}
+
+/* Give names a little more room while retaining enough width for 7+ digit scores. */
+.leaderboard-card thead th:first-child,
+.leaderboard-card tbody th {
+  width: 12%;
+}
+
+.leaderboard-card thead th:nth-child(2) {
+  width: 50%;
+}
+
+.leaderboard-card thead th:last-child,
+.leaderboard-score {
+  width: 38%;
+}
+
+@media (max-width: 760px) {
+  .leaderboard-card tbody th,
+  .leaderboard-card tbody td {
+    font-size: clamp(0.64rem, 2.5vw, 0.82rem);
+  }
+
+  .leaderboard-card thead th {
+    font-size: clamp(0.5rem, 2vw, 0.62rem);
+  }
+
+  .leaderboard-name-form input {
+    font-size: 0.78rem;
+  }
+}
