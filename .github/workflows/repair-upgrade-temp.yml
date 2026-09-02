@@ -1,0 +1,93 @@
+name: Temporary Upgrade Repair
+
+on:
+  push:
+    branches:
+      - analytics-run-details-upgrade
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.head_commit.message != 'Repair game markup and cache busts'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout upgrade branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Restore full game markup and apply narrow upgrade edits
+        run: |
+          git fetch origin main
+          git checkout origin/main -- game/index.html
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          game = Path('game/index.html')
+          text = game.read_text()
+          text = text.replace(
+              '<link rel="stylesheet" href="./game.css?v=20260902-public-leaderboards">',
+              '<link rel="stylesheet" href="./game.css?v=20260902-public-leaderboards">\n    <link rel="stylesheet" href="./leaderboard-upgrades.css?v=20260902-1">'
+          )
+          text = text.replace(
+              '../game-records.js?v=20260902-public-leaderboards',
+              '../game-records.js?v=20260902-run-analytics-2'
+          )
+          text = text.replace(
+              './leaderboard.js?v=20260902-public-leaderboards',
+              './leaderboard.js?v=20260902-run-analytics-2'
+          )
+          text = re.sub(
+              r'\n\s*<p class="leaderboard-placement-status" id="leaderboard-placement-status"[^>]*>\s*CHECKING LEADERBOARD POSITION…\s*</p>',
+              '',
+              text,
+              count=1,
+          )
+          text = text.replace(
+              '          <p class="poster-kicker">THE WORLD\'S BEST AND MOST CORRECT PLAYERS</p>\n',
+              ''
+          )
+          text = text.replace(
+              '          <p class="leaderboard-reset-copy">DAILY BOARDS RESET AT MIDNIGHT CENTRAL TIME</p>\n',
+              ''
+          )
+          game.write_text(text)
+
+          analytics = Path('analytics/index.html')
+          text = analytics.read_text()
+          text = text.replace(
+              '<link rel="stylesheet" href="./mode-leaderboards.css?v=20260902-1">',
+              '<link rel="stylesheet" href="./mode-leaderboards.css?v=20260902-run-details-2">\n    <link rel="stylesheet" href="./run-details-overrides.css?v=20260902-1">'
+          )
+          text = text.replace(
+              '<script src="./mode-leaderboards.js?v=20260901-2" defer></script>',
+              '<script src="./mode-leaderboards.js?v=20260902-run-details-2" defer></script>'
+          )
+          old_privacy = "Counts use anonymous browser IDs stored locally in each visitor's browser. No names, IP addresses, fingerprints, or user-agent histories are stored. Geography uses coarse Cloudflare IP-geolocation; the IP itself is discarded and map coordinates are rounded before storage."
+          new_privacy = "Traffic counts use anonymous browser IDs stored locally in each visitor's browser. Players may optionally publish a leaderboard name. Completed runs may store coarse device, browser, control-method and graphics-quality categories plus approximate Cloudflare location. No IP addresses, full user-agent strings, exact screen dimensions or hardware fingerprints are retained."
+          text = text.replace(old_privacy, new_privacy)
+          analytics.write_text(text)
+          PY
+
+      - name: Verify intended markup survived
+        run: |
+          test "$(wc -l < game/index.html)" -gt 350
+          grep -q 'leaderboard-upgrades.css?v=20260902-1' game/index.html
+          grep -q 'game-records.js?v=20260902-run-analytics-2' game/index.html
+          grep -q 'leaderboard.js?v=20260902-run-analytics-2' game/index.html
+          ! grep -q "THE WORLD'S BEST AND MOST CORRECT PLAYERS" game/index.html
+          ! grep -q 'DAILY BOARDS RESET AT MIDNIGHT CENTRAL TIME' game/index.html
+          ! grep -q 'leaderboard-placement-status' game/index.html
+          grep -q 'run-details-overrides.css?v=20260902-1' analytics/index.html
+          grep -q 'mode-leaderboards.js?v=20260902-run-details-2' analytics/index.html
+
+      - name: Commit repaired markup
+        run: |
+          git config user.name ISASTO
+          git config user.email 54598558+ISASTO@users.noreply.github.com
+          git add game/index.html analytics/index.html
+          git commit -m 'Repair game markup and cache busts'
+          git push origin HEAD:analytics-run-details-upgrade
