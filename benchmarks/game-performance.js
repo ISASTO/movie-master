@@ -366,6 +366,7 @@ const hook = String.raw`
       ui.endConfirmOverlay.hidden = true;
       ui.exitConfirmOverlay.hidden = true;
       ui.statsOverlay.hidden = true;
+      ui.leaderboardOverlay.hidden = true;
       const buttons = [ui.resumeButton, ui.resetButton, ui.endButton];
       for (let index = 0; index < buttons.length; index += 1) {
         buttons[index].hidden = false;
@@ -528,6 +529,8 @@ function createElement(id) {
     click() {},
     setPointerCapture() {},
     closest() { return null; },
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
     getClientRects() {
       return this.hidden ? [] : [this.getBoundingClientRect()];
     },
@@ -558,6 +561,7 @@ const documentObject = {
   createElement(tagName) {
     return tagName === "canvas" ? createCanvas(false) : createElement(tagName);
   },
+  querySelectorAll() { return []; },
   addEventListener() {},
 };
 

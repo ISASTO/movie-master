@@ -1,3 +1,5 @@
+import { buildPublicLeaderboardPayload } from "./leaderboards.js";
+
 const ALLOWED_ORIGINS = new Set([
   "https://moviemaster.vip",
   "https://www.moviemaster.vip",
@@ -64,6 +66,66 @@ function finiteNumber(value, fallback = 0) {
 function boundedInteger(value, min = 0, max = 1_000_000_000) {
   const number = Math.floor(finiteNumber(value, 0));
   return Math.max(min, Math.min(max, number));
+}
+
+function createRunToken() {
+  if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = [...bytes].map((byte) => byte.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`;
+}
+
+function validatedRunSummary(body, mode, serverElapsedSeconds) {
+  const summary = {
+    score: boundedInteger(body.score),
+    longestStreak: boundedInteger(body.longestStreak),
+    gameTimeSeconds: boundedInteger(body.gameTimeSeconds, 0, 604800),
+    popcornCollected: boundedInteger(body.popcornCollected),
+    popcornMissed: boundedInteger(body.popcornMissed),
+    garbageDestroyed: boundedInteger(body.garbageDestroyed),
+    destroyedByStars: boundedInteger(body.destroyedByStars),
+    destroyedByBlasts: boundedInteger(body.destroyedByBlasts),
+    starsFired: boundedInteger(body.starsFired),
+    starsHit: boundedInteger(body.starsHit),
+    hitsTaken: boundedInteger(body.hitsTaken),
+    shieldBlocks: boundedInteger(body.shieldBlocks),
+    blastsUsed: boundedInteger(body.blastsUsed),
+    powerupShield: boundedInteger(body.powerupShield),
+    powerupSpeed: boundedInteger(body.powerupSpeed),
+    powerupSuper: boundedInteger(body.powerupSuper),
+    powerupMagnet: boundedInteger(body.powerupMagnet),
+  };
+
+  const elapsed = Math.max(0, boundedInteger(serverElapsedSeconds, 0, 604800));
+  const activeSeconds = Math.max(1, summary.gameTimeSeconds);
+  const powerupsUsed = summary.powerupShield
+    + summary.powerupSpeed
+    + summary.powerupSuper
+    + summary.powerupMagnet;
+  const maximumPossibleScore = summary.popcornCollected * 800
+    + summary.destroyedByStars * 263
+    + summary.destroyedByBlasts * 168;
+  const inconsistent =
+    summary.gameTimeSeconds > elapsed + 15
+    || summary.longestStreak > summary.popcornCollected
+    || summary.starsHit > summary.starsFired
+    || summary.destroyedByStars + summary.destroyedByBlasts !== summary.garbageDestroyed
+    || summary.score > maximumPossibleScore
+    || (mode === "HARDCORE" && (summary.hitsTaken > 1 || summary.popcornMissed > 1));
+  const implausible =
+    summary.score > 15000 + activeSeconds * 5000
+    || summary.starsFired > 1000 + activeSeconds * 520
+    || summary.garbageDestroyed > 100 + activeSeconds * 20
+    || summary.blastsUsed > 10 + activeSeconds
+    || powerupsUsed > 40 + activeSeconds;
+
+  if (inconsistent || implausible) {
+    return { ok: false, message: "Run statistics failed validation" };
+  }
+  return { ok: true, summary };
 }
 
 function roundedCoordinate(value) {
@@ -455,7 +517,7 @@ async function readJsonBody(request) {
   }
 }
 
-async function handleGameEvent(request, env) {
+export async function handleGameEvent(request, env) {
   const origin = request.headers.get("Origin");
   if (!originIsAllowed(request)) return jsonResponse({ error: "Origin not allowed" }, 403, null);
   const body = await readJsonBody(request);
@@ -481,54 +543,142 @@ async function handleGameEvent(request, env) {
   const run = runId.toLowerCase();
   const { date } = chicagoParts();
 
-  await env.DB
-    .prepare(
-      `INSERT OR IGNORE INTO game_starts (run_id, visitor_id, mode, visit_date)
-       VALUES (?, ?, ?, ?)`,
-    )
-    .bind(run, visitor, mode, date)
-    .run();
+  if (event === "start") {
+    const recent = await env.DB
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM game_starts
+         WHERE visitor_id = ? AND started_at >= datetime('now', '-1 minute')`,
+      )
+      .bind(visitor)
+      .first();
+    if (Number(recent?.count ?? 0) >= 30) {
+      return jsonResponse({ error: "Too many run starts" }, 429, origin);
+    }
 
-  if (event === "finish") {
+    const usesReceipt = Number(body.receiptVersion ?? 0) >= 2;
+    const runToken = usesReceipt ? createRunToken() : null;
     await env.DB
       .prepare(
-        `INSERT OR IGNORE INTO game_runs (
-          run_id, visitor_id, mode, visit_date, score, longest_streak,
-          game_time_seconds, popcorn_collected, popcorn_missed,
-          garbage_destroyed, destroyed_by_stars, destroyed_by_blasts,
-          stars_fired, stars_hit, hits_taken, shield_blocks, blasts_used,
-          powerup_shield, powerup_speed, powerup_super, powerup_magnet
-        )
-        SELECT ?, visitor_id, mode, visit_date, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        FROM game_starts
-        WHERE run_id = ? AND visitor_id = ?`,
+        `INSERT OR IGNORE INTO game_starts
+          (run_id, visitor_id, mode, visit_date, run_token)
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .bind(
-        run,
-        boundedInteger(body.score),
-        boundedInteger(body.longestStreak),
-        boundedInteger(body.gameTimeSeconds, 0, 604800),
-        boundedInteger(body.popcornCollected),
-        boundedInteger(body.popcornMissed),
-        boundedInteger(body.garbageDestroyed),
-        boundedInteger(body.destroyedByStars),
-        boundedInteger(body.destroyedByBlasts),
-        boundedInteger(body.starsFired),
-        boundedInteger(body.starsHit),
-        boundedInteger(body.hitsTaken),
-        boundedInteger(body.shieldBlocks),
-        boundedInteger(body.blastsUsed),
-        boundedInteger(body.powerupShield),
-        boundedInteger(body.powerupSpeed),
-        boundedInteger(body.powerupSuper),
-        boundedInteger(body.powerupMagnet),
-        run,
-        visitor,
-      )
+      .bind(run, visitor, mode, date, runToken)
       .run();
+
+    const startRow = await env.DB
+      .prepare(
+        `SELECT visitor_id, mode, run_token, completed_at
+         FROM game_starts WHERE run_id = ?`,
+      )
+      .bind(run)
+      .first();
+    if (
+      !startRow
+      || startRow.visitor_id !== visitor
+      || startRow.mode !== mode
+      || startRow.completed_at
+    ) {
+      return jsonResponse({ error: "Run ID is unavailable" }, 409, origin);
+    }
+    return jsonResponse({
+      ok: true,
+      receiptVersion: startRow.run_token ? 2 : 1,
+      runToken: startRow.run_token || null,
+    }, 200, origin);
   }
 
-  return jsonResponse({ ok: true }, 200, origin);
+  const startRow = await env.DB
+    .prepare(
+      `SELECT
+         visitor_id,
+         mode,
+         run_token,
+         completed_at,
+         CAST(strftime('%s', 'now') - strftime('%s', started_at) AS INTEGER)
+           AS server_elapsed_seconds
+       FROM game_starts
+       WHERE run_id = ?`,
+    )
+    .bind(run)
+    .first();
+  if (!startRow || startRow.visitor_id !== visitor || startRow.mode !== mode) {
+    return jsonResponse({ error: "Run was not started" }, 409, origin);
+  }
+
+  const providedToken = typeof body.runToken === "string" ? body.runToken.toLowerCase() : "";
+  if (startRow.run_token && (!UUID_PATTERN.test(providedToken) || providedToken !== startRow.run_token)) {
+    return jsonResponse({ error: "Invalid run receipt" }, 409, origin);
+  }
+
+  if (startRow.completed_at) {
+    return jsonResponse({
+      ok: true,
+      duplicate: true,
+      leaderboards: await buildPublicLeaderboardPayload(env.DB, visitor),
+    }, 200, origin);
+  }
+
+  const validated = validatedRunSummary(body, mode, startRow.server_elapsed_seconds);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.message }, 422, origin);
+  }
+  const summary = validated.summary;
+  const inserted = await env.DB
+    .prepare(
+      `INSERT OR IGNORE INTO game_runs (
+        run_id, visitor_id, mode, visit_date, score, longest_streak,
+        game_time_seconds, popcorn_collected, popcorn_missed,
+        garbage_destroyed, destroyed_by_stars, destroyed_by_blasts,
+        stars_fired, stars_hit, hits_taken, shield_blocks, blasts_used,
+        powerup_shield, powerup_speed, powerup_super, powerup_magnet
+      )
+      SELECT ?, visitor_id, mode, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      FROM game_starts
+      WHERE run_id = ? AND visitor_id = ? AND completed_at IS NULL`,
+    )
+    .bind(
+      run,
+      date,
+      summary.score,
+      summary.longestStreak,
+      summary.gameTimeSeconds,
+      summary.popcornCollected,
+      summary.popcornMissed,
+      summary.garbageDestroyed,
+      summary.destroyedByStars,
+      summary.destroyedByBlasts,
+      summary.starsFired,
+      summary.starsHit,
+      summary.hitsTaken,
+      summary.shieldBlocks,
+      summary.blastsUsed,
+      summary.powerupShield,
+      summary.powerupSpeed,
+      summary.powerupSuper,
+      summary.powerupMagnet,
+      run,
+      visitor,
+    )
+    .run();
+
+  if (Number(inserted?.meta?.changes ?? 0) < 1) {
+    return jsonResponse({ error: "Run was already recorded" }, 409, origin);
+  }
+  await env.DB
+    .prepare(
+      `UPDATE game_starts
+       SET completed_at = CURRENT_TIMESTAMP
+       WHERE run_id = ? AND visitor_id = ? AND completed_at IS NULL`,
+    )
+    .bind(run, visitor)
+    .run();
+
+  return jsonResponse({
+    ok: true,
+    leaderboards: await buildPublicLeaderboardPayload(env.DB, visitor),
+  }, 200, origin);
 }
 
 export async function handleEnhancedRequest(request, env, ctx, baseWorker) {

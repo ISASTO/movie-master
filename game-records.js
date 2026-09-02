@@ -7,9 +7,8 @@
   const GAMEPAD_DEAD_ZONE = 0.18;
   const GAMEPAD_BUTTON_THRESHOLD = 0.5;
   const GAMEPAD_SCAN_INTERVAL = 50;
-  let activeRunId = null;
+  let activeRun = null;
   let runActive = false;
-  let finishing = false;
   let activeGamepadIndex = null;
 
   const createUuid = () => {
@@ -31,16 +30,53 @@
     }
   };
 
-  const post = (body) => {
-    fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      cache: "no-store",
-      keepalive: true,
-    }).catch(() => {
-      // Reporting must never interrupt the game.
-    });
+  const request = async (body) => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        cache: "no-store",
+        keepalive: true,
+        signal: controller.signal,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(payload?.error || `Request failed: ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      return payload;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  };
+
+  const wait = (milliseconds) => new Promise((resolve) => {
+    window.setTimeout(resolve, milliseconds);
+  });
+
+  const requestWithRetry = async (body, attempts = 2) => {
+    let lastError = null;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        return await request(body);
+      } catch (error) {
+        lastError = error;
+        const retryable = error?.name === "AbortError"
+          || error instanceof TypeError
+          || Number(error?.status) >= 500;
+        if (!retryable || attempt >= attempts - 1) throw error;
+        await wait(250 * (attempt + 1));
+      }
+    }
+    throw lastError;
+  };
+
+  const dispatchRunEvent = (name, detail = {}) => {
+    window.dispatchEvent(new CustomEvent(name, { detail }));
   };
 
   const currentMode = () =>
@@ -77,7 +113,6 @@
     const axisX = Number(gamepad?.axes?.[0]) || 0;
     const axisY = Number(gamepad?.axes?.[1]) || 0;
     if (axisX * axisX + axisY * axisY > GAMEPAD_DEAD_ZONE * GAMEPAD_DEAD_ZONE) return true;
-
     for (const button of gamepad?.buttons || []) {
       if (typeof button === "number") {
         if (button >= GAMEPAD_BUTTON_THRESHOLD) return true;
@@ -116,14 +151,12 @@
   const scanGamepads = () => {
     if (document.visibilityState !== "visible") return;
     const gamepads = readConnectedGamepads();
-
     if (
       activeGamepadIndex !== null
       && !gamepads.some((gamepad) => gamepad.index === activeGamepadIndex)
     ) {
       handleActiveGamepadDisconnect(activeGamepadIndex);
     }
-
     for (const gamepad of gamepads) {
       if (gamepadHasRelevantInput(gamepad)) activeGamepadIndex = gamepad.index;
     }
@@ -137,40 +170,45 @@
 
   const beginRun = () => {
     runActive = true;
-    finishing = false;
     scanGamepads();
-
     const visitorId = getVisitorId();
     const runId = createUuid();
     if (!visitorId || !runId) {
-      activeRunId = null;
+      activeRun = null;
       return;
     }
-    activeRunId = runId;
-    post({
-      event: "start",
+    const mode = currentMode();
+    activeRun = {
       visitorId,
       runId,
-      mode: currentMode(),
-    });
+      mode,
+      startRequest: requestWithRetry({
+        event: "start",
+        visitorId,
+        runId,
+        mode,
+        receiptVersion: 2,
+      }).catch((error) => ({ error })),
+    };
+    dispatchRunEvent("movie-master:run-started", { mode });
   };
 
-  const finishRun = () => {
+  const finishRun = async () => {
     runActive = false;
     activeGamepadIndex = null;
-    if (!activeRunId || finishing) return;
-    const visitorId = getVisitorId();
-    if (!visitorId) {
-      activeRunId = null;
+    const runRecord = activeRun;
+    activeRun = null;
+    if (!runRecord) {
+      dispatchRunEvent("movie-master:run-record-failed", {
+        message: "Leaderboard identity is unavailable",
+      });
       return;
     }
-    finishing = true;
 
-    const runId = activeRunId;
     const payload = {
       event: "finish",
-      visitorId,
-      runId,
+      visitorId: runRecord.visitorId,
+      runId: runRecord.runId,
       mode: (document.getElementById("stat-mode")?.textContent || currentMode()).trim().toUpperCase(),
       score: readInteger("stat-score"),
       longestStreak: readInteger("stat-longest-streak"),
@@ -191,15 +229,22 @@
       powerupMagnet: readInteger("stat-powerup-magnet"),
     };
 
-    post(payload);
-    activeRunId = null;
-    finishing = false;
+    try {
+      const startResult = await runRecord.startRequest;
+      if (startResult?.error) throw startResult.error;
+      if (startResult?.runToken) payload.runToken = startResult.runToken;
+      const result = await requestWithRetry(payload, 3);
+      dispatchRunEvent("movie-master:run-recorded", result);
+    } catch (error) {
+      dispatchRunEvent("movie-master:run-record-failed", {
+        message: error?.name === "AbortError" ? "Leaderboard timed out" : error?.message,
+      });
+    }
   };
 
   for (const id of startButtons) {
     document.getElementById(id)?.addEventListener("click", beginRun);
   }
-
   window.addEventListener("gamepaddisconnected", (event) => {
     handleActiveGamepadDisconnect(event.gamepad.index);
   });
@@ -210,7 +255,7 @@
   const gameover = document.getElementById("gameover-overlay");
   if (gameover) {
     const observer = new MutationObserver(() => {
-      if (!gameover.hidden) window.setTimeout(finishRun, 0);
+      if (!gameover.hidden && runActive) window.setTimeout(() => void finishRun(), 0);
     });
     observer.observe(gameover, { attributes: true, attributeFilter: ["hidden"] });
   }

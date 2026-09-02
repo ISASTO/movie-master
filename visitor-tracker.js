@@ -60,10 +60,4 @@
     // Analytics must never interfere with the page or game.
   });
 
-  if (section === "game" && script?.src) {
-    const reporter = document.createElement("script");
-    reporter.src = new URL("./game-records.js?v=20260901-2", script.src).href;
-    reporter.async = true;
-    document.head.append(reporter);
-  }
 })();

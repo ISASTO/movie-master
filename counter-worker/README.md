@@ -19,6 +19,12 @@ Then initialize the remote database:
 npx wrangler d1 execute movie-master-visitors --remote --file=./schema.sql
 ```
 
+For an existing database, apply pending migrations before deploying a new Worker:
+
+```bash
+npx wrangler d1 migrations apply movie-master-visitors --remote
+```
+
 Deploy the Worker:
 
 ```bash
@@ -34,5 +40,9 @@ Wrangler will print the Worker URL, typically similar to:
 - `GET /health` — confirms the Worker is responding.
 - `GET /count` — returns `{ "count": N }`.
 - `POST /visit` — accepts `{ "visitorId": "<uuid>" }`, inserts it once, and returns `{ "count": N }`.
+- `POST /game-event` — records a receipted game start or validated completed run.
+- `GET /public-leaderboards` — returns Standard and Hardcore all-time/daily boards.
+- `POST /leaderboard-profile` — validates and saves a public leaderboard name.
+- `GET /mode-leaderboards` — returns the anonymous analytics leaderboard.
 
-The public site is intentionally not wired to the Worker until the Worker has been deployed and its URL is known.
+Run `npm test` before applying a migration or deploying the Worker.

@@ -154,6 +154,8 @@ CREATE TABLE IF NOT EXISTS game_starts (
   visitor_id TEXT NOT NULL,
   mode TEXT NOT NULL CHECK (mode IN ('NORMAL', 'HARDCORE')),
   visit_date TEXT NOT NULL,
+  run_token TEXT,
+  completed_at TEXT,
   started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -162,6 +164,9 @@ ON game_starts(visitor_id, started_at);
 
 CREATE INDEX IF NOT EXISTS idx_game_starts_date_mode
 ON game_starts(visit_date, mode);
+
+CREATE INDEX IF NOT EXISTS idx_game_starts_visitor_started
+ON game_starts(visitor_id, started_at DESC);
 
 -- Completed run summaries. These are the same anonymous statistics already
 -- calculated by the game-over screen, now retained for aggregate reporting.
@@ -195,6 +200,20 @@ ON game_runs(score DESC, longest_streak DESC);
 
 CREATE INDEX IF NOT EXISTS idx_game_runs_visitor
 ON game_runs(visitor_id, finished_at);
+
+CREATE INDEX IF NOT EXISTS idx_game_runs_public_all_time
+ON game_runs(mode, visitor_id, score DESC, finished_at ASC);
+
+CREATE INDEX IF NOT EXISTS idx_game_runs_public_daily
+ON game_runs(mode, visit_date, visitor_id, score DESC, finished_at ASC);
+
+-- Public leaderboard names are profiles rather than run fields. Renaming a
+-- browser therefore updates all of its historical and future best-score rows.
+CREATE TABLE IF NOT EXISTS leaderboard_profiles (
+  visitor_id TEXT PRIMARY KEY,
+  display_name TEXT NOT NULL DEFAULT 'ANONYMOUS',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Every click on the outbound official merch-store button. The anonymous browser
 -- ID lets the dashboard show both raw click events and unique clickers.

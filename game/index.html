@@ -24,9 +24,11 @@
     <link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">
-    <link rel="stylesheet" href="./game.css?v=20260831-controller-menu">
+    <link rel="stylesheet" href="./game.css?v=20260902-public-leaderboards">
     <script src="../visitor-tracker.js?v=20260901-section-visit" data-visitor-section="game" defer></script>
-    <script src="./game.js?v=20260831-cleaner-stats" defer></script>
+    <script src="../game-records.js?v=20260902-public-leaderboards" defer></script>
+    <script src="./leaderboard.js?v=20260902-public-leaderboards" defer></script>
+    <script src="./game.js?v=20260902-public-leaderboards" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -157,6 +159,9 @@
               <button class="secondary-button mode-toggle" id="start-mode-button" type="button">
                 HARDCORE MODE: OFF
               </button>
+              <button class="secondary-button leaderboard-open-button" id="start-leaderboards-button" type="button">
+                LEADERBOARDS
+              </button>
             </div>
             <p class="hardcore-warning" id="start-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
             <p class="start-best">BEST SCORE <strong class="fit-number" id="start-best">0</strong></p>
@@ -214,30 +219,62 @@
       </div>
 
       <div class="game-overlay gameover-overlay" id="gameover-overlay" hidden>
-        <section class="gameover-panel" aria-labelledby="gameover-title">
-          <p class="poster-kicker">THE END</p>
-          <h2 id="gameover-title">OVERWHELMED BY GARBAGE 🗑️</h2>
-          <div class="final-stats">
-            <div class="final-stat">
-              <span>FINAL SCORE</span>
-              <strong class="fit-number" id="final-score">0</strong>
+        <div class="gameover-layout">
+          <aside class="leaderboard-dock leaderboard-dock-standard" aria-label="Standard leaderboard">
+            <div data-leaderboard-mount="NORMAL"></div>
+          </aside>
+
+          <section class="gameover-panel" aria-labelledby="gameover-title">
+            <p class="poster-kicker">THE END</p>
+            <h2 id="gameover-title">OVERWHELMED BY GARBAGE 🗑️</h2>
+            <div class="final-stats">
+              <div class="final-stat">
+                <span>FINAL SCORE</span>
+                <strong class="fit-number" id="final-score">0</strong>
+              </div>
+              <div class="final-stat">
+                <span>LONGEST STREAK</span>
+                <strong class="fit-number" id="final-longest-streak">0</strong>
+              </div>
             </div>
-            <div class="final-stat">
-              <span>LONGEST STREAK</span>
-              <strong class="fit-number" id="final-longest-streak">0</strong>
+            <p class="leaderboard-placement-status" id="leaderboard-placement-status" role="status" aria-live="polite">
+              CHECKING LEADERBOARD POSITION…
+            </p>
+            <form class="leaderboard-name-form" data-leaderboard-name-form>
+              <label for="gameover-leaderboard-name">LEADERBOARD NAME</label>
+              <div>
+                <input
+                  id="gameover-leaderboard-name"
+                  data-leaderboard-name-input
+                  name="leaderboard-name"
+                  type="text"
+                  value="ANONYMOUS"
+                  maxlength="24"
+                  autocomplete="nickname"
+                  autocapitalize="characters"
+                  spellcheck="false"
+                >
+                <button class="secondary-button" type="submit">SAVE</button>
+              </div>
+              <small data-leaderboard-name-status role="status" aria-live="polite">NAMES ARE PUBLIC. DO NOT USE PERSONAL INFORMATION.</small>
+            </form>
+            <div class="run-actions">
+              <button class="primary-button" id="restart-button" type="button">TRY AGAIN</button>
+              <button class="secondary-button" id="stats-button" type="button">GAME STATS</button>
+              <button class="secondary-button" id="share-run-button" type="button">SHARE RUN</button>
+              <button class="secondary-button leaderboard-open-button" id="gameover-leaderboards-button" type="button">LEADERBOARDS</button>
+              <button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">
+                HARDCORE MODE: OFF
+              </button>
             </div>
-          </div>
-          <div class="run-actions">
-            <button class="primary-button" id="restart-button" type="button">TRY AGAIN</button>
-            <button class="secondary-button" id="stats-button" type="button">GAME STATS</button>
-            <button class="secondary-button" id="share-run-button" type="button">SHARE RUN</button>
-            <button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">
-              HARDCORE MODE: OFF
-            </button>
-          </div>
-          <p class="share-run-status" id="share-run-status" role="status" aria-live="polite"></p>
-          <p class="hardcore-warning" id="gameover-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
-        </section>
+            <p class="share-run-status" id="share-run-status" role="status" aria-live="polite"></p>
+            <p class="hardcore-warning" id="gameover-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
+          </section>
+
+          <aside class="leaderboard-dock leaderboard-dock-hardcore" aria-label="Hardcore leaderboard">
+            <div data-leaderboard-mount="HARDCORE"></div>
+          </aside>
+        </div>
       </div>
 
       <div class="game-overlay stats-overlay" id="stats-overlay" hidden>
@@ -273,6 +310,66 @@
           <button class="primary-button" id="stats-close-button" type="button">BACK</button>
         </section>
       </div>
+
+      <div class="game-overlay leaderboard-overlay" id="leaderboard-overlay" hidden>
+        <section class="leaderboards-panel" aria-labelledby="leaderboards-title">
+          <p class="poster-kicker">THE WORLD'S BEST AND MOST CORRECT PLAYERS</p>
+          <h2 id="leaderboards-title">LEADERBOARDS</h2>
+          <p class="leaderboard-reset-copy">DAILY BOARDS RESET AT MIDNIGHT CENTRAL TIME</p>
+
+          <form class="leaderboard-name-form leaderboard-name-form-wide" data-leaderboard-name-form>
+            <label for="overlay-leaderboard-name">LEADERBOARD NAME</label>
+            <div>
+              <input
+                id="overlay-leaderboard-name"
+                data-leaderboard-name-input
+                name="leaderboard-name"
+                type="text"
+                value="ANONYMOUS"
+                maxlength="24"
+                autocomplete="nickname"
+                autocapitalize="characters"
+                spellcheck="false"
+              >
+              <button class="secondary-button" type="submit">SAVE</button>
+            </div>
+            <small data-leaderboard-name-status role="status" aria-live="polite">NAMES ARE PUBLIC. DO NOT USE PERSONAL INFORMATION.</small>
+          </form>
+
+          <div class="leaderboard-mode-tabs" role="tablist" aria-label="Leaderboard mode">
+            <button class="leaderboard-mode-tab" type="button" data-leaderboard-mode-tab="NORMAL" aria-selected="true">STANDARD</button>
+            <button class="leaderboard-mode-tab" type="button" data-leaderboard-mode-tab="HARDCORE" aria-selected="false">HARDCORE</button>
+          </div>
+
+          <div class="leaderboard-overlay-grid">
+            <div data-leaderboard-mount="NORMAL"></div>
+            <div data-leaderboard-mount="HARDCORE"></div>
+          </div>
+
+          <button class="primary-button" id="leaderboards-close-button" type="button">BACK</button>
+        </section>
+      </div>
+
+      <template id="leaderboard-card-template">
+        <section class="leaderboard-card">
+          <header class="leaderboard-card-header">
+            <p>PUBLIC LEADERBOARD</p>
+            <h2 data-leaderboard-title>STANDARD</h2>
+            <div class="leaderboard-period-tabs" role="group" aria-label="Leaderboard period">
+              <button type="button" data-leaderboard-period="allTime" aria-pressed="true">ALL-TIME</button>
+              <button type="button" data-leaderboard-period="daily" aria-pressed="false">DAILY</button>
+            </div>
+          </header>
+          <table>
+            <thead>
+              <tr><th scope="col">#</th><th scope="col">PLAYER</th><th scope="col">SCORE</th></tr>
+            </thead>
+            <tbody data-leaderboard-rows>
+              <tr class="leaderboard-message"><td colspan="3">LOADING…</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </template>
 
       <div class="touch-controls" aria-label="Touch controls">
         <div class="joystick" id="joystick" aria-label="Movement joystick">

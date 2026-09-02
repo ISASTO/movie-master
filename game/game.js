@@ -32,6 +32,7 @@
     resumeCountdownValue: $("resume-countdown-value"),
     startButton: $("start-button"),
     startModeButton: $("start-mode-button"),
+    startLeaderboardsButton: $("start-leaderboards-button"),
     startHardcoreWarning: $("start-hardcore-warning"),
     resumeButton: $("resume-button"),
     resetButton: $("reset-button"),
@@ -46,8 +47,11 @@
     restartButton: $("restart-button"),
     statsButton: $("stats-button"),
     shareRunButton: $("share-run-button"),
+    gameoverLeaderboardsButton: $("gameover-leaderboards-button"),
     shareRunStatus: $("share-run-status"),
     statsCloseButton: $("stats-close-button"),
+    leaderboardOverlay: $("leaderboard-overlay"),
+    leaderboardCloseButton: $("leaderboards-close-button"),
     gameoverModeButton: $("gameover-mode-button"),
     gameoverHardcoreWarning: $("gameover-hardcore-warning"),
     movementButton: $("movement-button"),
@@ -405,6 +409,7 @@
   let resumeCountdownStartedAt = 0;
   let resumeCountdownStep = "";
   let exitReturnState = "paused";
+  let leaderboardReturnButton = null;
   let runStats = createRunStats();
 
   if (movementMode !== "mouse" && movementMode !== "keys" && movementMode !== "touch") {
@@ -1105,20 +1110,35 @@
   }
 
   function visibleMenuButtons() {
-    if (gameState === "ready") return [ui.startButton, ui.startModeButton];
+    if (!ui.leaderboardOverlay.hidden) {
+      return [
+        ui.leaderboardCloseButton,
+        ...ui.leaderboardOverlay.querySelectorAll("button"),
+      ].filter((button, index, items) => button && items.indexOf(button) === index);
+    }
+    if (gameState === "ready") {
+      return [ui.startButton, ui.startModeButton, ui.startLeaderboardsButton];
+    }
     if (gameState === "paused") return [ui.resumeButton, ui.resetButton, ui.endButton];
     if (gameState === "reset-confirm") return [ui.resetCancelButton, ui.resetConfirmButton];
     if (gameState === "end-confirm") return [ui.endCancelButton, ui.endConfirmButton];
     if (gameState === "exit-confirm") return [ui.exitCancelButton, ui.exitConfirmButton];
     if (gameState === "gameover" && !ui.statsOverlay.hidden) return [ui.statsCloseButton];
     if (gameState === "gameover") {
-      return [ui.restartButton, ui.statsButton, ui.shareRunButton, ui.gameoverModeButton];
+      return [
+        ui.restartButton,
+        ui.statsButton,
+        ui.shareRunButton,
+        ui.gameoverLeaderboardsButton,
+        ui.gameoverModeButton,
+        ...ui.gameoverOverlay.querySelectorAll(".leaderboard-name-form button, .leaderboard-card button"),
+      ].filter((button, index, items) => button && items.indexOf(button) === index);
     }
     return [];
   }
 
   function setControllerSelection(button) {
-    const candidates = visibleMenuButtons();
+    const candidates = visibleMenuButtons().filter((item) => item.getClientRects().length);
     const next = candidates.includes(button) && !button.disabled ? button : candidates.find((item) => !item.disabled) || null;
     if (controllerSelectedButton === next) return;
     controllerSelectedButton?.classList.remove("controller-selected");
@@ -1260,6 +1280,7 @@
     ui.exitConfirmOverlay.hidden = true;
     ui.gameoverOverlay.hidden = true;
     ui.statsOverlay.hidden = true;
+    ui.leaderboardOverlay.hidden = true;
     ui.shareRunStatus.textContent = "";
     ui.pauseButton.disabled = false;
     ui.pauseButton.textContent = "PAUSE";
@@ -1307,6 +1328,7 @@
     hideResumeCountdown();
     ui.gameoverOverlay.hidden = false;
     ui.statsOverlay.hidden = true;
+    ui.leaderboardOverlay.hidden = true;
     ui.shareRunStatus.textContent = "";
     fitNumberToWidth(ui.finalScore);
     fitNumberToWidth(ui.finalLongestStreak);
@@ -1314,7 +1336,7 @@
     resetJoystick();
     renderGameStats(records.finalScore);
     updateInterface(true);
-    selectDefaultMenuButton();
+    setControllerSelection(ui.restartButton);
     announce(
       manuallyEnded
         ? "Run ended. Results are ready."
@@ -1408,6 +1430,36 @@
     ui.gameoverOverlay.hidden = false;
     setControllerSelection(ui.statsButton);
     announce("Game over.");
+  }
+
+  function openLeaderboards(event) {
+    if (gameState !== "ready" && gameState !== "gameover") return;
+    leaderboardReturnButton = event?.currentTarget || null;
+    ui.startOverlay.hidden = true;
+    ui.gameoverOverlay.hidden = true;
+    ui.statsOverlay.hidden = true;
+    ui.leaderboardOverlay.hidden = false;
+    const mode = hardcoreMode ? "HARDCORE" : "NORMAL";
+    window.dispatchEvent(new CustomEvent("movie-master:leaderboards-opened", {
+      detail: { mode },
+    }));
+    const mobileTab = ui.leaderboardOverlay.querySelector(`[data-leaderboard-mode-tab="${mode}"]`);
+    setControllerSelection(
+      window.matchMedia("(max-width: 760px)").matches
+        ? mobileTab
+        : ui.leaderboardCloseButton,
+    );
+    announce(`${hardcoreMode ? "Hardcore" : "Standard"} leaderboard.`);
+  }
+
+  function closeLeaderboards() {
+    if (ui.leaderboardOverlay.hidden) return;
+    ui.leaderboardOverlay.hidden = true;
+    if (gameState === "gameover") ui.gameoverOverlay.hidden = false;
+    else ui.startOverlay.hidden = false;
+    setControllerSelection(leaderboardReturnButton);
+    leaderboardReturnButton = null;
+    announce(gameState === "gameover" ? "Game over." : "Ready to start.");
   }
 
   function openResetConfirmation() {
@@ -3001,9 +3053,11 @@
       || gameState === "gameover";
     const menuButtons = menuActive ? visibleMenuButtons() : null;
     if (menuActive) {
-      const currentMenuContext = gameState === "gameover" && !ui.statsOverlay.hidden
-        ? "gameover-stats"
-        : gameState;
+      const currentMenuContext = !ui.leaderboardOverlay.hidden
+        ? `leaderboards-${gameState}`
+        : gameState === "gameover" && !ui.statsOverlay.hidden
+          ? "gameover-stats"
+          : gameState;
       const menuContextChanged = gamepadMenuContext !== currentMenuContext;
       updateGamepadMenuNavigation(gamepad, now, menuContextChanged);
       gamepadMenuContext = currentMenuContext;
@@ -3027,7 +3081,8 @@
 
     const cancelPressed = isGamepadButtonPressed(gamepad, GAMEPAD_CANCEL_BUTTON);
     if (menuActive && cancelPressed && !gamepadCancelPressed) {
-      if (gameState === "reset-confirm") cancelResetConfirmation();
+      if (!ui.leaderboardOverlay.hidden) closeLeaderboards();
+      else if (gameState === "reset-confirm") cancelResetConfirmation();
       else if (gameState === "end-confirm") cancelEndConfirmation();
       else if (gameState === "exit-confirm") cancelExitConfirmation();
       else if (gameState === "gameover" && !ui.statsOverlay.hidden) closeGameStats();
@@ -4913,7 +4968,10 @@
       if (gameState === "running") event.preventDefault();
     }
 
-    if (event.code === "Space") {
+    if (event.code === "Escape" && !ui.leaderboardOverlay.hidden) {
+      event.preventDefault();
+      closeLeaderboards();
+    } else if (event.code === "Space") {
       if (gameState === "running") {
         event.preventDefault();
         activateBlast();
@@ -4949,6 +5007,7 @@
       }
     } else if (
       event.code === "Enter"
+      && ui.leaderboardOverlay.hidden
       && (gameState === "ready" || (gameState === "gameover" && ui.statsOverlay.hidden))
     ) {
       event.preventDefault();
@@ -5020,10 +5079,13 @@
 
   ui.startButton.addEventListener("click", startGame);
   ui.startModeButton.addEventListener("click", toggleHardcoreMode);
+  ui.startLeaderboardsButton.addEventListener("click", openLeaderboards);
   ui.restartButton.addEventListener("click", startGame);
   ui.statsButton.addEventListener("click", openGameStats);
   ui.shareRunButton.addEventListener("click", shareRun);
+  ui.gameoverLeaderboardsButton.addEventListener("click", openLeaderboards);
   ui.statsCloseButton.addEventListener("click", closeGameStats);
+  ui.leaderboardCloseButton.addEventListener("click", closeLeaderboards);
   ui.gameoverModeButton.addEventListener("click", toggleHardcoreMode);
   ui.resumeButton.addEventListener("click", () => togglePause());
   ui.resetButton.addEventListener("click", openResetConfirmation);
@@ -5070,9 +5132,10 @@
     });
   }
 
-  for (const button of [
+  for (const button of new Set([
     ui.startButton,
     ui.startModeButton,
+    ui.startLeaderboardsButton,
     ui.resumeButton,
     ui.resetButton,
     ui.resetCancelButton,
@@ -5085,9 +5148,12 @@
     ui.restartButton,
     ui.statsButton,
     ui.shareRunButton,
+    ui.gameoverLeaderboardsButton,
     ui.gameoverModeButton,
     ui.statsCloseButton,
-  ]) {
+    ui.leaderboardCloseButton,
+    ...document.querySelectorAll(".leaderboard-card button, .leaderboard-mode-tab, .leaderboard-name-form button"),
+  ])) {
     button.addEventListener("pointerenter", () => {
       if (visibleMenuButtons().includes(button)) setControllerSelection(button);
     });
