@@ -1,0 +1,36 @@
+/* Final responsive hardening for run names and recent-run metadata. */
+
+.mode-leaderboard-board .leaderboard-player,
+.recent-runs-table .leaderboard-player {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: 1.25;
+}
+
+.recent-runs-table td,
+.recent-runs-table th {
+  max-width: 100%;
+}
+
+.run-detail-meta strong,
+.run-detail-stats strong,
+.run-detail-powerups strong {
+  min-width: 0;
+}
+
+.run-detail-run-id {
+  grid-column: 1 / -1;
+}
+
+.run-detail-run-id strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(0.68rem, 1vw, 0.84rem);
+  word-break: break-all;
+}
+
+@media (max-width: 700px) {
+  .recent-runs-table .leaderboard-player {
+    grid-column: 1 / -1;
+  }
+}
