@@ -1,0 +1,5 @@
+.gate-button:focus-visible,
+.print-button:focus-visible,
+.back-button:focus-visible {
+  outline: none;
+}
