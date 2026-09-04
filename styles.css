@@ -5423,3 +5423,68 @@ html {
   }
 }
 
+
+
+/* Narrow support strip after official merchandise. */
+.support-section {
+  padding-block: clamp(38px, 5vw, 68px);
+  background: var(--paper, #f4e8d2);
+}
+
+.support-shell {
+  display: flex;
+  justify-content: center;
+}
+
+.support-strip {
+  width: min(760px, 100%);
+  padding: clamp(28px, 4vw, 42px) clamp(18px, 4vw, 38px);
+  border-top: 2px solid rgba(87, 44, 7, 0.48);
+  border-bottom: 2px solid rgba(87, 44, 7, 0.48);
+  text-align: center;
+}
+
+.support-eyebrow {
+  margin: 0 0 9px;
+  color: #714011;
+  font-size: clamp(0.68rem, 1vw, 0.82rem);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.support-strip h2 {
+  margin: 0;
+  color: #2a170c;
+  font-family: "Alfa Movie", Rockwell, serif;
+  font-size: clamp(2rem, 5vw, 3.8rem);
+  font-weight: 400;
+  letter-spacing: 0.035em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.support-copy {
+  max-width: 590px;
+  margin: 16px auto 0;
+  color: #57371f;
+  font-size: clamp(0.9rem, 1.25vw, 1.05rem);
+  font-weight: 700;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+@media (max-width: 520px) {
+  .support-section {
+    padding-block: 30px;
+  }
+
+  .support-strip {
+    padding-inline: 10px;
+  }
+
+  .support-strip h2 {
+    font-size: clamp(1.8rem, 11vw, 2.75rem);
+  }
+}
