@@ -170,3 +170,5 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Add all-ages welcome banner"
           git push
+
+# trigger
