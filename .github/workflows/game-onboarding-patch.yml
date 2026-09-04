@@ -20,8 +20,8 @@ jobs:
           ref: game-info-onboarding
           fetch-depth: 0
 
-      - name: Apply onboarding patch
-        run: python .github/scripts/apply-game-onboarding.py
+      - name: Apply onboarding edge-case fixes
+        run: python .github/scripts/fix-game-onboarding.py
 
       - name: Validate JavaScript syntax
         run: node --check game/game.js
@@ -33,10 +33,13 @@ jobs:
         run: |
           grep -q 'id="info-button"' game/index.html
           grep -q 'id="info-overlay"' game/index.html
+          grep -q 'role="dialog" aria-modal="true" aria-labelledby="info-title"' game/index.html
           grep -q 'COLLECT POPCORN FOR UPGRADES' game/index.html
+          grep -q 'ui.startLeaderboardsButton, ui.startInfoButton' game/game.js
           grep -q 'ctx.strokeStyle = danger ? "#ff806b" : COLORS.goldBright;' game/game.js
           ! grep -q 'danger ? "pickup-beam-danger"' game/game.js
           ! grep -q 'danger ? "#ff5a3b"' game/game.js
+          ! grep -q 'danger ? "rgba(210, 75, 53, 0.42)"' game/game.js
 
       - name: Commit validated production changes
         run: |
@@ -47,5 +50,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add game/index.html game/game.js game/game.css
-          git commit -m "Simplify game onboarding and popcorn warning"
+          git commit -m "Harden game info onboarding"
           git push origin HEAD:game-info-onboarding
