@@ -5514,3 +5514,68 @@ html {
     padding-inline: 14px;
   }
 }
+
+
+/* Compact, stylized support appeal after merchandise. */
+.support-section {
+  padding-block: clamp(30px, 4vw, 48px);
+}
+
+.support-strip {
+  position: relative;
+  width: min(600px, 100%);
+  padding: clamp(24px, 3vw, 32px) clamp(18px, 3.2vw, 30px);
+  border: 2px solid rgba(87, 44, 7, 0.58);
+  background:
+    linear-gradient(180deg, rgba(255, 248, 225, 0.3), rgba(255, 248, 225, 0.1)),
+    rgba(223, 203, 166, 0.5);
+  box-shadow:
+    7px 7px 0 rgba(87, 44, 7, 0.13),
+    inset 0 0 0 4px rgba(255, 239, 198, 0.18);
+}
+
+.support-strip::before,
+.support-strip::after {
+  position: absolute;
+  top: 10px;
+  color: rgba(145, 72, 0, 0.62);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.support-strip::before {
+  content: "★";
+  left: 12px;
+}
+
+.support-strip::after {
+  content: "★";
+  right: 12px;
+}
+
+.support-eyebrow {
+  margin-bottom: 14px;
+  font-size: clamp(0.92rem, 1.35vw, 1.08rem);
+  letter-spacing: 0.12em;
+  line-height: 1.18;
+}
+
+.support-money-button {
+  max-width: min(100%, 480px);
+}
+
+.support-copy {
+  max-width: 450px;
+  margin-top: 17px;
+}
+
+@media (max-width: 520px) {
+  .support-strip {
+    width: min(100%, 440px);
+    padding: 24px 14px;
+  }
+
+  .support-eyebrow {
+    font-size: 0.9rem;
+  }
+}

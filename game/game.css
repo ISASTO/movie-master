@@ -2655,3 +2655,49 @@ strong.fit-number {
     line-height: 1.2;
   }
 }
+
+
+/* INFO rules use independent columns so short cards never inherit a taller row's whitespace. */
+.info-rules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.info-rule-column {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  align-self: start;
+}
+
+.info-rule-column > p {
+  flex: none;
+  align-self: stretch;
+}
+
+@media (max-width: 720px) {
+  .info-rules {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .info-rule-column {
+    display: contents;
+  }
+
+  .info-rule-keep { order: 1; }
+  .info-rule-popcorn { order: 2; }
+  .info-rule-powerups { order: 3; }
+  .info-rule-garbage { order: 4; }
+  .info-rule-blast { order: 5; }
+}
+
+@media (max-height: 500px) and (orientation: landscape) and (min-width: 721px) {
+  .info-rule-column {
+    gap: 5px;
+  }
+}
