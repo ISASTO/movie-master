@@ -35,8 +35,10 @@
     startModeButton: $("start-mode-button"),
     startLeaderboardsButton: $("start-leaderboards-button"),
     startInfoButton: $("start-info-button"),
+    startMainSiteButton: $("start-main-site-button"),
     startHardcoreWarning: $("start-hardcore-warning"),
     resumeButton: $("resume-button"),
+    pauseMainSiteButton: $("pause-main-site-button"),
     resetButton: $("reset-button"),
     resetCancelButton: $("reset-cancel-button"),
     resetConfirmButton: $("reset-confirm-button"),
@@ -50,6 +52,7 @@
     statsButton: $("stats-button"),
     shareRunButton: $("share-run-button"),
     gameoverLeaderboardsButton: $("gameover-leaderboards-button"),
+    gameoverMainSiteButton: $("gameover-main-site-button"),
     shareRunStatus: $("share-run-status"),
     statsCloseButton: $("stats-close-button"),
     leaderboardOverlay: $("leaderboard-overlay"),
@@ -1123,9 +1126,9 @@
       ].filter((button, index, items) => button && items.indexOf(button) === index);
     }
     if (gameState === "ready") {
-      return [ui.startButton, ui.startModeButton, ui.startLeaderboardsButton, ui.startInfoButton];
+      return [ui.startButton, ui.startModeButton, ui.startLeaderboardsButton, ui.startInfoButton, ui.startMainSiteButton];
     }
-    if (gameState === "paused") return [ui.resumeButton, ui.resetButton, ui.endButton];
+    if (gameState === "paused") return [ui.resumeButton, ui.resetButton, ui.endButton, ui.pauseMainSiteButton];
     if (gameState === "reset-confirm") return [ui.resetCancelButton, ui.resetConfirmButton];
     if (gameState === "end-confirm") return [ui.endCancelButton, ui.endConfirmButton];
     if (gameState === "exit-confirm") return [ui.exitCancelButton, ui.exitConfirmButton];
@@ -1136,6 +1139,7 @@
         ui.statsButton,
         ui.shareRunButton,
         ui.gameoverLeaderboardsButton,
+        ui.gameoverMainSiteButton,
         ui.gameoverModeButton,
         ...ui.gameoverOverlay.querySelectorAll(".leaderboard-name-form button, .leaderboard-card button"),
       ].filter((button, index, items) => button && items.indexOf(button) === index);
@@ -1586,10 +1590,14 @@
     beginResumeCountdown();
   }
 
-  function confirmExitGame() {
-    if (gameState !== "exit-confirm") return;
+  function goToMainSite() {
     flushRunRecords();
     window.location.assign(ui.exitButton.href);
+  }
+
+  function confirmExitGame() {
+    if (gameState !== "exit-confirm") return;
+    goToMainSite();
   }
 
   function togglePause(forcePause = false) {
@@ -5132,14 +5140,17 @@
   ui.startInfoButton.addEventListener("click", openInfo);
   ui.infoButton.addEventListener("click", openInfo);
   ui.infoCloseButton.addEventListener("click", closeInfo);
+  ui.startMainSiteButton.addEventListener("click", goToMainSite);
   ui.restartButton.addEventListener("click", startGame);
   ui.statsButton.addEventListener("click", openGameStats);
   ui.shareRunButton.addEventListener("click", shareRun);
   ui.gameoverLeaderboardsButton.addEventListener("click", openLeaderboards);
+  ui.gameoverMainSiteButton.addEventListener("click", goToMainSite);
   ui.statsCloseButton.addEventListener("click", closeGameStats);
   ui.leaderboardCloseButton.addEventListener("click", closeLeaderboards);
   ui.gameoverModeButton.addEventListener("click", toggleHardcoreMode);
   ui.resumeButton.addEventListener("click", () => togglePause());
+  ui.pauseMainSiteButton.addEventListener("click", openExitConfirmation);
   ui.resetButton.addEventListener("click", openResetConfirmation);
   ui.resetCancelButton.addEventListener("click", cancelResetConfirmation);
   ui.resetConfirmButton.addEventListener("click", confirmResetGame);
@@ -5189,8 +5200,10 @@
     ui.startModeButton,
     ui.startLeaderboardsButton,
     ui.startInfoButton,
+    ui.startMainSiteButton,
     ui.infoCloseButton,
     ui.resumeButton,
+    ui.pauseMainSiteButton,
     ui.resetButton,
     ui.resetCancelButton,
     ui.resetConfirmButton,
@@ -5203,6 +5216,7 @@
     ui.statsButton,
     ui.shareRunButton,
     ui.gameoverLeaderboardsButton,
+    ui.gameoverMainSiteButton,
     ui.gameoverModeButton,
     ui.statsCloseButton,
     ui.leaderboardCloseButton,

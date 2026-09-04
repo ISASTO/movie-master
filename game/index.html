@@ -29,7 +29,7 @@
     <script src="../visitor-tracker.js?v=20260902-perf-1" data-visitor-section="game" defer></script>
     <script src="../game-records.js?v=20260902-perf-1" defer></script>
     <script src="./leaderboard.js?v=20260902-perf-2" defer></script>
-    <script src="./game.js?v=20260904-onboarding-1" defer></script>
+    <script src="./game.js?v=20260904-main-site-buttons-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -165,6 +165,9 @@
               <button class="secondary-button" id="start-info-button" type="button">
                 INFO
               </button>
+              <button class="secondary-button" id="start-main-site-button" type="button">
+                MAIN SITE
+              </button>
             </div>
             <p class="hardcore-warning" id="start-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
             <p class="start-best">BEST SCORE <strong class="fit-number" id="start-best">0</strong></p>
@@ -212,6 +215,7 @@
             <button class="primary-button" id="resume-button" type="button">CONTINUE</button>
             <button class="secondary-button" id="reset-button" type="button">RESET</button>
             <button class="secondary-button danger-button" id="end-button" type="button">END GAME</button>
+            <button class="secondary-button" id="pause-main-site-button" type="button">MAIN SITE</button>
           </div>
         </section>
       </div>
@@ -247,7 +251,7 @@
           <span>YOUR CURRENT GAME WILL END.</span>
           <div class="pause-actions">
             <button class="primary-button" id="exit-cancel-button" type="button">CANCEL</button>
-            <button class="secondary-button danger-button" id="exit-confirm-button" type="button">EXIT GAME</button>
+            <button class="secondary-button danger-button" id="exit-confirm-button" type="button">GO TO MAIN SITE</button>
           </div>
         </section>
       </div>
@@ -294,6 +298,7 @@
               <button class="secondary-button" id="stats-button" type="button">GAME STATS</button>
               <button class="secondary-button" id="share-run-button" type="button">SHARE RUN</button>
               <button class="secondary-button leaderboard-open-button" id="gameover-leaderboards-button" type="button">LEADERBOARDS</button>
+              <button class="secondary-button" id="gameover-main-site-button" type="button">MAIN SITE</button>
               <button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">
                 HARDCORE MODE: OFF
               </button>
