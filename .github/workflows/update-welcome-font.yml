@@ -1,0 +1,35 @@
+name: Update welcome banner font
+
+on:
+  push:
+    paths:
+      - '.github/workflows/update-welcome-font.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Change welcome banner heading to Futura
+        shell: python
+        run: |
+          from pathlib import Path
+          css_path = Path('styles.css')
+          workflow_path = Path('.github/workflows/update-welcome-font.yml')
+          css = css_path.read_text()
+          old = '  font-family: "Alfa Movie", Rockwell, "Roboto Slab", serif;\n  font-size: clamp(2rem, 4.2vw, 4.2rem);\n  font-weight: 400;'
+          new = '  font-family: "Futura Web", Futura, "Century Gothic", sans-serif;\n  font-size: clamp(2rem, 4.2vw, 4.2rem);\n  font-weight: 800;'
+          if old not in css:
+              raise SystemExit('Could not find welcome banner heading font block')
+          css_path.write_text(css.replace(old, new, 1))
+          workflow_path.unlink()
+      - name: Commit source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add styles.css .github/workflows/update-welcome-font.yml
+          git commit -m "Use Futura for welcome banner heading"
+          git push
