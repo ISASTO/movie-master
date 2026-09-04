@@ -200,6 +200,7 @@
   const MOVEMENT_KEY = "movie-master-vs-garbage-movement-v1";
   const QUALITY_KEY = "movie-master-vs-garbage-quality-v1";
   const QUALITY_ORDER = ["high", "medium", "low"];
+  const BACKGROUND_TWINKLE_PHASE_COUNT = 16;
   const QUALITY_LEVELS = {
     high: {
       label: "HIGH",
@@ -249,6 +250,13 @@
     const angle = (index / 10) * Math.PI * 2;
     return { x: Math.cos(angle), y: Math.sin(angle) };
   });
+  const PARTICLE_DIRECTIONS = Array.from({ length: 256 }, (_, index) => {
+    const angle = (index / 256) * Math.PI * 2;
+    return { x: Math.cos(angle), y: Math.sin(angle) };
+  });
+  const FAST_THREAT_SCORE_FACTOR = 1 / (1.35 * 1.35);
+  const RUSH_THREAT_SCORE_FACTOR = 1 / (1.12 * 1.12);
+  const FAST_RUSH_THREAT_SCORE_FACTOR = 1 / ((1.35 * 1.12) ** 2);
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const coarsePointer = window.matchMedia("(hover: none), (pointer: coarse)").matches;
 
@@ -272,6 +280,7 @@
     generation: 0,
     backgroundGradient: null,
     backgroundRays: null,
+    backgroundStarBatches: null,
     backgroundGrid: null,
     filmHoles: null,
     starPaths: new Map(),
@@ -761,6 +770,7 @@
       enemies[index].renderSprite = null;
     }
     renderCache.backgroundGradient = createBackgroundGradient();
+    renderCache.backgroundStarBatches = null;
     const shortViewport = world.height <= 500;
     const fontSize = clamp(world.width * 0.012, shortViewport ? 9 : 10, shortViewport ? 11 : 13);
     const iconSize = fontSize * (shortViewport ? 1.08 : 1.18);
@@ -811,6 +821,38 @@
       holes.rect(x, world.bounds.bottom - 9, 21, 6);
     }
     renderCache.filmHoles = holes;
+  }
+
+  function rebuildBackgroundStarBatches() {
+    if (typeof Path2D !== "function") {
+      renderCache.backgroundStarBatches = null;
+      return;
+    }
+
+    const paths = Array(BACKGROUND_TWINKLE_PHASE_COUNT).fill(null);
+    const stars = world.backgroundStars;
+    for (let index = 0; index < stars.length; index += 1) {
+      const star = stars[index];
+      let path = paths[star.phaseBucket];
+      if (!path) {
+        path = new Path2D();
+        paths[star.phaseBucket] = path;
+      }
+      path.rect(star.x, star.y, star.size, star.size);
+    }
+
+    const batches = [];
+    for (let phaseBucket = 0; phaseBucket < paths.length; phaseBucket += 1) {
+      const path = paths[phaseBucket];
+      if (!path) continue;
+      const phase = (phaseBucket / BACKGROUND_TWINKLE_PHASE_COUNT) * Math.PI * 2;
+      batches.push({
+        path,
+        phaseSine: Math.sin(phase),
+        phaseCosine: Math.cos(phase),
+      });
+    }
+    renderCache.backgroundStarBatches = batches;
   }
 
   function populateCollisionIndex() {
@@ -937,11 +979,15 @@
           x,
           y,
           size,
+          phaseBucket: Math.floor(
+            (phase / (Math.PI * 2)) * BACKGROUND_TWINKLE_PHASE_COUNT,
+          ) % BACKGROUND_TWINKLE_PHASE_COUNT,
           phaseSine: Math.sin(phase),
           phaseCosine: Math.cos(phase),
         };
       },
     );
+    rebuildBackgroundStarBatches();
 
     const remapGameplayPosition = (item) => {
       if (!hadWorld) return;
@@ -2244,13 +2290,19 @@
     let targetDistanceSquared = maxRangeSquared;
     let bestThreatScore = maxRangeSquared;
 
-    for (const enemy of enemies) {
+    const playerX = player.x;
+    const playerY = player.y;
+    for (let index = 0; index < enemies.length; index += 1) {
+      const enemy = enemies[index];
       if (enemy.destroyed) continue;
-      const candidateDistance = distanceSquared(player, enemy);
+      const dx = playerX - enemy.x;
+      const dy = playerY - enemy.y;
+      const candidateDistance = dx * dx + dy * dy;
       if (candidateDistance > maxRangeSquared) continue;
-      const threatWeight = (enemy.kind === "fast" ? 1.35 : 1)
-        * (enemy.mode === "rush" ? 1.12 : 1);
-      const threatScore = candidateDistance / (threatWeight * threatWeight);
+      const threatScoreFactor = enemy.kind === "fast"
+        ? enemy.mode === "rush" ? FAST_RUSH_THREAT_SCORE_FACTOR : FAST_THREAT_SCORE_FACTOR
+        : enemy.mode === "rush" ? RUSH_THREAT_SCORE_FACTOR : 1;
+      const threatScore = candidateDistance * threatScoreFactor;
       if (threatScore < bestThreatScore) {
         bestThreatScore = threatScore;
         targetDistanceSquared = candidateDistance;
@@ -2289,17 +2341,15 @@
     const speedRange = speed - speedMinimum;
     const gameScale = world.gameScale;
     const random = Math.random;
-    const cosine = Math.cos;
-    const sine = Math.sin;
     for (let i = 0; i < actualCount; i += 1) {
-      const angle = random() * Math.PI * 2;
+      const direction = PARTICLE_DIRECTIONS[(random() * PARTICLE_DIRECTIONS.length) | 0];
       const velocity = (speedMinimum + random() * speedRange) * gameScale;
       const maxLife = 0.34 + random() * (0.78 - 0.34);
       const particle = acquireParticle();
       particle.x = x;
       particle.y = y;
-      particle.vx = cosine(angle) * velocity;
-      particle.vy = sine(angle) * velocity;
+      particle.vx = direction.x * velocity;
+      particle.vy = direction.y * velocity;
       particle.life = maxLife;
       particle.maxLife = maxLife;
       particle.size = (2 + random() * (6 - 2)) * gameScale;
@@ -2713,7 +2763,12 @@
     const rushMargin = scaleWorld(90);
     const closeThreatDistance = scaleWorld(CLOSE_THREAT_RADIUS);
     const closeThreatDistanceSquared = closeThreatDistance * closeThreatDistance;
-    const playerSpeedSquared = player.vx * player.vx + player.vy * player.vy;
+    const playerX = player.x;
+    const playerY = player.y;
+    const playerVx = player.vx;
+    const playerVy = player.vy;
+    const playerRadius = player.radius;
+    const playerSpeedSquared = playerVx * playerVx + playerVy * playerVy;
     const canPredictPlayer = playerSpeedSquared >= 1;
     const playerSpeed = canPredictPlayer ? Math.sqrt(playerSpeedSquared) : 0;
     const maximumPredictionScale = canPredictPlayer
@@ -2728,6 +2783,10 @@
     const fastPredictionCapSquared = fastPredictionCap * fastPredictionCap;
     const heavyPredictionCapSquared = heavyPredictionCap * heavyPredictionCap;
     const standardPredictionCapSquared = standardPredictionCap * standardPredictionCap;
+    const rushLeft = world.bounds.left - rushMargin;
+    const rushRight = world.bounds.right + rushMargin;
+    const rushTop = world.bounds.top - rushMargin;
+    const rushBottom = world.bounds.bottom + rushMargin;
 
     for (let i = enemies.length - 1; i >= 0; i -= 1) {
       const enemy = enemies[i];
@@ -2740,18 +2799,18 @@
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
         if (
-          enemy.x < world.bounds.left - rushMargin ||
-          enemy.x > world.bounds.right + rushMargin ||
-          enemy.y < world.bounds.top - rushMargin ||
-          enemy.y > world.bounds.bottom + rushMargin
+          enemy.x < rushLeft ||
+          enemy.x > rushRight ||
+          enemy.y < rushTop ||
+          enemy.y > rushBottom
         ) {
           enemy.destroyed = true;
           enemies.splice(i, 1);
           continue;
         }
       } else {
-        const directDx = player.x - enemy.x;
-        const directDy = player.y - enemy.y;
+        const directDx = playerX - enemy.x;
+        const directDy = playerY - enemy.y;
         const directDistanceSquared = directDx * directDx + directDy * directDy;
         const isCloseThreat = directDistanceSquared <= closeThreatDistanceSquared;
         const preferredPrediction = enemy.kind === "fast"
@@ -2769,19 +2828,21 @@
           : directDistanceSquared >= predictionCapSquared
             ? preferredPrediction
             : Math.sqrt(directDistanceSquared) * maximumPredictionScale;
-        const targetX = player.x + player.vx * prediction;
-        const targetY = player.y + player.vy * prediction;
+        const targetX = playerX + playerVx * prediction;
+        const targetY = playerY + playerVy * prediction;
         const dx = targetX - enemy.x;
         const dy = targetY - enemy.y;
-        const length = magnitude(dx, dy) || 1;
+        const length = Math.sqrt(dx * dx + dy * dy) || 1;
         enemy.vx = (dx / length) * enemy.speed;
         enemy.vy = (dy / length) * enemy.speed;
         enemy.x += enemy.vx * dt;
         enemy.y += enemy.vy * dt;
       }
 
-      const hitDistance = enemy.radius + player.radius;
-      if (distanceSquared(enemy, player) < hitDistance * hitDistance) {
+      const playerDx = enemy.x - playerX;
+      const playerDy = enemy.y - playerY;
+      const hitDistance = enemy.radius + playerRadius;
+      if (playerDx * playerDx + playerDy * playerDy < hitDistance * hitDistance) {
         damagePlayer(i);
         if (gameState !== "running") return;
       }
@@ -3415,10 +3476,11 @@
 
   function updateFloatingTexts(dt) {
     if (!floatingTexts.length) return;
+    const riseDistance = scaleWorld(29) * dt;
     for (let i = floatingTexts.length - 1; i >= 0; i -= 1) {
       const text = floatingTexts[i];
       text.life -= dt;
-      text.y -= scaleWorld(29) * dt;
+      text.y -= riseDistance;
       if (text.life <= 0) floatingTexts.splice(i, 1);
     }
   }
@@ -3602,12 +3664,21 @@
     const twinkleTime = time * 1.7;
     const twinkleSine = Math.sin(twinkleTime);
     const twinkleCosine = Math.cos(twinkleTime);
-    for (let index = 0; index < backgroundStars.length; index += 1) {
-      const star = backgroundStars[index];
-      const twinkle = twinkleSine * star.phaseCosine + twinkleCosine * star.phaseSine;
-      const alpha = 0.25 + twinkle * 0.11;
-      ctx.globalAlpha = alpha;
-      ctx.fillRect(star.x, star.y, star.size, star.size);
+    const backgroundStarBatches = renderCache.backgroundStarBatches;
+    if (backgroundStarBatches) {
+      for (let index = 0; index < backgroundStarBatches.length; index += 1) {
+        const batch = backgroundStarBatches[index];
+        const twinkle = twinkleSine * batch.phaseCosine + twinkleCosine * batch.phaseSine;
+        ctx.globalAlpha = 0.25 + twinkle * 0.11;
+        ctx.fill(batch.path);
+      }
+    } else {
+      for (let index = 0; index < backgroundStars.length; index += 1) {
+        const star = backgroundStars[index];
+        const twinkle = twinkleSine * star.phaseCosine + twinkleCosine * star.phaseSine;
+        ctx.globalAlpha = 0.25 + twinkle * 0.11;
+        ctx.fillRect(star.x, star.y, star.size, star.size);
+      }
     }
     ctx.globalAlpha = 1;
 
@@ -4309,14 +4380,16 @@
     const cullPadding = scaleWorld(45);
     const bobDistance = scaleWorld(2.4);
     const cacheGeneration = renderCache.generation;
+    const worldWidth = world.width;
+    const worldHeight = world.height;
     for (let index = 0; index < enemies.length; index += 1) {
       const enemy = enemies[index];
       const margin = enemy.radius + cullPadding;
       if (
         enemy.x < -margin
-        || enemy.x > world.width + margin
+        || enemy.x > worldWidth + margin
         || enemy.y < -margin
-        || enemy.y > world.height + margin
+        || enemy.y > worldHeight + margin
       ) continue;
       const drawY = enemy.y + Math.sin(enemy.phase) * bobDistance;
       const hitState = enemy.hitFlash > 0;
@@ -4390,14 +4463,16 @@
     if (!projectiles.length) return;
     const cullPadding = scaleWorld(30);
     const cacheGeneration = renderCache.generation;
+    const worldWidth = world.width;
+    const worldHeight = world.height;
     for (let index = 0; index < projectiles.length; index += 1) {
       const projectile = projectiles[index];
       const margin = projectile.radius + cullPadding;
       if (
         projectile.x < -margin
-        || projectile.x > world.width + margin
+        || projectile.x > worldWidth + margin
         || projectile.y < -margin
-        || projectile.y > world.height + margin
+        || projectile.y > worldHeight + margin
       ) continue;
       const sprite = projectile.renderSprite
         && projectile.renderSpriteGeneration === cacheGeneration
@@ -4848,20 +4923,23 @@
     const stride = qualitySettings.particleDrawStride;
     const cullPadding = scaleWorld(16);
     const starRadiusPadding = scaleWorld(1.5);
+    const worldWidth = world.width;
+    const worldHeight = world.height;
+    const drawStarParticles = qualityLevel !== "low";
     let lastColor = null;
     for (let index = 0; index < particles.length; index += stride) {
       const particle = particles[index];
       const margin = particle.size + cullPadding;
       if (
         particle.x < -margin
-        || particle.x > world.width + margin
+        || particle.x > worldWidth + margin
         || particle.y < -margin
-        || particle.y > world.height + margin
+        || particle.y > worldHeight + margin
       ) continue;
       const lifeRatio = particle.life / particle.maxLife;
       const alpha = lifeRatio <= 0 ? 0 : lifeRatio >= 1 ? 1 : lifeRatio;
       ctx.globalAlpha = alpha;
-      if (particle.star && qualityLevel !== "low") {
+      if (particle.star && drawStarParticles) {
         const outerRadius = particle.size + starRadiusPadding;
         const starPath = particle.renderStarPath || createSizedStarPath(
           5,
