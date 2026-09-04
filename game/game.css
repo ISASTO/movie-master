@@ -105,8 +105,11 @@ canvas:focus-visible {
   z-index: 100;
   top: 10px;
   left: 10px;
+  display: flex;
   transform: translateY(-150%);
   padding: 9px 13px;
+  min-height: 44px;
+  align-items: center;
   border: 2px solid var(--ink);
   background: var(--gold-bright);
   color: var(--ink);
@@ -242,13 +245,13 @@ html.game-paused .game-bar {
 .game-actions button,
 .game-actions a {
   min-width: 70px;
-  min-height: 34px;
+  min-height: 40px;
   padding: 7px 10px;
   border: 1px solid rgba(255, 211, 96, 0.72);
   background: rgba(42, 25, 15, 0.84);
   color: var(--gold-light);
   cursor: pointer;
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   line-height: 1;
@@ -1565,7 +1568,7 @@ strong.fit-number {
   .game-actions a {
     min-width: 58px;
     padding-inline: 7px;
-    font-size: 0.54rem;
+    font-size: 0.6rem;
   }
 
   .game-actions .movement-button {
@@ -1647,9 +1650,9 @@ strong.fit-number {
   .game-actions button,
   .game-actions a {
     min-width: 0;
-    min-height: 30px;
+    min-height: 34px;
     padding: 6px 7px;
-    font-size: 0.49rem;
+    font-size: 0.56rem;
     letter-spacing: 0.07em;
   }
 
@@ -1693,8 +1696,8 @@ strong.fit-number {
 
   .hud-stat span,
   .blast-label span {
-    font-size: 0.43rem;
-    letter-spacing: 0.1em;
+    font-size: clamp(0.48rem, 2.2vw, 0.56rem);
+    letter-spacing: 0.08em;
   }
 
   .hud-stat strong {
@@ -1710,7 +1713,7 @@ strong.fit-number {
     top: 140px;
     max-width: calc(100% - 14px);
     padding: 5px 9px;
-    font-size: 0.49rem;
+    font-size: 0.56rem;
   }
 
   .combo-callout {
@@ -1720,7 +1723,7 @@ strong.fit-number {
   .game-instructions {
     min-height: 31px;
     padding: 8px 9px max(7px, env(safe-area-inset-bottom));
-    font-size: 0.47rem;
+    font-size: 0.54rem;
     letter-spacing: 0.075em;
   }
 
@@ -1900,9 +1903,9 @@ strong.fit-number {
 
   .game-actions button,
   .game-actions a {
-    min-height: 28px;
+    min-height: 34px;
     padding: 5px 7px;
-    font-size: 0.48rem;
+    font-size: 0.54rem;
   }
 
   .hud {
@@ -1940,7 +1943,7 @@ strong.fit-number {
 
   .hud-stat span,
   .blast-label span {
-    font-size: 0.37rem;
+    font-size: 0.45rem;
     letter-spacing: 0.08em;
   }
 
@@ -1954,7 +1957,7 @@ strong.fit-number {
   }
 
   .blast-label strong {
-    font-size: 0.5rem;
+    font-size: 0.56rem;
   }
 
   .blast-track {
@@ -1973,13 +1976,13 @@ strong.fit-number {
     top: 94px;
     max-width: calc(100% - 12px);
     padding: 3px 7px;
-    font-size: 0.43rem;
+    font-size: 0.5rem;
   }
 
   .combo-callout {
     top: 116px;
     padding: 5px 9px;
-    font-size: 0.62rem;
+    font-size: 0.68rem;
   }
 
   .game-instructions {
@@ -2011,7 +2014,7 @@ strong.fit-number {
     width: 150px;
     min-height: 44px;
     padding: 7px 10px;
-    font-size: 0.5rem;
+    font-size: 0.58rem;
   }
 
   .game-overlay {
@@ -2114,7 +2117,7 @@ strong.fit-number {
   .rules p {
     padding-left: 7px;
     border-left-width: 2px;
-    font-size: 0.54rem;
+    font-size: 0.58rem;
     line-height: 1.18;
   }
 
@@ -2126,7 +2129,7 @@ strong.fit-number {
 
   .controls-line span {
     padding: 4px 5px;
-    font-size: 0.44rem;
+    font-size: 0.5rem;
     line-height: 1.15;
     text-align: center;
   }
@@ -2138,7 +2141,7 @@ strong.fit-number {
 
   .start-best {
     margin-top: 5px !important;
-    font-size: 0.52rem;
+    font-size: 0.58rem;
   }
 }
 
@@ -2149,7 +2152,7 @@ strong.fit-number {
 
   .game-identity h1 {
     max-width: 42vw;
-    font-size: 0.64rem;
+    font-size: 0.68rem;
   }
 
   .game-actions {
@@ -2159,11 +2162,11 @@ strong.fit-number {
   .game-actions button,
   .game-actions a {
     padding-inline: 4px;
-    font-size: 0.43rem;
+    font-size: 0.5rem;
   }
 
   .game-actions .quality-button {
-    min-width: 68px;
+    min-width: 72px;
   }
 
   .game-overlay {
@@ -2243,7 +2246,7 @@ strong.fit-number {
   .rules p {
     padding-left: 7px;
     border-left-width: 2px;
-    font-size: 0.58rem;
+    font-size: 0.62rem;
     line-height: 1.18;
   }
 
@@ -2254,19 +2257,19 @@ strong.fit-number {
 
   .controls-line span {
     padding: 4px 6px;
-    font-size: 0.48rem;
+    font-size: 0.52rem;
     line-height: 1.1;
   }
 
   .start-poster .primary-button {
-    min-height: 38px;
-    padding: 7px 14px;
-    font-size: 0.62rem;
+    min-height: 44px;
+    padding: 9px 14px;
+    font-size: 0.68rem;
   }
 
   .start-best {
     margin-top: 5px !important;
-    font-size: 0.52rem;
+    font-size: 0.58rem;
   }
 }
 
@@ -2285,6 +2288,15 @@ strong.fit-number {
   .game-actions a {
     min-height: 44px;
     padding-block: 8px;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .leaderboard-mode-tab,
+  .leaderboard-period-tabs button,
+  .leaderboard-name-form input,
+  .leaderboard-name-form .secondary-button {
+    min-height: 44px;
   }
 }
 
@@ -2521,7 +2533,7 @@ strong.fit-number {
 
   .info-summary {
     margin-bottom: 8px;
-    font-size: 0.68rem;
+    font-size: 0.76rem;
   }
 
   .info-rules {
@@ -2532,8 +2544,8 @@ strong.fit-number {
 
   .info-rules p {
     padding: 5px 7px;
-    font-size: 0.56rem;
-    line-height: 1.22;
+    font-size: 0.64rem;
+    line-height: 1.28;
   }
 
   .info-controls {
@@ -2548,7 +2560,7 @@ strong.fit-number {
 
   .info-controls b,
   .info-controls span {
-    font-size: 0.5rem;
+    font-size: 0.64rem;
   }
 }
 
@@ -2647,11 +2659,11 @@ strong.fit-number {
   }
 
   .info-controls b {
-    font-size: 0.62rem;
+    font-size: 0.68rem;
   }
 
   .info-controls span {
-    font-size: 0.58rem;
+    font-size: 0.64rem;
     line-height: 1.2;
   }
 }

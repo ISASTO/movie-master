@@ -3,34 +3,45 @@
    accidentally affect the canvas/gameplay layout. */
 
 .leaderboard-name-form label {
-  font-size: clamp(0.56rem, 0.75vw, 0.68rem);
+  font-size: clamp(0.62rem, 0.8vw, 0.72rem);
 }
 
 .leaderboard-name-form input {
+  min-height: 44px;
   font-size: clamp(0.78rem, 1vw, 0.9rem);
 }
 
+.leaderboard-name-form .secondary-button {
+  min-height: 44px;
+}
+
 .leaderboard-name-form small {
-  font-size: clamp(0.5rem, 0.68vw, 0.6rem);
+  font-size: clamp(0.58rem, 0.72vw, 0.64rem);
 }
 
 .leaderboard-mode-tab,
 .leaderboard-period-tabs button {
-  font-size: clamp(0.58rem, 0.76vw, 0.68rem);
+  min-height: 44px;
+  font-size: clamp(0.62rem, 0.8vw, 0.72rem);
 }
 
 .leaderboard-card-header p {
-  font-size: clamp(0.52rem, 0.68vw, 0.62rem);
+  font-size: clamp(0.58rem, 0.72vw, 0.66rem);
 }
 
 .leaderboard-card thead th {
-  font-size: clamp(0.5rem, 0.7vw, 0.62rem);
+  font-size: clamp(0.56rem, 0.74vw, 0.66rem);
 }
 
 .leaderboard-card tbody th,
 .leaderboard-card tbody td {
-  font-size: clamp(0.66rem, 0.92vw, 0.84rem);
+  font-size: clamp(0.72rem, 0.96vw, 0.88rem);
   line-height: 1.2;
+}
+
+.leaderboard-message td {
+  font-size: 0.62rem !important;
+  line-height: 1.35;
 }
 
 .leaderboard-card th,
@@ -69,11 +80,11 @@
 @media (max-width: 760px) {
   .leaderboard-card tbody th,
   .leaderboard-card tbody td {
-    font-size: clamp(0.64rem, 2.5vw, 0.82rem);
+    font-size: clamp(0.7rem, 2.7vw, 0.84rem);
   }
 
   .leaderboard-card thead th {
-    font-size: clamp(0.5rem, 2vw, 0.62rem);
+    font-size: clamp(0.56rem, 2.1vw, 0.66rem);
   }
 
   .leaderboard-name-form input {

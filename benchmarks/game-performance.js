@@ -366,6 +366,7 @@ const hook = String.raw`
       ui.endConfirmOverlay.hidden = true;
       ui.exitConfirmOverlay.hidden = true;
       ui.statsOverlay.hidden = true;
+      ui.infoOverlay.hidden = true;
       ui.leaderboardOverlay.hidden = true;
       const buttons = [ui.resumeButton, ui.resetButton, ui.endButton];
       for (let index = 0; index < buttons.length; index += 1) {

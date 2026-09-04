@@ -1596,8 +1596,8 @@ h3 {
 
 .package-purchase-button {
   justify-self: start;
-  min-height: 39px;
-  padding: 8px 14px;
+  min-height: 44px;
+  padding: 10px 14px;
   border: 2px solid var(--ink);
   background: var(--gold);
   color: var(--ink);
@@ -3409,8 +3409,8 @@ h3 {
   right: 11px;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0 0 4px;
   border: 3px solid var(--ink);
   background: var(--gold);
@@ -3432,7 +3432,7 @@ h3 {
 .purchase-dialog h2 {
   max-width: 660px;
   margin: 0 auto 15px;
-  padding-inline: 30px;
+  padding-inline: 48px;
   font-size: clamp(1.55rem, 3.2vw, 2.25rem);
   font-weight: 800;
   letter-spacing: -0.035em;
@@ -3552,7 +3552,7 @@ h3 {
 
 .purchase-copy-button,
 .purchase-email-copy button {
-  min-height: 38px;
+  min-height: 44px;
   padding: 7px 16px;
   border: 3px solid var(--ink);
   background: var(--gold);
@@ -3649,8 +3649,8 @@ h3 {
 }
 
 .purchase-email-copy button {
-  min-height: 33px;
-  padding: 5px 10px;
+  min-height: 44px;
+  padding: 7px 10px;
   border-width: 2px;
   box-shadow: 3px 3px 0 var(--gold-dark);
   font-size: 0.63rem;
@@ -3672,18 +3672,14 @@ h3 {
 .footer-arcade-ticket {
   position: relative;
   display: grid;
-  width: 42px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   place-items: center;
-  overflow: hidden;
-  border: 2px solid #d38b08;
-  background:
-    radial-gradient(circle at 0 50%, #080706 0 4px, transparent 4.5px),
-    radial-gradient(circle at 100% 50%, #080706 0 4px, transparent 4.5px),
-    linear-gradient(135deg, #f3b617, #ffd463 48%, #dd8c04);
+  overflow: visible;
+  border: 0;
+  background: transparent;
   color: #17100b;
-  box-shadow: 3px 3px 0 #6f3800;
   cursor: pointer;
   font-family: Georgia, serif;
   font-size: 1.15rem;
@@ -3691,12 +3687,25 @@ h3 {
   line-height: 1;
   text-decoration: none;
   transform: rotate(-2deg);
-  transition: filter 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  transition: filter 140ms ease, transform 140ms ease;
+}
+
+.footer-arcade-ticket::before {
+  position: absolute;
+  inset: 8px 1px;
+  border: 2px solid #d38b08;
+  background:
+    radial-gradient(circle at 0 50%, #080706 0 4px, transparent 4.5px),
+    radial-gradient(circle at 100% 50%, #080706 0 4px, transparent 4.5px),
+    linear-gradient(135deg, #f3b617, #ffd463 48%, #dd8c04);
+  box-shadow: 3px 3px 0 #6f3800;
+  content: "";
+  transition: box-shadow 140ms ease;
 }
 
 .footer-arcade-ticket::after {
   position: absolute;
-  inset: 3px 6px;
+  inset: 11px 7px;
   border: 1px dashed rgba(23, 16, 11, 0.55);
   content: "";
   pointer-events: none;
@@ -3712,8 +3721,12 @@ h3 {
   filter: brightness(1.16) saturate(1.12);
   outline: 2px solid #ffd463;
   outline-offset: 4px;
-  box-shadow: 5px 6px 0 #6f3800, 0 0 18px rgba(255, 212, 99, 0.38);
   transform: translateY(-3px) rotate(2deg) scale(1.06);
+}
+
+.footer-arcade-ticket:hover::before,
+.footer-arcade-ticket:focus-visible::before {
+  box-shadow: 5px 6px 0 #6f3800, 0 0 18px rgba(255, 212, 99, 0.38);
 }
 
 .reveal-on-scroll {
@@ -4293,7 +4306,7 @@ h3 {
 
   .direct-email-address,
   .direct-email-copy {
-    min-height: 43px;
+    min-height: 44px;
   }
 
   .direct-email-address {
@@ -4303,6 +4316,7 @@ h3 {
 
   .direct-email-copy {
     width: 100%;
+    font-size: 0.66rem;
   }
 
   .reservation-package-selector {
@@ -4457,9 +4471,9 @@ h3 {
     width: 100%;
     max-width: 205px;
     justify-self: stretch;
-    min-height: 36px;
-    padding: 7px 10px;
-    font-size: 0.63rem;
+    min-height: 44px;
+    padding: 9px 10px;
+    font-size: 0.66rem;
   }
 
   .package-or {
@@ -4743,14 +4757,14 @@ h3 {
   .purchase-dialog-close {
     top: 7px;
     right: 8px;
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     font-size: 1.35rem;
   }
 
   .purchase-dialog h2 {
     margin-bottom: 8px;
-    padding-inline: 32px;
+    padding-inline: 44px;
     font-size: clamp(1.22rem, 6.6vw, 1.55rem);
   }
 
@@ -4772,8 +4786,8 @@ h3 {
 
   .purchase-package-options button {
     grid-template-columns: 1fr;
-    min-height: 54px;
-    padding: 4px 3px;
+    min-height: 60px;
+    padding: 6px 4px;
     border-width: 1px;
     text-align: center;
   }
@@ -4784,8 +4798,8 @@ h3 {
   }
 
   .purchase-package-options span {
-    font-size: 0.46rem;
-    line-height: 1.06;
+    font-size: 0.54rem;
+    line-height: 1.12;
   }
 
   .purchase-request {
@@ -4821,8 +4835,8 @@ h3 {
   }
 
   .purchase-copy-button {
-    min-height: 34px;
-    padding: 5px 10px;
+    min-height: 44px;
+    padding: 7px 10px;
     border-width: 2px;
     box-shadow: 3px 3px 0 var(--gold-dark);
     font-size: 0.62rem;
@@ -4836,8 +4850,8 @@ h3 {
 
   .purchase-contact-button {
     gap: 5px;
-    min-height: 42px;
-    padding: 4px 5px;
+    min-height: 44px;
+    padding: 5px;
     border-width: 2px;
     box-shadow: 3px 3px 0 var(--gold-dark);
     font-size: 0.58rem;
@@ -4861,14 +4875,14 @@ h3 {
 
   .purchase-email-copy strong {
     align-self: center;
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     text-align: right;
   }
 
   .purchase-email-copy button {
-    min-height: 31px;
-    padding: 4px 7px;
-    font-size: 0.52rem;
+    min-height: 44px;
+    padding: 7px;
+    font-size: 0.58rem;
   }
 
   .purchase-email-copy [role="status"] {
