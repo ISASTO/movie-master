@@ -1,0 +1,53 @@
+name: More main-site buttons
+
+on:
+  push:
+    branches:
+      - more-main-site-buttons
+    paths:
+      - .github/workflows/main-site-buttons.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: more-main-site-buttons
+          fetch-depth: 0
+
+      - name: Apply production patch
+        run: python .github/scripts/add-main-site-buttons.py
+
+      - name: Validate JavaScript syntax
+        run: node --check game/game.js
+
+      - name: Validate button wiring
+        run: |
+          test "$(grep -o 'id="start-main-site-button"' game/index.html | wc -l)" -eq 1
+          test "$(grep -o 'id="pause-main-site-button"' game/index.html | wc -l)" -eq 1
+          test "$(grep -o 'id="gameover-main-site-button"' game/index.html | wc -l)" -eq 1
+          grep -q 'ui.pauseMainSiteButton.addEventListener("click", openExitConfirmation)' game/game.js
+          grep -q 'ui.startMainSiteButton.addEventListener("click", goToMainSite)' game/game.js
+          grep -q 'ui.gameoverMainSiteButton.addEventListener("click", goToMainSite)' game/game.js
+          grep -q '>GO TO MAIN SITE</button>' game/index.html
+          git diff --check
+
+      - name: Run game benchmark regression
+        run: node benchmarks/game-performance.js
+
+      - name: Commit validated production changes
+        run: |
+          if git diff --quiet -- game/index.html game/game.js; then
+            echo "No production changes to commit."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add game/index.html game/game.js
+          git commit -m "Add more ways back to main site"
+          git push origin HEAD:more-main-site-buttons
