@@ -5377,7 +5377,7 @@ html {
 }
 
 .welcome-banner-copy p {
-  max-width: 880px;
+  max-width: 930px;
   margin: 0 auto;
   color: var(--ink);
   font-size: clamp(1rem, 1.5vw, 1.28rem);
