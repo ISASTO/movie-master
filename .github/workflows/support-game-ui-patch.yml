@@ -20,8 +20,8 @@ jobs:
           ref: support-modal-and-game-layout
           fetch-depth: 0
 
-      - name: Apply combined patch
-        run: python .github/scripts/apply-support-game-ui.py
+      - name: Apply final refinements
+        run: python .github/scripts/refine-support-game-ui.py
 
       - name: Validate JavaScript syntax
         run: |
@@ -36,6 +36,7 @@ jobs:
           grep -q 'data-package="support"' index.html
           grep -q 'GIVE THE MOVIE MASTER MONEY' index.html
           grep -q 'I am interested in giving you money for free to help grow your business.' site-core.js
+          grep -q 'Please provide your PayPal, Venmo, or Cash App payment information. Thank you.' site-core.js
           grep -q 'packageSelector.hidden = isLifetimeInquiry || isSupportInquiry' site-core.js
           grep -q 'Give the Movie Master Money' site-core.js
 
@@ -46,16 +47,17 @@ jobs:
           grep -q '<span>AVOID GARBAGE 🗑️</span>' game/index.html
           grep -q 'BLOCKBUSTER BLAST IS CHARGED' game/index.html
           grep -q 'align-items: start;' game/game.css
-          grep -q 'font-size: clamp(0.76rem, 1.05vw, 0.92rem);' game/game.css
+          grep -q 'font-size: clamp(0.84rem, 1.18vw, 1rem);' game/game.css
+          grep -q 'font-size: clamp(0.78rem, 1.06vw, 0.92rem);' game/game.css
 
       - name: Commit validated production changes
         run: |
-          if git diff --quiet -- index.html site-core.js script.js styles.css game/index.html game/game.css; then
-            echo "No production changes to commit."
+          if git diff --quiet -- site-core.js game/game.css; then
+            echo "No production refinements to commit."
             exit 1
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html site-core.js script.js styles.css game/index.html game/game.css
-          git commit -m "Wire support CTA and refine game instructions"
+          git add site-core.js game/game.css
+          git commit -m "Polish support message and game info readability"
           git push origin HEAD:support-modal-and-game-layout
