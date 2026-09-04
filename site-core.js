@@ -486,124 +486,6 @@
     });
   }
 
-  function setUpReferralSharing() {
-    const launchButton = document.querySelector("#referral-share-launch");
-    const dialog = document.querySelector("#share-dialog");
-    const closeButton = document.querySelector("#share-dialog-close");
-    const textLink = document.querySelector("#share-text-link");
-    const twitterLink = document.querySelector("#share-twitter-link");
-    const facebookLink = document.querySelector("#share-facebook-link");
-    const instagramLink = document.querySelector("#share-instagram-link");
-    const emailLink = document.querySelector("#share-email-link");
-    const nativeButton = document.querySelector("#share-native-button");
-    const copyButton = document.querySelector("#share-copy-button");
-    const status = document.querySelector("#share-status");
-
-    if (
-      !launchButton ||
-      !dialog ||
-      !closeButton ||
-      !textLink ||
-      !twitterLink ||
-      !facebookLink ||
-      !instagramLink ||
-      !emailLink ||
-      !nativeButton ||
-      !copyButton ||
-      !status
-    ) {
-      return;
-    }
-
-    const shareUrl = "https://moviemaster.vip/";
-    const shareMessage =
-      "The Movie Master has the best and most correct movie opinions at very affordable prices. If you buy a recommendation package and tell him I sent you, I get a recommendation for free! Please consider it. It’s worth it.";
-    const messageWithLink = `${shareMessage}\n\n${shareUrl}`;
-    const shareData = {
-      title: "MOVIE MASTER",
-      text: shareMessage,
-      url: shareUrl,
-    };
-    const isAppleMobile =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const smsParameter = isAppleMobile ? "&body=" : "?body=";
-
-    textLink.href = `sms:${smsParameter}${encodeURIComponent(messageWithLink)}`;
-    twitterLink.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(shareUrl)}`;
-    facebookLink.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-    emailLink.href = `mailto:?subject=${encodeURIComponent("You need the Movie Master")}&body=${encodeURIComponent(messageWithLink)}`;
-
-    let nativeShareAvailable = typeof navigator.share === "function";
-    if (nativeShareAvailable && typeof navigator.canShare === "function") {
-      try {
-        nativeShareAvailable = navigator.canShare(shareData);
-      } catch {
-        nativeShareAvailable = false;
-      }
-    }
-    nativeButton.hidden = !nativeShareAvailable;
-
-    const setStatus = (message) => {
-      status.textContent = message;
-    };
-
-    const openDialog = () => {
-      setStatus("");
-      if (typeof dialog.showModal === "function") {
-        if (!dialog.open) dialog.showModal();
-      } else {
-        dialog.setAttribute("open", "");
-        closeButton.focus();
-      }
-    };
-
-    const closeDialog = () => {
-      if (typeof dialog.close === "function") {
-        dialog.close();
-      } else {
-        dialog.removeAttribute("open");
-        launchButton.focus();
-      }
-    };
-
-    launchButton.addEventListener("click", openDialog);
-    closeButton.addEventListener("click", closeDialog);
-    dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) closeDialog();
-    });
-    dialog.addEventListener("close", () => launchButton.focus());
-
-    copyButton.addEventListener("click", async () => {
-      const copied = await copyText(messageWithLink);
-      setStatus(copied ? "MESSAGE AND LINK COPIED" : "SELECT THE MESSAGE ABOVE TO COPY IT");
-      copyButton.focus();
-    });
-
-    [facebookLink, instagramLink].forEach((link) => {
-      link.addEventListener("click", () => {
-        copyText(messageWithLink).then((copied) => {
-          setStatus(
-            copied
-              ? "MESSAGE COPIED — PASTE IT INTO YOUR POST"
-              : "COPY THE MESSAGE ABOVE AND PASTE IT INTO YOUR POST",
-          );
-        });
-      });
-    });
-
-    nativeButton.addEventListener("click", async () => {
-      try {
-        await navigator.share(shareData);
-        setStatus("SHARE WINDOW OPENED");
-      } catch (error) {
-        if (error?.name !== "AbortError") {
-          setStatus("THAT SHARE OPTION ISN’T AVAILABLE — TRY COPY MESSAGE");
-        }
-      }
-    });
-  }
-
   function setUpActionBar() {
     const menuButton = document.querySelector("#mobile-menu-button");
     const menuPanel = document.querySelector("#mobile-nav-panel");
@@ -688,7 +570,6 @@
   setUpTestimonials();
   setUpVisitorCounter();
   setUpPurchaseFlow();
-  setUpReferralSharing();
   setUpEmailCopyButtons();
   setUpActionBar();
 })();
