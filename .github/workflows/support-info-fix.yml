@@ -1,0 +1,55 @@
+name: Support panel + INFO fix
+
+on:
+  push:
+    branches:
+      - support-panel-info-fix
+    paths:
+      - .github/workflows/support-info-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: support-panel-info-fix
+          fetch-depth: 0
+
+      - name: Apply production patch
+        run: python .github/scripts/apply-support-info-fix.py
+
+      - name: Validate whitespace
+        run: git diff --check
+
+      - name: Validate support panel
+        run: |
+          grep -q 'styles.css?v=20260904-support-panel-2' index.html
+          grep -q 'width: min(600px, 100%);' styles.css
+          grep -q 'font-size: clamp(0.92rem, 1.35vw, 1.08rem);' styles.css
+          grep -q 'support-strip::before' styles.css
+
+      - name: Validate INFO structure and copy
+        run: |
+          grep -q 'game.css?v=20260904-info-layout-1' game/index.html
+          test "$(grep -o 'class="info-rule-column"' game/index.html | wc -l)" -eq 2
+          grep -q 'Garbage keeps getting faster and faster as the run goes on.' game/index.html
+          grep -q 'display: contents;' game/game.css
+          grep -q 'info-rule-keep { order: 1; }' game/game.css
+          grep -q 'info-rule-popcorn { order: 2; }' game/game.css
+
+      - name: Commit validated production changes
+        run: |
+          if git diff --quiet -- index.html styles.css game/index.html game/game.css; then
+            echo "No production changes to commit."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html styles.css game/index.html game/game.css
+          git commit -m "Polish support appeal and fix INFO rule layout"
+          git push origin HEAD:support-panel-info-fix
