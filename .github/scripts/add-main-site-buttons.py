@@ -120,8 +120,8 @@ js = replace_once(
 # Keep the static controller-button registry aware of all three additions.
 js = replace_once(
     js,
-    '''    ui.startLeaderboardsButton,\n    ui.startInfoButton,\n    ui.resumeButton,''',
-    '''    ui.startLeaderboardsButton,\n    ui.startInfoButton,\n    ui.startMainSiteButton,\n    ui.resumeButton,\n    ui.pauseMainSiteButton,''',
+    '''    ui.startLeaderboardsButton,\n    ui.startInfoButton,\n    ui.infoCloseButton,\n    ui.resumeButton,''',
+    '''    ui.startLeaderboardsButton,\n    ui.startInfoButton,\n    ui.startMainSiteButton,\n    ui.infoCloseButton,\n    ui.resumeButton,\n    ui.pauseMainSiteButton,''',
     'static controller registry intro/pause',
 )
 
