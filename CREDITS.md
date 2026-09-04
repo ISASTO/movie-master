@@ -2,8 +2,7 @@
 
 ## Movie Master photograph
 
-The Movie Master cutout was supplied by the site owner and is used with their
-permission.
+The Movie Master cutout was supplied by the Movie Master (Robert Cravens) and is used with his permission.
 
 ## Illustrative customer portraits
 
