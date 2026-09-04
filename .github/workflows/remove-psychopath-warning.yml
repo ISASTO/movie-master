@@ -1,0 +1,37 @@
+name: Remove psychopath warning
+
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-psychopath-warning.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove warning block
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text()
+          block = '''            <article class="psychopath-warning reveal-on-scroll">\n              <span class="warning-stripes warning-stripes-left" aria-hidden="true"></span>\n              <p>NO PSYCHOPATHS ALLOWED</p>\n              <span class="warning-stripes warning-stripes-right" aria-hidden="true"></span>\n            </article>\n\n'''
+          if block not in text:
+              raise SystemExit('Expected psychopath warning block not found')
+          path.write_text(text.replace(block, '', 1))
+          PY
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/remove-psychopath-warning.yml
+          git add index.html
+          git commit -m "Remove No Psychopaths Allowed warning"
+          git push
