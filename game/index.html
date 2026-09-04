@@ -24,12 +24,12 @@
     <link rel="icon" href="/assets/images/favicon-192.png" type="image/png" sizes="192x192">
     <link rel="shortcut icon" href="/favicon.ico">
     <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">
-    <link rel="stylesheet" href="./game.css?v=20260902-public-leaderboards">
+    <link rel="stylesheet" href="./game.css?v=20260904-onboarding-1">
     <link rel="stylesheet" href="./leaderboard-upgrades.css?v=20260902-1">
     <script src="../visitor-tracker.js?v=20260902-perf-1" data-visitor-section="game" defer></script>
     <script src="../game-records.js?v=20260902-perf-1" defer></script>
     <script src="./leaderboard.js?v=20260902-perf-2" defer></script>
-    <script src="./game.js?v=20260902-public-leaderboards" defer></script>
+    <script src="./game.js?v=20260904-onboarding-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -54,6 +54,7 @@
           <a id="exit-button" href="https://moviemaster.vip/">EXIT</a>
           <button class="movement-button" id="movement-button" type="button">MOVE: MOUSE</button>
           <button class="quality-button" id="quality-button" type="button">QUALITY: HIGH</button>
+          <button class="info-button" id="info-button" type="button">INFO</button>
           <button id="pause-button" type="button" disabled>PAUSE</button>
           <button id="sound-button" type="button" aria-pressed="true">SOUND ON</button>
         </div>
@@ -140,14 +141,7 @@
 
           <div class="start-copy">
             <h2 id="start-title">MOVIE MASTER vs GARBAGE</h2>
-            <p class="poster-deck">Help! The Movie Master is being attacked by garbage🗑!</p>
-            <div class="rules">
-              <p><b>KEEP MOVING.</b> The Movie Master shoots his recommendation stars automatically while he is in motion.</p>
-              <p><b>COLLECT THE POPCORN.</b> Every 10 in a row makes his recommendation stars faster and larger. Every 20 also makes the Movie Master move faster. At streaks of 100, 200, 300, and 400, every shot gains another star. At 500, a second Blockbuster Blast bar unlocks. In Normal Mode, miss one and more garbage arrives. In Hardcore Mode, miss one and the game ends.</p>
-              <p><b>COLLECT POWER-UPS.</b> Grab Shields, Super Speed, Super Stars, and the Magnet when they appear.</p>
-              <p><b>DO NOT TOUCH GARBAGE.</b> Each hit costs a star. Reach zero stars and you lose. In Hardcore Mode, one unshielded hit ends the game.</p>
-              <p><b>BLOCKBUSTER BLAST.</b> Collect popcorn to charge it. At 100%, press Space, click anywhere in the playable area, or use the gold button to clear the screen.</p>
-            </div>
+            <p class="poster-deck start-quick-copy">COLLECT POPCORN FOR UPGRADES · KEEP MOVING TO SHOOT · AVOID GARBAGE 🗑️</p>
             <div class="controls-line" aria-label="Controls">
               <span><b>MOVE</b> <i id="start-move-copy">FOLLOW THE MOUSE</i></span>
               <span><b>SHOOT</b> <i>AUTOMATIC WHILE MOVING</i></span>
@@ -163,9 +157,39 @@
               <button class="secondary-button leaderboard-open-button" id="start-leaderboards-button" type="button">
                 LEADERBOARDS
               </button>
+              <button class="secondary-button" id="start-info-button" type="button">
+                INFO
+              </button>
             </div>
             <p class="hardcore-warning" id="start-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
             <p class="start-best">BEST SCORE <strong class="fit-number" id="start-best">0</strong></p>
+          </div>
+        </section>
+      </div>
+
+      <div class="game-overlay info-overlay" id="info-overlay" hidden>
+        <section class="info-panel" aria-labelledby="info-title">
+          <p class="poster-kicker">FULL INSTRUCTIONS</p>
+          <h2 id="info-title">HOW TO PLAY</h2>
+          <p class="info-summary">Collect popcorn. Keep moving. Avoid garbage. Everything else is below.</p>
+
+          <div class="info-rules">
+            <p><b>KEEP MOVING.</b> The Movie Master shoots his recommendation stars automatically while he is in motion. He will still defend himself against very close garbage while standing still.</p>
+            <p><b>COLLECT THE POPCORN.</b> Every 10 in a row upgrades the recommendation stars. Every 20 also upgrades movement speed. At streaks of 100, 200, 300, and 400, every shot gains another star. At 500, a second Blockbuster Blast bar unlocks. In Normal Mode, missing popcorn summons more garbage. In Hardcore Mode, one miss ends the game.</p>
+            <p><b>COLLECT POWER-UPS.</b> Shields block up to three hits, Super Speed makes the Movie Master much faster, Super Stars fire in every direction, and the Magnet pulls nearby popcorn and power-ups toward you.</p>
+            <p><b>AVOID GARBAGE.</b> Each unshielded hit costs a rating star. Reach zero and the run ends. In Hardcore Mode, one unshielded hit ends the game.</p>
+            <p><b>USE BLOCKBUSTER BLAST.</b> Popcorn and destroyed garbage charge the meter. At 100%, press Space, click the playable area, use a gamepad blast button, or press the gold button to clear the screen.</p>
+          </div>
+
+          <div class="info-controls" aria-label="Full controls">
+            <div><b>MOVE</b><span>Mouse · WASD / arrows · touch joystick · gamepad</span></div>
+            <div><b>SHOOT</b><span>Automatic while moving</span></div>
+            <div><b>BLAST</b><span>Space · click · gold button · gamepad</span></div>
+            <div><b>PAUSE</b><span>P · Escape · pause button · gamepad menu button</span></div>
+          </div>
+
+          <div class="run-actions">
+            <button class="primary-button" id="info-close-button" type="button">CLOSE</button>
           </div>
         </section>
       </div>
