@@ -5488,3 +5488,29 @@ html {
     font-size: clamp(1.8rem, 11vw, 2.75rem);
   }
 }
+
+
+/* Support CTA uses the site's established package-button language. */
+.support-money-button {
+  display: inline-flex;
+  width: auto;
+  max-width: min(100%, 520px);
+  min-height: 52px;
+  align-items: center;
+  justify-content: center;
+  justify-self: auto;
+  margin-inline: auto;
+  padding: 12px 22px;
+  font-size: clamp(0.86rem, 1.35vw, 1.08rem);
+  letter-spacing: 0.07em;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .support-money-button {
+    width: 100%;
+    max-width: 340px;
+    min-height: 48px;
+    padding-inline: 14px;
+  }
+}

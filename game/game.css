@@ -2566,3 +2566,92 @@ strong.fit-number {
     min-height: calc(100dvh - 16px);
   }
 }
+
+
+/* Readability refinements for the concise onboarding and INFO screen. */
+.start-quick-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.start-quick-copy > span {
+  display: block;
+}
+
+.start-quick-copy .start-blast-copy {
+  margin-top: 5px;
+  color: var(--gold-dark);
+  font-size: 0.86em;
+  letter-spacing: 0.055em;
+}
+
+/* Do not stretch short instruction cards to the height of their grid partner. */
+.info-rules {
+  align-items: start;
+}
+
+.info-rules p {
+  align-self: start;
+}
+
+/* Controls are reference information, not fine print. */
+.info-controls > div {
+  gap: 7px;
+  padding: 12px 10px;
+}
+
+.info-controls b {
+  font-size: clamp(0.76rem, 1.05vw, 0.92rem);
+  letter-spacing: 0.1em;
+}
+
+.info-controls span {
+  font-size: clamp(0.7rem, 0.95vw, 0.84rem);
+  line-height: 1.32;
+}
+
+@media (max-width: 720px) {
+  .start-quick-copy {
+    gap: 1px;
+  }
+
+  .start-quick-copy .start-blast-copy {
+    margin-top: 4px;
+  }
+
+  .info-controls b {
+    font-size: 0.78rem;
+  }
+
+  .info-controls span {
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) and (min-width: 520px) {
+  .start-quick-copy {
+    gap: 0;
+    font-size: 0.62rem;
+    line-height: 1.18;
+  }
+
+  .start-quick-copy .start-blast-copy {
+    margin-top: 2px;
+    font-size: 0.9em;
+  }
+
+  .info-controls > div {
+    gap: 3px;
+    padding: 6px;
+  }
+
+  .info-controls b {
+    font-size: 0.62rem;
+  }
+
+  .info-controls span {
+    font-size: 0.58rem;
+    line-height: 1.2;
+  }
+}
