@@ -378,7 +378,7 @@
       vip:
         "Hello Mr. Movie Master sir. I am interested in purchasing the Movie Master VIP Package for $20. It includes 20 Blockbuster Smash Hit Masterpieces, 3 of the best R&B music videos ever made, and a VIP certificate to prove my VIP status. Please provide your payment information so I can pay you via PayPal, Venmo, or Cash App. Thank you.",
       support:
-        "Hello Mr. Movie Master, sir. I am interested in giving you money for free to help grow your business. I do not require any movie recommendations in return. Please provide your PayPal, Venmo, or Cash App payment information so I can pay you. Thank you.",
+        "Hello Mr. Movie Master, sir. I am interested in giving you money for free to help grow your business. I do not require any movie recommendations in return. Please provide your PayPal, Venmo, or Cash App payment information. Thank you.",
       lifetime:
         "Hello Mr. Movie Master sir. I am interested in applying for the Ultimate Lifetime Membership for $1,000,000. I understand that membership requires your personal approval. Please tell me what I must do to prove that I am worthy. Thank you.",
     };

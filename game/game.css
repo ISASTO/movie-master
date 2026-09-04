@@ -2602,12 +2602,12 @@ strong.fit-number {
 }
 
 .info-controls b {
-  font-size: clamp(0.76rem, 1.05vw, 0.92rem);
+  font-size: clamp(0.84rem, 1.18vw, 1rem);
   letter-spacing: 0.1em;
 }
 
 .info-controls span {
-  font-size: clamp(0.7rem, 0.95vw, 0.84rem);
+  font-size: clamp(0.78rem, 1.06vw, 0.92rem);
   line-height: 1.32;
 }
 
@@ -2621,11 +2621,11 @@ strong.fit-number {
   }
 
   .info-controls b {
-    font-size: 0.78rem;
+    font-size: 0.84rem;
   }
 
   .info-controls span {
-    font-size: 0.72rem;
+    font-size: 0.78rem;
   }
 }
 
