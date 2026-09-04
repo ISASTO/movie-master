@@ -51,3 +51,5 @@ jobs:
           git add game/index.html game/game.js
           git commit -m "Add more ways back to main site"
           git push origin HEAD:more-main-site-buttons
+
+# rerun after correcting exact controller-registry patch context
