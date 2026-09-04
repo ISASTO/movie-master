@@ -1123,7 +1123,7 @@
       ].filter((button, index, items) => button && items.indexOf(button) === index);
     }
     if (gameState === "ready") {
-      return [ui.startButton, ui.startModeButton, ui.startLeaderboardsButton];
+      return [ui.startButton, ui.startModeButton, ui.startLeaderboardsButton, ui.startInfoButton];
     }
     if (gameState === "paused") return [ui.resumeButton, ui.resetButton, ui.endButton];
     if (gameState === "reset-confirm") return [ui.resetCancelButton, ui.resetConfirmButton];
@@ -1280,6 +1280,7 @@
     hideResumeCountdown();
     clearControllerSelection();
     ui.startOverlay.hidden = true;
+    ui.infoOverlay.hidden = true;
     ui.pauseOverlay.hidden = true;
     ui.resetConfirmOverlay.hidden = true;
     ui.endConfirmOverlay.hidden = true;
@@ -3145,6 +3146,7 @@
     if (
       pausePressed
       && !gamepadPausePressed
+      && ui.infoOverlay.hidden
       && (gameState === "running" || gameState === "paused" || gameState === "resuming")
     ) {
       togglePause();
@@ -5044,7 +5046,10 @@
       event.preventDefault();
       cancelExitConfirmation();
     } else if (event.code === "KeyP" || event.code === "Escape") {
-      if (gameState === "running" || gameState === "paused" || gameState === "resuming") {
+      if (
+        ui.infoOverlay.hidden
+        && (gameState === "running" || gameState === "paused" || gameState === "resuming")
+      ) {
         event.preventDefault();
         togglePause();
       }

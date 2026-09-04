@@ -2551,3 +2551,18 @@ strong.fit-number {
     font-size: 0.5rem;
   }
 }
+
+
+/* Preserve the compact start poster on short desktop/landscape screens. */
+@media (max-height: 650px) and (min-width: 721px) {
+  .start-poster {
+    min-height: 0;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) and (min-width: 520px) {
+  .start-poster {
+    min-height: calc(100vh - 16px);
+    min-height: calc(100dvh - 16px);
+  }
+}
