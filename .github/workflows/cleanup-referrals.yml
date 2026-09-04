@@ -1,0 +1,275 @@
+name: One-time referral cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/cleanup-referrals.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clean source files
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def require_sub(pattern, replacement, text, label, count=1, flags=0):
+              new_text, n = re.subn(pattern, replacement, text, count=count, flags=flags)
+              if n != count:
+                  raise SystemExit(f"{label}: expected {count} replacement(s), got {n}")
+              return new_text
+
+          # ----- index.html -----
+          index_path = Path("index.html")
+          html = index_path.read_text(encoding="utf-8")
+
+          html = require_sub(
+              r'\n\s*<a class="package-referral-link[^>]*>.*?</a>\s*\n',
+              "\n",
+              html,
+              "package referral CTA",
+              flags=re.S,
+          )
+
+          html = require_sub(
+              r'\n\s*<section class="section referral-section".*?</section>\s*\n',
+              "\n",
+              html,
+              "referral section",
+              flags=re.S,
+          )
+
+          html = require_sub(
+              r'(<article class="samples-notice.*?<div class="samples-copy">\s*<h3>NO FREE SAMPLES WILL BE GIVEN</h3>\s*)<p>.*?</p>',
+              r'\1<p>\n                  Quality Blockbuster Smash Hit Masterpiece recommendations are provided only to paying\n                  customers. Do not attempt to scam the Movie Master into giving you free recommendations.\n                </p>',
+              html,
+              "free samples copy",
+              flags=re.S,
+          )
+
+          old_streaming = '<p>No. Go to the library or use a hack website or something.</p>'
+          new_streaming = (
+              '<p>\n'
+              '                The Movie Master will specifically recommend movies that are <strong>not</strong> on your\n'
+              '                streaming services, as streaming services do not provide quality movies. You can get\n'
+              '                movies from the library, or you can search on Google where to watch his recommendations.\n'
+              '              </p>'
+          )
+          if html.count(old_streaming) != 1:
+              raise SystemExit(f"streaming FAQ: expected 1 old answer, got {html.count(old_streaming)}")
+          html = html.replace(old_streaming, new_streaming, 1)
+
+          html = require_sub(
+              r'(<section class="section testimonials-section" id="testimonials">.*?<p class="section-intro">).*?(</p>)',
+              r'\1\n              The Movie Master has many satisfied customers. Only one of the testimonials below is real,\n              but the rest might plausibly be said at some point in the future.\n            \2',
+              html,
+              "testimonial intro",
+              flags=re.S,
+          )
+
+          html = require_sub(
+              r'<p class="testimonial-disclaimer">.*?</p>',
+              '<p class="testimonial-disclaimer">\n            Disclaimer: Exactly one testimonial is real. All others are fabricated.\n            Customer portraits are illustrative.\n          </p>',
+              html,
+              "testimonial disclaimer",
+              flags=re.S,
+          )
+
+          old_refund_heading = '<h3>ABSOLUTELY NO REFUNDS WHATSOEVER</h3>'
+          if html.count(old_refund_heading) != 1:
+              raise SystemExit(f"refund heading: expected 1 old heading, got {html.count(old_refund_heading)}")
+          html = html.replace(
+              old_refund_heading,
+              '<h3>ABSOLUTELY NO REFUNDS WHATSOEVER*</h3>',
+              1,
+          )
+
+          refund_tail = (
+              '                  circumstances.\n'
+              '                </p>'
+          )
+          refund_replacement = (
+              refund_tail
+              + '\n                <p class="refund-legal-exception">*Except where required by law.</p>'
+          )
+          if html.count(refund_tail) != 1:
+              raise SystemExit(f"refund paragraph: expected 1 target, got {html.count(refund_tail)}")
+          html = html.replace(refund_tail, refund_replacement, 1)
+
+          html = require_sub(
+              r'\n\s*<dialog\s+class="purchase-dialog share-dialog".*?</dialog>\s*(?=</body>)',
+              "\n  ",
+              html,
+              "referral share dialog",
+              flags=re.S,
+          )
+
+          index_path.write_text(html, encoding="utf-8")
+
+          # ----- script.js: remove the temporary DOM-patching workaround -----
+          Path("script.js").write_text(
+              '''(() => {\n  "use strict";\n\n  const load = (src) => {\n    const script = document.createElement("script");\n    script.src = src;\n    script.async = true;\n    document.head.append(script);\n  };\n\n  load("./site-core.js?v=20260904-cleanup-1");\n  load("./payment-options.js?v=20260901-1");\n  load("./store-click.js?v=20260901-1");\n})();\n''',
+              encoding="utf-8",
+          )
+
+          # ----- site-core.js: remove dead referral sharing behavior -----
+          core_path = Path("site-core.js")
+          core = core_path.read_text(encoding="utf-8")
+          core = require_sub(
+              r'\n  function setUpReferralSharing\(\) \{.*?\n  function setUpActionBar\(\)',
+              '\n  function setUpActionBar()',
+              core,
+              "referral sharing function",
+              flags=re.S,
+          )
+          if core.count('  setUpReferralSharing();\n') != 1:
+              raise SystemExit("referral sharing initializer not found exactly once")
+          core = core.replace('  setUpReferralSharing();\n', '', 1)
+          core_path.write_text(core, encoding="utf-8")
+
+          # ----- styles.css: remove selectors used only by the deleted referral/share UI -----
+          css_path = Path("styles.css")
+          css = css_path.read_text(encoding="utf-8")
+
+          def find_open_brace(text, start):
+              i = start
+              quote = None
+              while i < len(text):
+                  if text.startswith('/*', i) and quote is None:
+                      end = text.find('*/', i + 2)
+                      if end == -1:
+                          return -1
+                      i = end + 2
+                      continue
+                  ch = text[i]
+                  if quote:
+                      if ch == '\\':
+                          i += 2
+                          continue
+                      if ch == quote:
+                          quote = None
+                  elif ch in ('"', "'"):
+                      quote = ch
+                  elif ch == '{':
+                      return i
+                  i += 1
+              return -1
+
+          def find_matching_brace(text, opening):
+              depth = 1
+              i = opening + 1
+              quote = None
+              while i < len(text):
+                  if text.startswith('/*', i) and quote is None:
+                      end = text.find('*/', i + 2)
+                      if end == -1:
+                          raise SystemExit("unterminated CSS comment")
+                      i = end + 2
+                      continue
+                  ch = text[i]
+                  if quote:
+                      if ch == '\\':
+                          i += 2
+                          continue
+                      if ch == quote:
+                          quote = None
+                  elif ch in ('"', "'"):
+                      quote = ch
+                  elif ch == '{':
+                      depth += 1
+                  elif ch == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return i
+                  i += 1
+              raise SystemExit("unbalanced CSS braces")
+
+          dead_selector_terms = ('.referral', '.package-referral', '.rules-referral', '.share-')
+
+          def clean_css_segment(segment):
+              out = []
+              pos = 0
+              while True:
+                  opening = find_open_brace(segment, pos)
+                  if opening == -1:
+                      out.append(segment[pos:])
+                      break
+                  closing = find_matching_brace(segment, opening)
+                  prelude = segment[pos:opening]
+                  body = segment[opening + 1:closing]
+                  stripped = prelude.strip()
+
+                  if stripped.startswith(('@media', '@supports', '@container', '@layer')):
+                      cleaned_body = clean_css_segment(body)
+                      if cleaned_body.strip():
+                          out.append(prelude + '{' + cleaned_body + '}')
+                  elif stripped.startswith('@'):
+                      out.append(prelude + '{' + body + '}')
+                  else:
+                      leading = prelude[: len(prelude) - len(prelude.lstrip())]
+                      selectors = [part.strip() for part in stripped.split(',') if part.strip()]
+                      kept = [
+                          selector
+                          for selector in selectors
+                          if not any(term in selector for term in dead_selector_terms)
+                      ]
+                      if kept:
+                          if len(kept) == len(selectors):
+                              out.append(prelude + '{' + body + '}')
+                          else:
+                              out.append(leading + ',\n'.join(kept) + ' {' + body + '}')
+                      else:
+                          out.append(leading)
+                  pos = closing + 1
+              return ''.join(out)
+
+          css = clean_css_segment(css)
+
+          refund_rule = '''\n.refund-legal-exception {\n  margin-top: 0.35rem;\n  color: var(--purple-dark);\n  font-size: 0.82em;\n}\n'''
+          marker = '''.refund-notice h3 {\n  margin-bottom: 12px;\n  color: var(--purple-dark);\n  font-size: clamp(1.35rem, 2.4vw, 2.05rem);\n}\n'''
+          if marker not in css:
+              raise SystemExit("refund heading CSS marker not found")
+          css = css.replace(marker, marker + refund_rule, 1)
+          css = re.sub(r'\n{4,}', '\n\n\n', css)
+          css_path.write_text(css, encoding="utf-8")
+
+          # The one-time workflow removes itself so no cleanup machinery is left behind.
+          workflow = Path('.github/workflows/cleanup-referrals.yml')
+          if workflow.exists():
+              workflow.unlink()
+          PY
+
+      - name: Verify cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE 'referral|share-dialog|share-message|share-option|share-copy|share-platform|share-status' \
+            --exclude-dir=.git .; then
+            echo "Referral/share remnants remain."
+            exit 1
+          fi
+          grep -F "search on Google where to watch his recommendations" index.html
+          grep -F "ABSOLUTELY NO REFUNDS WHATSOEVER*" index.html
+          grep -F "Only one of the testimonials below is real" index.html
+          test "$(wc -l < script.js)" -lt 25
+
+      - name: Commit cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove referral program source and finalize legal copy"
+          git push origin HEAD:main
