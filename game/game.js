@@ -3082,35 +3082,18 @@
     setControllerInputActive(false);
   }
 
-  function supportsGamepadHapticEffect(actuator, effectType) {
-    try {
-      if (typeof actuator?.canPlayEffectType === "function") {
-        return Boolean(actuator.canPlayEffectType(effectType));
-      }
-      if (typeof actuator?.effects?.includes === "function") {
-        return actuator.effects.includes(effectType);
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   async function playGamepadHaptic(actuator, settings) {
     if (!actuator) return false;
 
-    if (
-      typeof actuator.playEffect === "function"
-      && supportsGamepadHapticEffect(actuator, "dual-rumble")
-    ) {
+    if (typeof actuator.playEffect === "function") {
       try {
-        await actuator.playEffect("dual-rumble", {
+        const result = await actuator.playEffect("dual-rumble", {
           startDelay: 0,
           duration: settings.duration,
           weakMagnitude: settings.weakMagnitude,
           strongMagnitude: settings.strongMagnitude,
         });
-        return true;
+        if (result !== false) return true;
       } catch {
         // Try the legacy pulse API or another actuator exposed by the browser.
       }
@@ -3133,13 +3116,31 @@
 
   function vibrateGamepad(cue, sourceGamepad = null) {
     const settings = GAMEPAD_RUMBLE[cue];
-    if (!settings) return;
+    if (!settings) return false;
 
-    const sourceIsGamepad = sourceGamepad
-      && Number.isInteger(sourceGamepad.index)
-      && sourceGamepad.connected !== false;
-    const gamepad = sourceIsGamepad ? sourceGamepad : chooseActiveGamepad();
-    if (!gamepad) return;
+    let refreshedSource = null;
+    if (Number.isInteger(sourceGamepad?.index)) {
+      const gamepads = readConnectedGamepads();
+      for (let index = 0; index < gamepads.length; index += 1) {
+        const candidate = gamepads[index];
+        if (
+          candidate
+          && candidate.connected !== false
+          && candidate.index === sourceGamepad.index
+        ) {
+          refreshedSource = candidate;
+          break;
+        }
+      }
+    }
+
+    // Gamepad objects are snapshots. Virtual XInput pads may be recreated by
+    // DS4Windows between input and feedback, so prefer the newest object for
+    // the source slot before falling back to the currently active controller.
+    const gamepad = refreshedSource
+      || chooseActiveGamepad()
+      || (sourceGamepad && sourceGamepad.connected !== false ? sourceGamepad : null);
+    if (!gamepad) return false;
 
     const actuators = [];
     const addActuator = (actuator) => {
@@ -3150,12 +3151,13 @@
     for (let index = 0; index < (legacyActuators?.length || 0); index += 1) {
       addActuator(legacyActuators[index]);
     }
-    if (actuators.length === 0) return;
+    if (actuators.length === 0) return false;
 
-    void (async () => {
+    return (async () => {
       for (const actuator of actuators) {
-        if (await playGamepadHaptic(actuator, settings)) return;
+        if (await playGamepadHaptic(actuator, settings)) return true;
       }
+      return false;
     })();
   }
 

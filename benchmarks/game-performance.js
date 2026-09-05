@@ -391,6 +391,10 @@ const hook = String.raw`
       pollGamepad(now);
     },
 
+    vibrateGamepadForTest(cue, sourceGamepad = null) {
+      return vibrateGamepad(cue, sourceGamepad);
+    },
+
     selectedMenuButton() {
       return controllerSelectedButton?.id || null;
     },
@@ -640,6 +644,8 @@ function createMockController({
   pressedButtons = [],
   id = "Xbox 360 Controller (XInput STANDARD GAMEPAD)",
   mapping = "standard",
+  vibrationActuator,
+  hapticActuators,
 } = {}) {
   const pressed = new Set(pressedButtons);
   return {
@@ -652,6 +658,8 @@ function createMockController({
       pressed: pressed.has(index),
       value: pressed.has(index) ? 1 : 0,
     })),
+    vibrationActuator,
+    hapticActuators,
   };
 }
 
@@ -659,7 +667,7 @@ function setMockControllerInput(axisX = 0, axisY = 0, pressedButtons = []) {
   mockGamepads = [createMockController({ axisX, axisY, pressedButtons })];
 }
 
-function verifyControllerMenuNavigation() {
+async function verifyControllerMenuNavigation() {
   const expectSelection = (expected, message) => {
     assert.equal(game.selectedMenuButton(), expected, message);
   };
@@ -779,14 +787,89 @@ function verifyControllerMenuNavigation() {
     "Engaged XInput should take over from a neutral physical controller",
   );
 
+  const directHapticCalls = [];
+  const directActuator = {
+    effects: [],
+    async playEffect(type, parameters) {
+      directHapticCalls.push({ type, parameters });
+      return "complete";
+    },
+  };
+  const directXInput = createMockController({
+    index: 1,
+    vibrationActuator: directActuator,
+  });
+  mockGamepads = [null, directXInput];
+  await game.vibrateGamepadForTest("blast", directXInput);
+  assert.equal(
+    directHapticCalls.length,
+    1,
+    "XInput rumble should try playEffect even when effect metadata is empty",
+  );
+  assert.equal(directHapticCalls[0].type, "dual-rumble");
+  assert.equal(directHapticCalls[0].parameters.startDelay, 0);
+  assert.equal(directHapticCalls[0].parameters.duration, 130);
+  assert.equal(directHapticCalls[0].parameters.weakMagnitude, 0.3);
+  assert.equal(
+    directHapticCalls[0].parameters.strongMagnitude,
+    0.5,
+    "XInput rumble should preserve the intended dual-motor effect",
+  );
+
+  const refreshedHapticCalls = [];
+  const refreshedXInput = createMockController({
+    index: 2,
+    vibrationActuator: {
+      effects: ["dual-rumble"],
+      async playEffect() {
+        refreshedHapticCalls.push("playEffect");
+        return "complete";
+      },
+    },
+  });
+  const staleXInputSnapshot = createMockController({ index: 2 });
+  mockGamepads = [null, null, refreshedXInput];
+  await game.vibrateGamepadForTest("hit", staleXInputSnapshot);
+  assert.deepEqual(
+    refreshedHapticCalls,
+    ["playEffect"],
+    "Rumble should refresh a recreated virtual controller before using its actuator",
+  );
+
+  const fallbackCalls = [];
+  const fallbackActuator = {
+    effects: ["dual-rumble"],
+    async playEffect() {
+      fallbackCalls.push("playEffect");
+      return false;
+    },
+    async pulse(magnitude, duration) {
+      fallbackCalls.push({ magnitude, duration });
+      return true;
+    },
+  };
+  const fallbackXInput = createMockController({
+    index: 3,
+    vibrationActuator: fallbackActuator,
+  });
+  mockGamepads = [null, null, null, fallbackXInput];
+  await game.vibrateGamepadForTest("shield", fallbackXInput);
+  assert.equal(fallbackCalls[0], "playEffect");
+  assert.deepEqual(
+    fallbackCalls[1],
+    { magnitude: 0.46, duration: 110 },
+    "A failed dual-rumble result should fall back to the legacy pulse API",
+  );
+
   return {
     threshold: 0.64,
     releaseThreshold: 0.3,
     neutralDwellMs: 85,
     initialRepeatDelayMs: 170,
     repeatIntervalMs: 170,
-    checks: 21,
+    checks: 30,
     xinputDiscoveryChecks: 9,
+    xinputHapticsChecks: 9,
   };
 }
 
@@ -1095,7 +1178,7 @@ async function recordCpuProfile(scenario, directory) {
 
 async function main() {
   if (verifyControllerMenu) {
-    const verification = verifyControllerMenuNavigation();
+    const verification = await verifyControllerMenuNavigation();
     process.stdout.write(`${JSON.stringify({ controllerMenu: verification }, null, 2)}\n`);
     return;
   }

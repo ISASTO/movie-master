@@ -41,7 +41,9 @@ node --expose-gc benchmarks/game-performance.js \
 Verify controller-menu thresholds, neutral re-arming, held-stick repeat timing,
 stick springback rejection, D-pad navigation, sparse XInput discovery without a
 connection event, virtual-controller recreation, and physical-to-virtual pad
-handoff:
+handoff. The same verification also covers fresh-snapshot XInput rumble,
+capability-metadata mismatches, dual-motor parameters, and the legacy pulse
+fallback:
 
 ```sh
 node benchmarks/game-performance.js --verify-controller-menu
