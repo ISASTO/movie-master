@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="./analytics.css?v=20260905-hierarchy-1">
     <link rel="stylesheet" href="./details.css?v=20260905-hierarchy-1">
     <link rel="stylesheet" href="./traffic-series.css?v=20260901-2">
-    <link rel="stylesheet" href="./mode-leaderboards.css?v=20260905-hierarchy-1">
+    <link rel="stylesheet" href="./mode-leaderboards.css?v=20260905-hierarchy-2">
     <link rel="stylesheet" href="./run-details-overrides.css?v=20260902-1">
     <script src="./fetch-shim.js?v=20260902-perf-1" defer></script>
     <script src="./dashboard.js?v=20260905-hierarchy-1" defer></script>
@@ -262,7 +262,7 @@
           </div>
           <nav class="section-jump-nav" aria-label="Game dashboard sections">
             <a href="#game-overview">OVERVIEW</a>
-            <a href="#leaderboard-title">LEADERBOARDS</a>
+            <a href="#leaderboards">LEADERBOARDS</a>
             <a href="#recent-runs">RECENT RUNS</a>
             <a href="#gameplay-totals">TOTALS</a>
           </nav>
@@ -328,7 +328,7 @@
           </div>
         </section>
 
-        <section class="detail-panel leaderboard-panel" aria-labelledby="leaderboard-title">
+        <section class="detail-panel leaderboard-panel" id="leaderboards" aria-labelledby="leaderboard-title">
           <div class="detail-panel-heading"><div><p class="eyebrow">HIGH SCORES BY DIFFICULTY</p><h3 id="leaderboard-title">LEADERBOARDS</h3></div></div>
           <div class="mode-leaderboard-grid" id="mode-leaderboard-grid">
             <section class="mode-leaderboard-board" aria-labelledby="leaderboard-standard-title">

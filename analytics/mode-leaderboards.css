@@ -1,6 +1,7 @@
 .mode-leaderboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 1rem;
   margin-top: 1rem;
 }
@@ -243,7 +244,7 @@
   display: block;
   margin-bottom: 0.35rem;
   color: var(--muted);
-  font-size: 0.58rem;
+  font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.08em;
 }
@@ -262,6 +263,12 @@
 .run-detail-hero strong {
   color: var(--gold);
   font-size: clamp(1.3rem, 2.8vw, 2.3rem);
+}
+
+.run-detail-meta > div:nth-child(9),
+.run-detail-meta > div:nth-child(10),
+.run-detail-stats > div:last-child {
+  grid-column: span 2;
 }
 
 .run-detail-subtitle {
@@ -315,6 +322,11 @@
   .run-detail-meta,
   .run-detail-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .run-detail-meta > div:nth-child(9),
+  .run-detail-meta > div:nth-child(10) {
+    grid-column: auto;
   }
 }
 
@@ -462,6 +474,10 @@
   .run-detail-hero,
   .run-detail-powerups {
     grid-template-columns: 1fr;
+  }
+
+  .run-detail-stats > div:last-child {
+    grid-column: auto;
   }
 
   .run-detail-run-id {
