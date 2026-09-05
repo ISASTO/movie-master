@@ -27,7 +27,6 @@
 html {
   min-width: 280px;
   background: var(--paper);
-  scroll-behavior: smooth;
 }
 
 body {

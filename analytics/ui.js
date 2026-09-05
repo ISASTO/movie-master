@@ -8,6 +8,7 @@
       .map((tab) => [tab.dataset.dashboardTab, document.getElementById(tab.dataset.dashboardTab)])
       .filter(([, section]) => section),
   );
+  let activeScrollFrame = null;
 
   const easeOutCubic = (progress) => 1 - ((1 - progress) ** 3);
 
@@ -55,6 +56,10 @@
   }
 
   function scrollToTarget(target, { focus = false } = {}) {
+    if (activeScrollFrame !== null) {
+      window.cancelAnimationFrame(activeScrollFrame);
+      activeScrollFrame = null;
+    }
     openDisclosurePath(target);
     const stickyHeight = document.querySelector(".dashboard-tabs")?.offsetHeight ?? 0;
     const destination = Math.max(
@@ -81,12 +86,13 @@
       const progress = Math.min(1, (now - startTime) / duration);
       window.scrollTo(0, start + distance * easeOutCubic(progress));
       if (progress < 1) {
-        window.requestAnimationFrame(frame);
+        activeScrollFrame = window.requestAnimationFrame(frame);
       } else {
+        activeScrollFrame = null;
         finish();
       }
     };
-    window.requestAnimationFrame(frame);
+    activeScrollFrame = window.requestAnimationFrame(frame);
   }
 
   function showTarget(target, { focus = false, focusTab = false } = {}) {
