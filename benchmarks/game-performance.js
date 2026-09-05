@@ -395,6 +395,16 @@ const hook = String.raw`
       return controllerSelectedButton?.id || null;
     },
 
+    controllerState() {
+      return {
+        activeGamepadIndex,
+        controllerInputActive,
+        moveX: gamepadMove.x,
+        moveY: gamepadMove.y,
+        movementActive: gamepadMove.active,
+      };
+    },
+
     counts() {
       return {
         enemies: enemies.length,
@@ -623,17 +633,30 @@ vm.createContext(context);
 vm.runInContext(instrumented, context, { filename: "game.js" });
 const game = context.__performanceGame;
 
-function setMockControllerInput(axisX = 0, axisY = 0, pressedButtons = []) {
+function createMockController({
+  index = 0,
+  axisX = 0,
+  axisY = 0,
+  pressedButtons = [],
+  id = "Xbox 360 Controller (XInput STANDARD GAMEPAD)",
+  mapping = "standard",
+} = {}) {
   const pressed = new Set(pressedButtons);
-  mockGamepads = [{
-    index: 0,
+  return {
+    id,
+    index,
     connected: true,
+    mapping,
     axes: [axisX, axisY],
     buttons: Array.from({ length: 16 }, (_, index) => ({
       pressed: pressed.has(index),
       value: pressed.has(index) ? 1 : 0,
     })),
-  }];
+  };
+}
+
+function setMockControllerInput(axisX = 0, axisY = 0, pressedButtons = []) {
+  mockGamepads = [createMockController({ axisX, axisY, pressedButtons })];
 }
 
 function verifyControllerMenuNavigation() {
@@ -697,13 +720,73 @@ function verifyControllerMenuNavigation() {
   game.pollGamepadAt(117);
   expectSelection("resume-button", "D-pad input should re-arm after release");
 
+  game.setupControllerMenu();
+  mockGamepads = [];
+  game.pollGamepadAt(0);
+  let controllerState = game.controllerState();
+  assert.equal(
+    controllerState.activeGamepadIndex,
+    null,
+    "An empty GamepadList should not retain an active controller slot",
+  );
+  assert.equal(
+    controllerState.controllerInputActive,
+    false,
+    "An empty GamepadList should leave controller input inactive",
+  );
+  assert.equal(controllerState.movementActive, false);
+
+  mockGamepads = [null, createMockController({ index: 1, axisX: 0.8 })];
+  game.pollGamepadAt(16);
+  assert.equal(
+    game.controllerState().activeGamepadIndex,
+    1,
+    "A sparse virtual XInput pad should be discovered without a connection event",
+  );
+  assert.equal(
+    game.controllerState().controllerInputActive,
+    true,
+    "Input from a newly exposed virtual XInput pad should activate controller mode",
+  );
+
+  mockGamepads = [];
+  game.pollGamepadAt(32);
+  assert.equal(
+    game.controllerState().activeGamepadIndex,
+    null,
+    "Removing a virtual pad should clear its active slot",
+  );
+  mockGamepads = [null, null, createMockController({ index: 2, axisY: 0.8 })];
+  game.pollGamepadAt(48);
+  assert.equal(
+    game.controllerState().activeGamepadIndex,
+    2,
+    "A recreated virtual XInput pad should be discovered at its new slot",
+  );
+
+  game.setupControllerMenu();
+  mockGamepads = [createMockController({ index: 0, axisX: 0.8 })];
+  game.pollGamepadAt(0);
+  assert.equal(game.controllerState().activeGamepadIndex, 0);
+  mockGamepads = [
+    createMockController({ index: 0 }),
+    createMockController({ index: 1, axisY: 0.8 }),
+  ];
+  game.pollGamepadAt(16);
+  assert.equal(
+    game.controllerState().activeGamepadIndex,
+    1,
+    "Engaged XInput should take over from a neutral physical controller",
+  );
+
   return {
     threshold: 0.64,
     releaseThreshold: 0.3,
     neutralDwellMs: 85,
     initialRepeatDelayMs: 170,
     repeatIntervalMs: 170,
-    checks: 12,
+    checks: 21,
+    xinputDiscoveryChecks: 9,
   };
 }
 
