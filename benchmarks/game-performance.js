@@ -25,6 +25,7 @@ const scenarioFilter = readOption("scenario");
 const sampleCount = readIntegerOption("samples", 25);
 const warmupCount = readIntegerOption("warmups", 7);
 const verifyControllerMenu = process.argv.includes("--verify-controller-menu");
+const verifyPopcornWarning = process.argv.includes("--verify-popcorn-warning");
 const source = fs.readFileSync(path.join(repositoryRoot, "game", "game.js"), "utf8");
 
 const hook = String.raw`
@@ -178,6 +179,11 @@ const hook = String.raw`
       magnetTime = 0;
       mastery = 0.42;
       dualBlastUnlocked = false;
+    },
+
+    buildPopcornWarningRenderScene(enemyCount, projectileCount, particleCount, floatingTextCount) {
+      this.buildOrdinaryRenderScene(enemyCount, projectileCount, particleCount, floatingTextCount);
+      pickups[0].ttl = 1.05;
     },
 
     buildIdleScene() {
@@ -393,6 +399,10 @@ const hook = String.raw`
 
     vibrateGamepadForTest(cue, sourceGamepad = null) {
       return vibrateGamepad(cue, sourceGamepad);
+    },
+
+    popcornWarningOpacity(ttl, totalTtl = 8.5) {
+      return getPopcornWarningOpacity({ ttl, totalTtl });
     },
 
     selectedMenuButton() {
@@ -873,6 +883,62 @@ async function verifyControllerMenuNavigation() {
   };
 }
 
+function verifyPopcornWarningAnimation() {
+  assert.equal(
+    game.popcornWarningOpacity(2.1),
+    1,
+    "The popcorn should remain fully opaque when the final blink phase begins",
+  );
+  assert.equal(
+    game.popcornWarningOpacity(2.2),
+    1,
+    "The popcorn should not blink before the final warning phase",
+  );
+
+  const troughs = [];
+  let priorOpacity = 1;
+  let falling = true;
+  let minimumOpacity = 1;
+  let maximumOpacity = 0;
+  for (let elapsedMilliseconds = 1; elapsedMilliseconds <= 2100; elapsedMilliseconds += 1) {
+    const remaining = 2.1 - elapsedMilliseconds / 1000;
+    const opacity = game.popcornWarningOpacity(remaining);
+    minimumOpacity = Math.min(minimumOpacity, opacity);
+    maximumOpacity = Math.max(maximumOpacity, opacity);
+    if (!falling && opacity < priorOpacity) {
+      falling = true;
+    } else if (falling && opacity > priorOpacity) {
+      troughs.push(elapsedMilliseconds - 1);
+      falling = false;
+    }
+    priorOpacity = opacity;
+  }
+
+  assert.ok(minimumOpacity >= 0.7399, "The blink must never make the popcorn disappear");
+  assert.ok(minimumOpacity <= 0.7401, "The blink should reach its intended reduced opacity");
+  assert.ok(maximumOpacity >= 0.9999, "The blink should return to full opacity");
+  assert.ok(maximumOpacity <= 1.0001, "The blink must not exceed full opacity");
+  assert.equal(troughs.length, 4, "The final warning should contain four visible dimming passes");
+
+  const intervals = troughs.slice(1).map((value, index) => value - troughs[index]);
+  for (let index = 1; index < intervals.length; index += 1) {
+    assert.ok(
+      intervals[index] < intervals[index - 1],
+      "Each popcorn blink should arrive sooner than the previous one",
+    );
+  }
+
+  return {
+    blinkDurationSeconds: 2.1,
+    startRateHz: 1.05,
+    endRateHz: 2.5,
+    minimumOpacity: Number(minimumOpacity.toFixed(2)),
+    dimmingPasses: troughs.length,
+    troughIntervalsMs: intervals,
+    checks: 9,
+  };
+}
+
 function nowNanoseconds() {
   return process.hrtime.bigint();
 }
@@ -1109,6 +1175,15 @@ const allScenarios = [
     operations: () => game.drawMany(1),
   },
   {
+    name: "popcorn-warning-render",
+    category: "render",
+    units: 360,
+    setup: () => game.buildPopcornWarningRenderScene(12, 36, 24, 2),
+    prime: () => game.drawMany(5),
+    run: () => game.drawMany(360),
+    operations: () => game.drawMany(1),
+  },
+  {
     name: "typical-render",
     category: "render",
     units: 240,
@@ -1180,6 +1255,11 @@ async function main() {
   if (verifyControllerMenu) {
     const verification = await verifyControllerMenuNavigation();
     process.stdout.write(`${JSON.stringify({ controllerMenu: verification }, null, 2)}\n`);
+    return;
+  }
+  if (verifyPopcornWarning) {
+    const verification = verifyPopcornWarningAnimation();
+    process.stdout.write(`${JSON.stringify({ popcornWarning: verification }, null, 2)}\n`);
     return;
   }
 

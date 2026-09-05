@@ -10,7 +10,7 @@ The suite covers idle and ordinary full updates, controller polling, stable and
 changing HUD state, collectible updates, ordinary and crowded placement,
 no-target projectile motion, busy and extreme projectile collisions, enemy
 steering, target acquisition, hot sprite caches, the animated background, and
-empty, early, typical, busy, and extreme complete renders.
+empty, early, popcorn-warning, typical, busy, and extreme complete renders.
 
 Run the complete suite from the repository root:
 
@@ -47,6 +47,13 @@ fallback:
 
 ```sh
 node benchmarks/game-performance.js --verify-controller-menu
+```
+
+Verify that the final popcorn warning remains visible, returns to full opacity,
+and completes four increasingly rapid dimming passes:
+
+```sh
+node benchmarks/game-performance.js --verify-popcorn-warning
 ```
 
 Compare `unitMedianMs` and the per-work-unit value derived from `p95Ms` between

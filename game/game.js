@@ -156,6 +156,24 @@
   const POPCORN_GLOW_RADIUS = 95;
   const POWERUP_GLOW_RADIUS = 108;
   const COLLECTIBLE_GLOW_GAP = 8;
+  const POPCORN_DANGER_PROGRESS = 0.34;
+  const POPCORN_BLINK_DURATION = 2.1;
+  const POPCORN_BLINK_START_RATE = 1.05;
+  const POPCORN_BLINK_END_RATE = 2.5;
+  const POPCORN_BLINK_MIN_OPACITY = 0.74;
+  const POPCORN_BLINK_OPACITY_STEPS = 256;
+  const POPCORN_BLINK_OPACITIES = Float32Array.from(
+    { length: POPCORN_BLINK_OPACITY_STEPS + 1 },
+    (_, index) => {
+      const urgency = index / POPCORN_BLINK_OPACITY_STEPS;
+      const elapsed = POPCORN_BLINK_DURATION * urgency;
+      const completedCycles = POPCORN_BLINK_START_RATE * elapsed
+        + (POPCORN_BLINK_END_RATE - POPCORN_BLINK_START_RATE)
+          * elapsed * urgency * 0.5;
+      const wave = 0.5 + Math.cos(completedCycles * Math.PI * 2) * 0.5;
+      return POPCORN_BLINK_MIN_OPACITY + (1 - POPCORN_BLINK_MIN_OPACITY) * wave;
+    },
+  );
   const REFERENCE_PLAYABLE_HEIGHT = 1231;
   const MIN_GAME_SCALE = 0.16;
   const MAX_GAME_SCALE = 2;
@@ -4535,20 +4553,35 @@
     }
   }
 
+  function getPopcornWarningOpacity(pickup) {
+    if (reducedMotion || pickup.ttl >= POPCORN_BLINK_DURATION) return 1;
+
+    const elapsed = POPCORN_BLINK_DURATION - Math.max(0, pickup.ttl);
+    const urgency = clamp(elapsed / POPCORN_BLINK_DURATION, 0, 1);
+    const opacityIndex = Math.min(
+      POPCORN_BLINK_OPACITY_STEPS,
+      Math.round(urgency * POPCORN_BLINK_OPACITY_STEPS),
+    );
+    return POPCORN_BLINK_OPACITIES[opacityIndex];
+  }
+
   function drawPickups(time) {
     for (const pickup of pickups) {
       const pulse = 1 + Math.sin(time * 5 + pickup.phase) * 0.09;
       const progress = clamp(pickup.ttl / pickup.totalTtl, 0, 1);
-      const danger = progress < 0.34;
+      const danger = progress < POPCORN_DANGER_PROGRESS;
 
       ctx.save();
+      if (!reducedMotion && pickup.ttl < POPCORN_BLINK_DURATION) {
+        ctx.globalAlpha = getPopcornWarningOpacity(pickup);
+      }
       if (qualitySettings.pickupBeams) {
         const beamRadius = scaleWorld(POPCORN_GLOW_RADIUS);
         const beamSprite = getRadialFillSprite(
-          "pickup-beam-normal",
+          danger ? "pickup-beam-danger" : "pickup-beam-normal",
           scaleWorld(5),
           beamRadius,
-          PICKUP_BEAM_STOPS.normal,
+          danger ? PICKUP_BEAM_STOPS.danger : PICKUP_BEAM_STOPS.normal,
         );
         if (beamSprite) {
           const beamHalf = beamSprite.logicalSize / 2;
@@ -4560,7 +4593,7 @@
             beamSprite.logicalSize,
           );
         } else {
-          const colorStops = PICKUP_BEAM_STOPS.normal;
+          const colorStops = danger ? PICKUP_BEAM_STOPS.danger : PICKUP_BEAM_STOPS.normal;
           const beam = ctx.createRadialGradient(
             pickup.x,
             pickup.y,
@@ -4581,9 +4614,9 @@
 
       ctx.translate(pickup.x, pickup.y);
       ctx.scale(pulse, pulse);
-      ctx.shadowColor = COLORS.goldBright;
+      ctx.shadowColor = danger ? "#ff5a3b" : COLORS.goldBright;
       ctx.shadowBlur = scaleWorld(22) * qualitySettings.projectileGlow;
-      ctx.fillStyle = "rgba(229, 164, 8, 0.4)";
+      ctx.fillStyle = danger ? "rgba(210, 75, 53, 0.42)" : "rgba(229, 164, 8, 0.4)";
       ctx.beginPath();
       ctx.arc(0, 0, pickup.radius + scaleWorld(10), 0, Math.PI * 2);
       ctx.fill();
