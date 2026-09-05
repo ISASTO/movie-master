@@ -55,23 +55,14 @@ jobs:
           import json
           from pathlib import Path
 
-          before = json.loads(Path('/tmp/controller-before.json').read_text())
-          after = json.loads(Path('/tmp/controller-after.json').read_text())
-
-          def scenarios(payload):
-              rows = payload.get('scenarios', payload.get('results', []))
-              return {row['name']: row for row in rows}
-
-          b = scenarios(before)
-          a = scenarios(after)
+          before = json.loads(Path('/tmp/controller-before.json').read_text())['scenarios']
+          after = json.loads(Path('/tmp/controller-after.json').read_text())['scenarios']
           for name in ('no-controller-poll', 'connected-controller-poll'):
-              if name not in b or name not in a:
-                  raise SystemExit(f'missing benchmark scenario: {name}')
-              before_ms = float(b[name].get('unitMedianMs', b[name].get('medianPerUnitMs', 0)))
-              after_ms = float(a[name].get('unitMedianMs', a[name].get('medianPerUnitMs', 0)))
+              before_ms = float(before[name]['timing']['unitMedianMs'])
+              after_ms = float(after[name]['timing']['unitMedianMs'])
               print(f'{name}: before={before_ms:.9f} ms/poll after={after_ms:.9f} ms/poll')
-              # Even a much larger relative change here is irrelevant if the
-              # absolute work remains below 0.02 ms per animation frame.
+              # Relative changes are misleading at microsecond scale; keep the
+              # compatibility path comfortably below 0.02 ms per frame.
               if after_ms >= 0.02:
                   raise SystemExit(f'{name} controller polling exceeded 0.02 ms/poll')
           PY
@@ -80,6 +71,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add game/game.js game/index.html
+          git add game/game.js game/index.html benchmarks/game-performance.js
           git commit -m "Restore virtual XInput controller detection"
           git push origin HEAD:fix-xinput-controller-detection
