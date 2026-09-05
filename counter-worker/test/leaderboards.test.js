@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
+import visitorWorker from "../src/index.js";
+import { alignSnapshotSiteVisitors } from "../src/entry.js";
 import { handleGameEvent } from "../src/insights.js";
 import {
   buildPublicLeaderboardPayload,
@@ -11,6 +13,7 @@ import {
 } from "../src/leaderboards.js";
 import { ensureRunDataSchema } from "../src/run-data.js";
 import { handleRunDetailsRequest, persistRunTelemetry } from "../src/run-telemetry.js";
+import { handleStoreRequest } from "../src/store.js";
 
 const VISITORS = Array.from({ length: 7 }, (_, index) =>
   `10000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
@@ -54,14 +57,34 @@ class TestD1 {
   }
 
   async batch(statements) {
-    const results = [];
-    for (const statement of statements) results.push(await statement.all());
-    return results;
+    this.database.exec("BEGIN");
+    try {
+      const results = [];
+      for (const statement of statements) {
+        if (this.batchFailurePattern?.test(statement.sql)) {
+          throw new Error(`Injected batch failure for ${statement.sql}`);
+        }
+        results.push(await statement.all());
+      }
+      this.database.exec("COMMIT");
+      return results;
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
   }
 
   close() {
     this.database.close();
   }
+}
+
+function visitRequest(visitorId) {
+  return new Request("https://worker.example/visit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://moviemaster.vip" },
+    body: JSON.stringify({ visitorId }),
+  });
 }
 
 function insertRun(db, { runId, visitorId, mode = "NORMAL", date = "2026-09-02", score, finishedAt }) {
@@ -154,6 +177,118 @@ test("the public leaderboard migration upgrades the deployed table shape", () =>
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'leaderboard_profiles'",
   ).get());
   database.close();
+});
+
+test("visitor reconciliation repairs interrupted legacy writes and cached totals", () => {
+  const database = new DatabaseSync(":memory:");
+  database.exec(readFileSync(new URL("../schema.sql", import.meta.url), "utf8"));
+  database.prepare(
+    "INSERT INTO visitors (visitor_id, first_seen) VALUES (?, '2026-09-05 12:00:00')",
+  ).run(VISITORS[0]);
+  database.prepare("UPDATE visitor_stats SET visitor_count = 99 WHERE id = 1").run();
+  database.prepare("UPDATE section_stats SET visitor_count = 77 WHERE section = 'game'").run();
+
+  database.exec(readFileSync(
+    new URL("../migrations/0002_reconcile_visitor_counters.sql", import.meta.url),
+    "utf8",
+  ));
+
+  assert.equal(database.prepare("SELECT COUNT(*) AS count FROM visitors").get().count, 1);
+  assert.equal(database.prepare(
+    "SELECT COUNT(*) AS count FROM visitor_sections WHERE section = 'site'",
+  ).get().count, 1);
+  assert.equal(database.prepare(
+    "SELECT COUNT(*) AS count FROM visitor_daily WHERE section = 'site' AND visit_date = '2026-09-05'",
+  ).get().count, 1);
+  assert.equal(database.prepare(
+    "SELECT visitor_count FROM visitor_stats WHERE id = 1",
+  ).get().visitor_count, 1);
+  assert.deepEqual(database.prepare(
+    "SELECT section, visitor_count FROM section_stats ORDER BY section",
+  ).all().map((row) => ({ ...row })), [
+    { section: "game", visitor_count: 0 },
+    { section: "site", visitor_count: 1 },
+  ]);
+  database.close();
+});
+
+test("a failed site-visit batch leaves every visitor table unchanged", async (t) => {
+  const db = new TestD1();
+  t.after(() => db.close());
+  db.batchFailurePattern = /INSERT OR IGNORE INTO visitor_daily/;
+  const originalError = console.error;
+  console.error = () => {};
+  t.after(() => { console.error = originalError; });
+
+  const response = await visitorWorker.fetch(visitRequest(VISITORS[0]), { DB: db });
+  assert.equal(response.status, 500);
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitors").get().count, 0);
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_sections").get().count, 0);
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_daily").get().count, 0);
+  assert.equal(db.database.prepare(
+    "SELECT visitor_count FROM visitor_stats WHERE id = 1",
+  ).get().visitor_count, 0);
+  assert.equal(db.database.prepare(
+    "SELECT visitor_count FROM section_stats WHERE section = 'site'",
+  ).get().visitor_count, 0);
+});
+
+test("site visits keep legacy, section, and daily totals idempotently aligned", async (t) => {
+  const db = new TestD1();
+  t.after(() => db.close());
+
+  assert.equal(
+    (await visitorWorker.fetch(visitRequest(VISITORS[0]), { DB: db })).status,
+    200,
+  );
+  assert.equal(
+    (await visitorWorker.fetch(visitRequest(VISITORS[0]), { DB: db })).status,
+    200,
+  );
+
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitors").get().count, 1);
+  assert.equal(db.database.prepare(
+    "SELECT COUNT(*) AS count FROM visitor_sections WHERE section = 'site'",
+  ).get().count, 1);
+  assert.equal(db.database.prepare(
+    "SELECT COUNT(*) AS count FROM visitor_daily WHERE section = 'site'",
+  ).get().count, 1);
+  assert.equal(db.database.prepare(
+    "SELECT visitor_count FROM visitor_stats WHERE id = 1",
+  ).get().visitor_count, 1);
+  assert.equal(db.database.prepare(
+    "SELECT visitor_count FROM section_stats WHERE section = 'site'",
+  ).get().visitor_count, 1);
+});
+
+test("store conversion reads the shared main-site analytics total", async (t) => {
+  const db = new TestD1();
+  t.after(() => db.close());
+  db.database.prepare(
+    "INSERT INTO visitor_sections (visitor_id, section) VALUES (?, 'site')",
+  ).run(VISITORS[0]);
+  db.database.prepare(
+    "INSERT INTO visitor_sections (visitor_id, section) VALUES (?, 'site')",
+  ).run(VISITORS[1]);
+  db.database.prepare("UPDATE visitor_stats SET visitor_count = 99 WHERE id = 1").run();
+
+  const response = await handleStoreRequest(
+    new Request("https://worker.example/store-stats", {
+      headers: { Origin: "https://moviemaster.vip" },
+    }),
+    { DB: db },
+  );
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).siteVisitors, 2);
+});
+
+test("dashboard snapshot conversions reuse one exact site denominator", () => {
+  const storeStats = alignSnapshotSiteVisitors(
+    { summary: { siteTotal: 215 } },
+    { allTime: { uniqueClickers: 15 }, siteVisitors: 216, clickThroughRate: 0 },
+  );
+  assert.equal(storeStats.siteVisitors, 215);
+  assert.equal(storeStats.clickThroughRate, (15 / 215) * 100);
 });
 
 test("run telemetry schema self-upgrades an already deployed game_runs table", async (t) => {

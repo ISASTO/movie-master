@@ -27,6 +27,17 @@ async function readJsonResponse(response, label) {
   return response.json();
 }
 
+export function alignSnapshotSiteVisitors(traffic, storeStats) {
+  const siteVisitors = Math.max(0, Number(traffic?.summary?.siteTotal ?? 0));
+  const uniqueClickers = Math.max(0, Number(storeStats?.allTime?.uniqueClickers ?? 0));
+
+  return {
+    ...storeStats,
+    siteVisitors,
+    clickThroughRate: siteVisitors > 0 ? (uniqueClickers / siteVisitors) * 100 : 0,
+  };
+}
+
 async function dashboardSnapshot(request, env, ctx) {
   const url = new URL(request.url);
   const requestedView = url.searchParams.get("view") ?? "daily";
@@ -45,13 +56,17 @@ async function dashboardSnapshot(request, env, ctx) {
       handleStoreRequest(internalGet(request, "/store-traffic", query), env),
     ]);
 
-  const [traffic, details, leaderboards, storeStats, storeTraffic] = await Promise.all([
+  const [traffic, details, leaderboards, rawStoreStats, storeTraffic] = await Promise.all([
     readJsonResponse(trafficResponse, "traffic"),
     readJsonResponse(detailsResponse, "details"),
     readJsonResponse(leaderboardResponse, "leaderboards"),
     readJsonResponse(storeStatsResponse, "store stats"),
     readJsonResponse(storeTrafficResponse, "store traffic"),
   ]);
+  // Both conversion cards describe the same main-site audience. Reuse the
+  // traffic snapshot's total so even a visit arriving between concurrent D1
+  // reads cannot make the two denominators disagree within one dashboard load.
+  const storeStats = alignSnapshotSiteVisitors(traffic, rawStoreStats);
 
   const headers = new Headers(trafficResponse.headers);
   headers.set("Cache-Control", "no-store");

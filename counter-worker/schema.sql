@@ -22,6 +22,11 @@ BEGIN
   WHERE id = 1;
 END;
 
+-- Reconcile a previously interrupted write or manually repaired database.
+UPDATE visitor_stats
+SET visitor_count = (SELECT COUNT(*) FROM visitors)
+WHERE id = 1;
+
 -- One row per browser per section for all-time main-site/game analytics.
 CREATE TABLE IF NOT EXISTS visitor_sections (
   visitor_id TEXT NOT NULL,
@@ -73,6 +78,13 @@ BEGIN
   SET visitor_count = visitor_count + 1
   WHERE section = NEW.section;
 END;
+
+UPDATE section_stats
+SET visitor_count = (
+  SELECT COUNT(*)
+  FROM visitor_sections
+  WHERE visitor_sections.section = section_stats.section
+);
 
 -- Small timestamps marking when richer analytics started. Existing records are
 -- never retroactively guessed for data that was not collected at the time.

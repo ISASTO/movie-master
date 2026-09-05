@@ -243,14 +243,7 @@ async function recordVisit(env, visitorId, section) {
   const normalizedId = visitorId.toLowerCase();
   const visitDate = chicagoDateKey();
 
-  if (section === "site") {
-    await env.DB
-      .prepare("INSERT OR IGNORE INTO visitors (visitor_id) VALUES (?)")
-      .bind(normalizedId)
-      .run();
-  }
-
-  await env.DB.batch([
+  const statements = [
     env.DB
       .prepare(
         "INSERT OR IGNORE INTO visitor_sections (visitor_id, section) VALUES (?, ?)",
@@ -262,7 +255,19 @@ async function recordVisit(env, visitorId, section) {
          VALUES (?, ?, ?)`,
       )
       .bind(normalizedId, section, visitDate),
-  ]);
+  ];
+
+  if (section === "site") {
+    statements.unshift(
+      env.DB
+        .prepare("INSERT OR IGNORE INTO visitors (visitor_id) VALUES (?)")
+        .bind(normalizedId),
+    );
+  }
+
+  // D1 batches are transactional. Keep the legacy visitor row, section row,
+  // daily row, and both trigger-maintained counters in one all-or-nothing write.
+  await env.DB.batch(statements);
 }
 
 export default {

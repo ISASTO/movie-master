@@ -197,8 +197,8 @@ async function getStoreStats(env, origin) {
     ).bind(today),
     env.DB.prepare(
       `SELECT visitor_count AS count
-       FROM visitor_stats
-       WHERE id = 1`,
+       FROM section_stats
+       WHERE section = 'site'`,
     ),
     env.DB.prepare(
       `SELECT value
