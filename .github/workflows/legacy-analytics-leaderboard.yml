@@ -51,3 +51,5 @@ jobs:
           git add counter-worker/src/leaderboards.js analytics/mode-leaderboards.js analytics/index.html
           git commit -m "Show legacy scores in analytics leaderboards"
           git push origin HEAD:main
+
+# retry after tightening patch assertions
