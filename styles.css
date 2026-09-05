@@ -5319,9 +5319,9 @@ html {
   position: relative;
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: minmax(92px, 0.7fr) minmax(0, 4.8fr) minmax(92px, 0.7fr);
+  grid-template-columns: minmax(72px, 80px) minmax(0, 1fr) minmax(72px, 80px);
   align-items: center;
-  gap: clamp(14px, 2vw, 28px);
+  gap: clamp(12px, 1.5vw, 20px);
   min-height: 210px;
   padding: clamp(22px, 3.2vw, 38px);
   overflow: hidden;
@@ -5406,7 +5406,7 @@ html {
   transform: scale(1.12) rotate(5deg);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
   .welcome-banner {
     grid-template-columns: 1fr;
     gap: 12px;
