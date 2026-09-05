@@ -382,7 +382,6 @@ const hook = String.raw`
         };
       }
       activeGamepadIndex = null;
-      gamepadConnectionKnown = true;
       gamepadMenuContext = entering ? "" : "paused";
       resetGamepadMenuNavigation(false);
       setControllerSelection(ui.resumeButton);

@@ -406,8 +406,6 @@
   let qualitySettings = QUALITY_LEVELS[qualityLevel];
   let activeGamepadIndex = null;
   let activeGamepadHasRelevantInput = false;
-  let gamepadConnectionKnown = false;
-  let nextGamepadProbeAt = 0;
   let gamepadBlastPressed = false;
   let gamepadPausePressed = false;
   let gamepadConfirmPressed = false;
@@ -3029,17 +3027,14 @@
     }
   }
 
-  function chooseActiveGamepad(now = performance.now(), forceProbe = false) {
-    if (
-      !forceProbe
-      && !gamepadConnectionKnown
-      && activeGamepadIndex === null
-      && now < nextGamepadProbeAt
-    ) {
-      activeGamepadHasRelevantInput = false;
-      return null;
-    }
-
+  function chooseActiveGamepad() {
+    // Keep discovery continuous. Some virtual XInput devices (notably pads
+    // created or recreated by DS4Windows) are exposed through getGamepads()
+    // without a reliable gamepadconnected event. The former 500 ms idle probe
+    // could therefore miss the short window in which the browser first exposed
+    // the virtual pad. This loop is allocation-free and is intentionally run
+    // with the animation frame, matching the controller behavior that worked
+    // before the no-controller polling optimization.
     const gamepads = readConnectedGamepads();
     let first = null;
     let current = null;
@@ -3062,8 +3057,6 @@
     if (!first) {
       activeGamepadIndex = null;
       activeGamepadHasRelevantInput = false;
-      gamepadConnectionKnown = false;
-      nextGamepadProbeAt = now + 500;
       return null;
     }
 
@@ -3073,8 +3066,6 @@
     activeGamepadIndex = selected.index;
     activeGamepadHasRelevantInput = selected === engaged
       || (selected === current && currentEngaged);
-    gamepadConnectionKnown = true;
-    nextGamepadProbeAt = 0;
     return selected;
   }
 
@@ -3147,7 +3138,7 @@
     const sourceIsGamepad = sourceGamepad
       && Number.isInteger(sourceGamepad.index)
       && sourceGamepad.connected !== false;
-    const gamepad = sourceIsGamepad ? sourceGamepad : chooseActiveGamepad(undefined, true);
+    const gamepad = sourceIsGamepad ? sourceGamepad : chooseActiveGamepad();
     if (!gamepad) return;
 
     const actuators = [];
@@ -3169,7 +3160,7 @@
   }
 
   function pollGamepad(now = performance.now()) {
-    const gamepad = chooseActiveGamepad(now);
+    const gamepad = chooseActiveGamepad();
     if (!gamepad) {
       if (
         controllerInputActive
@@ -5192,16 +5183,12 @@
 
   window.addEventListener("gamepadconnected", (event) => {
     activeGamepadIndex = event.gamepad.index;
-    gamepadConnectionKnown = true;
-    nextGamepadProbeAt = 0;
   });
 
   window.addEventListener("gamepaddisconnected", (event) => {
     if (event.gamepad.index !== activeGamepadIndex) return;
     activeGamepadIndex = null;
     activeGamepadHasRelevantInput = false;
-    gamepadConnectionKnown = false;
-    nextGamepadProbeAt = 0;
     resetGamepadInputState();
   });
 
