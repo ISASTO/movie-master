@@ -16,7 +16,7 @@
   border-bottom: 1px solid var(--line);
 }
 
-.mode-leaderboard-heading h3 {
+.mode-leaderboard-heading :is(h3, h4) {
   margin: 0;
   font-size: clamp(1.05rem, 2vw, 1.45rem);
   letter-spacing: -0.01em;
@@ -43,12 +43,12 @@
 }
 
 .mode-leaderboard-board th {
-  font-size: clamp(0.56rem, 0.68vw, 0.68rem);
+  font-size: clamp(0.68rem, 0.74vw, 0.74rem);
   letter-spacing: 0.08em;
 }
 
 .mode-leaderboard-board td {
-  font-size: clamp(0.7rem, 0.88vw, 0.9rem);
+  font-size: clamp(0.78rem, 0.9vw, 0.94rem);
 }
 
 .mode-leaderboard-board .leaderboard-rank,
@@ -60,12 +60,12 @@
 
 .mode-leaderboard-board .leaderboard-player {
   width: 42%;
-  font-size: clamp(0.7rem, 0.9vw, 0.9rem);
+  font-size: clamp(0.78rem, 0.9vw, 0.94rem);
   letter-spacing: -0.01em;
 }
 
 .mode-leaderboard-board .leaderboard-score {
-  font-size: clamp(0.66rem, 0.82vw, 0.84rem);
+  font-size: clamp(0.76rem, 0.84vw, 0.88rem);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
@@ -125,7 +125,7 @@
 
 .recent-runs-table th {
   color: var(--muted);
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   letter-spacing: 0.08em;
 }
 
@@ -271,28 +271,28 @@
   letter-spacing: 0.12em;
 }
 
-@media (max-width: 1100px) and (min-width: 901px) {
+@media (max-width: 1100px) and (min-width: 1041px) {
   .mode-leaderboard-board th,
   .mode-leaderboard-board td {
     padding-inline: 0.28rem;
   }
 
   .mode-leaderboard-board th {
-    font-size: 0.54rem;
+    font-size: 0.66rem;
     letter-spacing: 0.05em;
   }
 
   .mode-leaderboard-board td,
   .mode-leaderboard-board .leaderboard-player {
-    font-size: 0.68rem;
+    font-size: 0.76rem;
   }
 
   .mode-leaderboard-board .leaderboard-score {
-    font-size: 0.64rem;
+    font-size: 0.72rem;
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1040px) {
   .mode-leaderboard-grid {
     grid-template-columns: 1fr;
   }
@@ -353,7 +353,7 @@
     display: block;
     margin-bottom: 0.15rem;
     color: var(--muted);
-    font-size: 0.52rem;
+    font-size: 0.64rem;
     font-weight: 900;
     letter-spacing: 0.07em;
   }
@@ -411,7 +411,7 @@
 
   .leaderboard-player {
     grid-column: 2 / -1;
-    font-size: 0.78rem;
+    font-size: 0.84rem;
   }
 
   .leaderboard-score { grid-column: 2; }
@@ -419,7 +419,7 @@
   .leaderboard-time { grid-column: 4; }
 
   .mode-leaderboard-board .leaderboard-score {
-    font-size: 0.78rem;
+    font-size: 0.84rem;
     letter-spacing: 0;
   }
 
@@ -430,7 +430,7 @@
     display: block;
     margin-bottom: 0.12rem;
     color: var(--muted);
-    font-size: 0.54rem;
+    font-size: 0.64rem;
     font-weight: 900;
     letter-spacing: 0.07em;
   }

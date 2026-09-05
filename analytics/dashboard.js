@@ -193,14 +193,15 @@
     const summary = state.payload.summary ?? {};
     const siteTotal = Number(summary.siteTotal ?? 0);
     const discovered = Number(summary.discovered ?? 0);
+    const discoveryRate = Number(summary.discoveryRate ?? 0);
 
     elements.siteTotal.textContent = numberFormatter.format(siteTotal);
     elements.gameTotal.textContent = numberFormatter.format(summary.gameTotal ?? 0);
     elements.siteToday.textContent = numberFormatter.format(summary.todaySite ?? 0);
     elements.gameToday.textContent = numberFormatter.format(summary.todayGame ?? 0);
-    elements.discovered.textContent = numberFormatter.format(discovered);
+    elements.discovered.textContent = `${discoveryRate.toFixed(1)}%`;
     elements.rateDetail.textContent =
-      `${Number(summary.discoveryRate ?? 0).toFixed(1)}% of ${numberFormatter.format(siteTotal)} main-site visitors`;
+      `${numberFormatter.format(discovered)} of ${numberFormatter.format(siteTotal)} main-site visitors opened the game`;
 
     if (state.view === "daily") {
       captureDailyComparison(state.payload);

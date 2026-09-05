@@ -9,27 +9,28 @@
     <title>MOVIE MASTER ANALYTICS</title>
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://movie-master-visitor-counter.isasto.workers.dev" crossorigin>
-    <link rel="stylesheet" href="./analytics.css?v=20260901-6">
-    <link rel="stylesheet" href="./details.css?v=20260901-4">
+    <link rel="stylesheet" href="./analytics.css?v=20260905-hierarchy-1">
+    <link rel="stylesheet" href="./details.css?v=20260905-hierarchy-1">
     <link rel="stylesheet" href="./traffic-series.css?v=20260901-2">
-    <link rel="stylesheet" href="./mode-leaderboards.css?v=20260902-run-details-2">
+    <link rel="stylesheet" href="./mode-leaderboards.css?v=20260905-hierarchy-1">
     <link rel="stylesheet" href="./run-details-overrides.css?v=20260902-1">
     <script src="./fetch-shim.js?v=20260902-perf-1" defer></script>
-    <script src="./dashboard.js?v=20260901-5" defer></script>
-    <script src="./details.js?v=20260901-3" defer></script>
+    <script src="./dashboard.js?v=20260905-hierarchy-1" defer></script>
+    <script src="./details.js?v=20260905-hierarchy-1" defer></script>
     <script src="./source-breakdown.js?v=20260901-2" defer></script>
     <script src="./store-stats.js?v=20260901-3" defer></script>
     <script src="./mode-leaderboards.js?v=20260905-legacy-analytics-1" defer></script>
     <script src="./auto-refresh.js?v=20260902-perf-2" defer></script>
-    <script src="./ui.js?v=20260901-1" defer></script>
+    <script src="./ui.js?v=20260905-hierarchy-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#analytics-main">SKIP TO DASHBOARD</a>
 
     <header class="analytics-header">
-      <div>
+      <div class="analytics-brand">
+        <p class="eyebrow">PRIVATE OVERVIEW</p>
         <h1>MOVIE MASTER ANALYTICS</h1>
-        <p class="subtitle">Anonymous traffic and game statistics • Times shown in America/Chicago</p>
+        <p class="subtitle">Anonymous traffic and game statistics • America/Chicago</p>
       </div>
       <nav aria-label="Site links">
         <a href="../">MAIN SITE</a>
@@ -37,73 +38,97 @@
       </nav>
     </header>
 
-    <nav class="dashboard-tabs" aria-label="Analytics sections">
+    <nav class="dashboard-tabs" aria-label="Analytics dashboards">
       <div class="dashboard-tabs-inner">
-        <div class="dashboard-tab-links">
-          <a href="#traffic-dashboard" data-dashboard-tab="traffic-dashboard" aria-current="location">TRAFFIC</a>
-          <a href="#game-dashboard" data-dashboard-tab="game-dashboard">GAME STATS</a>
+        <div class="dashboard-tab-links" role="tablist" aria-label="Choose a dashboard">
+          <a href="#traffic-dashboard" role="tab" aria-selected="true" aria-controls="traffic-dashboard" data-dashboard-tab="traffic-dashboard">TRAFFIC</a>
+          <a href="#game-dashboard" role="tab" aria-selected="false" aria-controls="game-dashboard" data-dashboard-tab="game-dashboard">GAME STATS</a>
         </div>
         <p id="updated-status" class="dashboard-status" role="status" aria-live="polite">LOADING…</p>
       </div>
     </nav>
 
     <main class="analytics-shell" id="analytics-main" tabindex="-1">
-      <section class="dashboard-section" id="traffic-dashboard" aria-labelledby="traffic-dashboard-title">
+      <section class="dashboard-section" id="traffic-dashboard" role="tabpanel" tabindex="0" aria-labelledby="traffic-dashboard-title">
         <div class="dashboard-section-heading">
-          <p class="eyebrow">WEBSITE</p>
-          <h2 id="traffic-dashboard-title">TRAFFIC</h2>
-          <p class="traffic-refresh-note">Refreshes automatically every 2 minutes</p>
+          <div>
+            <p class="eyebrow">WEBSITE HEALTH</p>
+            <h2 id="traffic-dashboard-title">TRAFFIC OVERVIEW</h2>
+            <p>Current reach first, historical context second, deeper audience details on demand.</p>
+          </div>
+          <nav class="section-jump-nav" aria-label="Traffic dashboard sections">
+            <a href="#traffic-overview">TODAY</a>
+            <a href="#traffic-trends">TREND</a>
+            <a href="#traffic-sources">SOURCES</a>
+            <a href="#traffic-deep-dive">AUDIENCE DETAILS</a>
+          </nav>
         </div>
 
-        <nav class="section-jump-nav" aria-label="Traffic dashboard sections">
-          <a href="#traffic-overview">OVERVIEW</a>
-          <a href="#traffic-trends">TRENDS</a>
-          <a href="#traffic-patterns">PATTERNS</a>
-          <a href="#traffic-geography">GEOGRAPHY</a>
-        </nav>
-
-        <section class="summary-grid primary-summary-grid" id="traffic-overview" aria-label="Traffic overview" aria-busy="true">
-          <article class="summary-card summary-card-primary">
-            <span>MAIN SITE • TODAY</span>
-            <strong id="summary-site-today">—</strong>
-            <small id="summary-site-today-detail">Loading comparison…</small>
-          </article>
-          <article class="summary-card summary-card-primary">
-            <span>GAME • TODAY</span>
-            <strong id="summary-game-today">—</strong>
-            <small id="summary-game-today-detail">Loading comparison…</small>
-          </article>
-          <article class="summary-card summary-card-primary">
-            <span>SITE VISITORS WHO OPENED THE GAME</span>
-            <strong id="summary-discovered">—</strong>
-            <small id="summary-rate-detail">Loading discovery rate…</small>
-          </article>
-          <article class="summary-card summary-card-primary">
-            <span>STORE CLICK-THROUGH RATE</span>
-            <strong id="store-click-rate">—</strong>
-            <small id="store-click-rate-detail">Loading store traffic…</small>
-          </article>
-        </section>
-
-        <div class="overview-support-grid">
-          <section class="compact-panel" aria-labelledby="audience-title">
-            <div class="compact-panel-heading">
-              <p class="eyebrow">QUICK COUNTS</p>
-              <h3 id="audience-title">AUDIENCE</h3>
+        <section class="overview-block" id="traffic-overview" aria-labelledby="current-reach-title" aria-busy="true">
+          <div class="content-heading">
+            <div>
+              <p class="eyebrow">TODAY</p>
+              <h3 id="current-reach-title">CURRENT REACH</h3>
             </div>
-            <dl class="metric-list">
-              <div><dt>MAIN SITE • ALL TIME</dt><dd id="summary-site-total">—</dd></div>
-              <div><dt>GAME • ALL TIME</dt><dd id="summary-game-total">—</dd></div>
-              <div><dt>STORE VISITORS • ALL TIME</dt><dd><strong id="store-clickers-total">—</strong><small id="store-clickers-total-detail">Loading…</small></dd></div>
-              <div><dt>STORE VISITORS • TODAY</dt><dd><strong id="store-clickers-today">—</strong><small id="store-clickers-today-detail">Loading…</small></dd></div>
-            </dl>
-          </section>
+            <p>Unique browsers since midnight Central Time</p>
+          </div>
 
-          <section class="compact-panel" aria-labelledby="sources-title">
-            <div class="compact-panel-heading">
-              <p class="eyebrow">HOW THEY ARRIVED</p>
-              <h3 id="sources-title">GAME TRAFFIC SOURCES</h3>
-            </div>
+          <div class="summary-grid traffic-today-grid">
+            <article class="summary-card summary-card-primary">
+              <span>MAIN SITE VISITORS</span>
+              <strong id="summary-site-today">—</strong>
+              <small id="summary-site-today-detail">Loading comparison…</small>
+            </article>
+            <article class="summary-card summary-card-primary">
+              <span>GAME VISITORS</span>
+              <strong id="summary-game-today">—</strong>
+              <small id="summary-game-today-detail">Loading comparison…</small>
+            </article>
+            <article class="summary-card summary-card-primary">
+              <span>STORE VISITORS</span>
+              <strong id="store-clickers-today">—</strong>
+              <small id="store-clickers-today-detail">Loading store traffic…</small>
+            </article>
+          </div>
+
+          <div class="overview-secondary-grid">
+            <section class="compact-panel audience-panel" aria-labelledby="audience-title">
+              <div class="compact-panel-heading">
+                <p class="eyebrow">ALL TIME</p>
+                <h3 id="audience-title">AUDIENCE TOTALS</h3>
+              </div>
+              <dl class="stat-strip">
+                <div><dt>MAIN SITE</dt><dd id="summary-site-total">—</dd></div>
+                <div><dt>GAME</dt><dd id="summary-game-total">—</dd></div>
+                <div><dt>STORE</dt><dd><strong id="store-clickers-total">—</strong><small id="store-clickers-total-detail">Loading…</small></dd></div>
+              </dl>
+            </section>
+
+            <section class="compact-panel conversion-panel" aria-labelledby="conversion-title">
+              <div class="compact-panel-heading">
+                <p class="eyebrow">ALL-TIME ACTIONS</p>
+                <h3 id="conversion-title">VISITOR CONVERSION</h3>
+              </div>
+              <div class="conversion-grid">
+                <article class="conversion-metric">
+                  <span>MAIN SITE → GAME</span>
+                  <strong id="summary-discovered">—</strong>
+                  <small id="summary-rate-detail">Loading discovery rate…</small>
+                </article>
+                <article class="conversion-metric">
+                  <span>MAIN SITE → STORE</span>
+                  <strong id="store-click-rate">—</strong>
+                  <small id="store-click-rate-detail">Loading store traffic…</small>
+                </article>
+              </div>
+            </section>
+          </div>
+
+          <details class="compact-disclosure" id="traffic-sources">
+            <summary>
+              <span><span class="eyebrow">ACQUISITION DETAIL</span><span class="disclosure-title">GAME TRAFFIC SOURCES</span><small>Separate main-site referrals from direct and shared visits</small></span>
+              <span class="disclosure-action" aria-hidden="true">SHOW SOURCES</span>
+            </summary>
             <div class="source-table-wrap">
               <table class="source-table">
                 <thead><tr><th scope="col">SOURCE</th><th scope="col">ALL TIME</th><th scope="col">TODAY</th></tr></thead>
@@ -114,14 +139,14 @@
                 </tbody>
               </table>
             </div>
-          </section>
-        </div>
+          </details>
+        </section>
 
         <section class="chart-panel" id="traffic-trends" aria-labelledby="traffic-title">
           <div class="chart-heading">
             <div>
               <p class="eyebrow">UNIQUE VISITORS</p>
-              <h2 id="traffic-title">TRAFFIC OVER TIME</h2>
+              <h3 id="traffic-title">TRAFFIC TREND</h3>
               <p id="view-description">Last 7 days</p>
             </div>
             <div class="chart-actions">
@@ -140,6 +165,7 @@
             <label class="series-toggle series-toggle-merch"><input type="checkbox" id="toggle-merch" checked><span class="legend-swatch legend-merch" aria-hidden="true"></span>STORE</label>
           </div>
 
+          <p class="chart-scroll-hint" aria-hidden="true">SWIPE TO EXPLORE THE FULL TREND →</p>
           <div class="chart-wrap" id="chart-wrap">
             <svg id="traffic-chart" viewBox="0 0 960 430" role="img" aria-labelledby="chart-title chart-description">
               <title id="chart-title">Movie Master visitor traffic</title>
@@ -155,7 +181,7 @@
 
         <details class="disclosure-panel data-panel" id="visitor-data">
           <summary>
-            <span><span class="eyebrow">EXACT NUMBERS</span><span class="disclosure-title">VISITOR DATA</span></span>
+            <span><span class="eyebrow">EXACT NUMBERS</span><span class="disclosure-title">VISITOR DATA TABLE</span><small>Every period represented in the chart</small></span>
             <span class="disclosure-action" aria-hidden="true">SHOW TABLE</span>
           </summary>
           <div class="table-scroll">
@@ -166,141 +192,176 @@
           </div>
         </details>
 
-        <section class="detail-panel" id="traffic-patterns" aria-labelledby="when-title">
-          <div class="detail-panel-heading">
-            <div><p class="eyebrow">WHEN PEOPLE VISIT</p><h2 id="when-title">TRAFFIC PATTERNS</h2></div>
+        <section class="deep-dive-section" id="traffic-deep-dive" aria-labelledby="deep-dive-title">
+          <div class="deep-dive-heading">
+            <div>
+              <p class="eyebrow">DEEPER ANALYSIS</p>
+              <h3 id="deep-dive-title">AUDIENCE DETAILS</h3>
+              <p>Open the view you need; secondary detail stays out of the way by default.</p>
+            </div>
             <div class="traffic-section-switcher" role="group" aria-label="Traffic section">
               <button type="button" data-traffic-section="site" class="is-active" aria-pressed="true">MAIN SITE</button>
               <button type="button" data-traffic-section="game" aria-pressed="false">GAME</button>
             </div>
           </div>
-          <div class="pattern-grid">
-            <article class="pattern-card">
-              <h3>HOUR OF DAY</h3>
-              <p id="hour-chart-description">Unique browser-hour visits</p>
-              <p class="scroll-hint" aria-hidden="true">SWIPE TO SEE ALL 24 HOURS →</p>
-              <div class="hour-chart-scroll" tabindex="0" aria-label="Scrollable hour-of-day chart"><div class="mini-bar-chart mini-bar-chart-hours" id="hour-bars" aria-label="Traffic by hour of day"></div></div>
-            </article>
-            <article class="pattern-card">
-              <h3>DAY OF WEEK</h3>
-              <p id="weekday-chart-description">Unique browser-day visits</p>
-              <div class="mini-bar-chart mini-bar-chart-weekdays" id="weekday-bars" aria-label="Traffic by day of week"></div>
-            </article>
-          </div>
-          <p class="detail-note" id="time-pattern-note">Loading traffic patterns…</p>
-        </section>
 
-        <section class="detail-panel" id="traffic-geography" aria-labelledby="geo-title">
-          <div class="detail-panel-heading"><div><p class="eyebrow">WHERE PEOPLE VISIT FROM</p><h2 id="geo-title">GEOGRAPHY</h2></div></div>
-          <div class="geography-grid">
-            <div class="world-map-wrap">
-              <svg id="visitor-map" viewBox="0 0 1000 500" role="img" aria-label="Approximate map of visitor locations">
-                <image href="./world-map.svg?v=20260901-3" x="0" y="0" width="1000" height="500"></image>
-                <g id="visitor-map-points"></g>
-              </svg>
+          <details class="detail-panel detail-disclosure" id="traffic-patterns">
+            <summary>
+              <span><span class="eyebrow">WHEN PEOPLE VISIT</span><span class="disclosure-title" id="when-title">TRAFFIC PATTERNS</span><small>Hourly and day-of-week activity</small></span>
+              <span class="disclosure-action" aria-hidden="true">EXPLORE</span>
+            </summary>
+            <div class="detail-disclosure-body">
+              <div class="pattern-grid">
+                <article class="pattern-card">
+                  <h4>HOUR OF DAY</h4>
+                  <p id="hour-chart-description">Unique browser-hour visits</p>
+                  <p class="scroll-hint" aria-hidden="true">SWIPE TO SEE ALL 24 HOURS →</p>
+                  <div class="hour-chart-scroll" tabindex="0" aria-label="Scrollable hour-of-day chart"><div class="mini-bar-chart mini-bar-chart-hours" id="hour-bars" aria-label="Traffic by hour of day"></div></div>
+                </article>
+                <article class="pattern-card">
+                  <h4>DAY OF WEEK</h4>
+                  <p id="weekday-chart-description">Unique browser-day visits</p>
+                  <div class="mini-bar-chart mini-bar-chart-weekdays" id="weekday-bars" aria-label="Traffic by day of week"></div>
+                </article>
+              </div>
+              <p class="detail-note" id="time-pattern-note">Loading traffic patterns…</p>
             </div>
-            <div class="location-ranking">
-              <h3>TOP LOCATIONS</h3>
-              <ol id="location-list"><li class="location-empty">Loading locations…</li></ol>
-              <button class="text-button" id="location-list-toggle" type="button" aria-expanded="false" hidden>VIEW ALL LOCATIONS</button>
+          </details>
+
+          <details class="detail-panel detail-disclosure" id="traffic-geography">
+            <summary>
+              <span><span class="eyebrow">WHERE PEOPLE VISIT FROM</span><span class="disclosure-title" id="geo-title">GEOGRAPHY</span><small>Approximate locations and ranked cities</small></span>
+              <span class="disclosure-action" aria-hidden="true">EXPLORE</span>
+            </summary>
+            <div class="detail-disclosure-body">
+              <div class="geography-grid">
+                <div class="world-map-wrap">
+                  <svg id="visitor-map" viewBox="0 0 1000 500" role="img" aria-label="Approximate map of visitor locations">
+                    <image href="./world-map.svg?v=20260901-3" x="0" y="0" width="1000" height="500"></image>
+                    <g id="visitor-map-points"></g>
+                  </svg>
+                </div>
+                <div class="location-ranking">
+                  <h4>TOP LOCATIONS</h4>
+                  <ol id="location-list"><li class="location-empty">Loading locations…</li></ol>
+                  <button class="text-button" id="location-list-toggle" type="button" aria-expanded="false" hidden>VIEW ALL LOCATIONS</button>
+                </div>
+              </div>
+              <p class="detail-note">Locations are approximate and coordinates are rounded before display.</p>
             </div>
-          </div>
-          <p class="detail-note">Locations are approximate and coordinates are rounded before display.</p>
+          </details>
         </section>
       </section>
 
-      <section class="dashboard-section game-dashboard" id="game-dashboard" aria-labelledby="game-dashboard-title">
+      <section class="dashboard-section game-dashboard" id="game-dashboard" role="tabpanel" tabindex="0" aria-labelledby="game-dashboard-title" hidden>
         <div class="dashboard-section-heading game-dashboard-heading">
-          <p class="eyebrow">MOVIE MASTER vs GARBAGE</p>
-          <h2 id="game-dashboard-title">GAME STATS</h2>
-          <p>Anonymous run statistics and all-time leaderboards</p>
+          <div>
+            <p class="eyebrow">MOVIE MASTER vs GARBAGE</p>
+            <h2 id="game-dashboard-title">GAME OVERVIEW</h2>
+            <p>Run health, player behavior, and the scores that matter most.</p>
+          </div>
+          <nav class="section-jump-nav" aria-label="Game dashboard sections">
+            <a href="#game-overview">OVERVIEW</a>
+            <a href="#leaderboard-title">LEADERBOARDS</a>
+            <a href="#recent-runs">RECENT RUNS</a>
+            <a href="#gameplay-totals">TOTALS</a>
+          </nav>
         </div>
 
-        <nav class="section-jump-nav" aria-label="Game dashboard sections">
-          <a href="#game-overview">OVERVIEW</a>
-          <a href="#gameplay-totals">TOTALS</a>
-          <a href="#leaderboard-title">LEADERBOARDS</a>
-        </nav>
+        <section class="overview-block" id="game-overview" aria-labelledby="game-at-a-glance-title" aria-busy="true">
+          <div class="content-heading">
+            <div>
+              <p class="eyebrow">AT A GLANCE</p>
+              <h3 id="game-at-a-glance-title">RUN HEALTH</h3>
+            </div>
+            <p>Completed runs and performance across all tracked players</p>
+          </div>
 
-        <section class="summary-grid primary-summary-grid game-primary-grid" id="game-overview" aria-label="Game overview" aria-busy="true">
-          <article class="summary-card summary-card-primary">
-            <span>COMPLETED RUNS</span>
-            <strong id="game-stat-completed">—</strong>
-            <small id="game-completed-detail">Loading…</small>
-          </article>
-          <article class="summary-card summary-card-primary">
-            <span>GAME-PAGE VISITORS</span>
-            <strong id="game-stat-visitors">—</strong>
-            <small>Unique browsers that opened the game</small>
-          </article>
-          <article class="summary-card summary-card-primary">
-            <span>RUN COMPLETION RATE</span>
-            <strong id="game-stat-completion">—</strong>
-            <small id="game-completion-detail">Completed runs ÷ runs started</small>
-          </article>
-          <article class="summary-card summary-card-primary summary-card-highlight">
-            <span>HIGH SCORE</span>
-            <strong id="game-stat-high-score">—</strong>
-            <small>Best completed run</small>
-          </article>
+          <div class="summary-grid game-primary-grid">
+            <article class="summary-card summary-card-primary">
+              <span>COMPLETED RUNS</span>
+              <strong id="game-stat-completed">—</strong>
+              <small id="game-completed-detail">Loading…</small>
+            </article>
+            <article class="summary-card summary-card-primary">
+              <span>RUN COMPLETION RATE</span>
+              <strong id="game-stat-completion">—</strong>
+              <small id="game-completion-detail">Completed runs ÷ runs started</small>
+            </article>
+            <article class="summary-card summary-card-primary summary-card-highlight">
+              <span>HIGH SCORE</span>
+              <strong id="game-stat-high-score">—</strong>
+              <small>Best completed run</small>
+            </article>
+          </div>
+
+          <div class="game-insights-grid">
+            <section class="compact-panel" aria-labelledby="activity-title">
+              <div class="compact-panel-heading"><p class="eyebrow">PARTICIPATION</p><h3 id="activity-title">RUN ACTIVITY</h3></div>
+              <dl class="metric-list">
+                <div><dt>GAME-PAGE VISITORS</dt><dd><strong id="game-stat-visitors">—</strong><small>Unique browsers that opened the game</small></dd></div>
+                <div><dt>RUNS STARTED</dt><dd><strong id="game-stat-starts">—</strong><small id="game-starts-detail">Loading…</small></dd></div>
+                <div><dt>PLAYERS WHO FINISHED</dt><dd><strong id="game-stat-players">—</strong><small id="game-players-detail">Loading…</small></dd></div>
+                <div><dt>RETURNING GAME VISITORS</dt><dd><strong id="game-stat-returning">—</strong><small id="game-returning-detail">Loading…</small></dd></div>
+                <div><dt>RETURN RATE</dt><dd><strong id="game-stat-return-rate">—</strong><small>Visited on two or more days</small></dd></div>
+              </dl>
+            </section>
+
+            <section class="compact-panel" aria-labelledby="performance-title">
+              <div class="compact-panel-heading"><p class="eyebrow">COMPLETED RUNS</p><h3 id="performance-title">PLAYER PERFORMANCE</h3></div>
+              <dl class="metric-list">
+                <div><dt>AVERAGE SCORE</dt><dd id="game-stat-avg-score">—</dd></div>
+                <div><dt>MEDIAN SCORE</dt><dd id="game-stat-median-score">—</dd></div>
+                <div><dt>AVERAGE GAME TIME</dt><dd id="game-stat-avg-time">—</dd></div>
+                <div><dt>AVERAGE LONGEST STREAK</dt><dd id="game-stat-avg-streak">—</dd></div>
+                <div><dt>BEST STREAK</dt><dd id="game-stat-high-streak">—</dd></div>
+              </dl>
+            </section>
+
+            <section class="compact-panel mode-panel" aria-labelledby="mode-title">
+              <div class="compact-panel-heading"><p class="eyebrow">RUNS STARTED</p><h3 id="mode-title">MODE SPLIT</h3></div>
+              <div class="mode-comparison">
+                <div class="mode-row"><div><span>NORMAL</span><strong id="mode-normal-label">—</strong></div><div class="mode-track"><span class="mode-fill mode-fill-normal" id="mode-normal-fill"></span></div></div>
+                <div class="mode-row"><div><span>HARDCORE</span><strong id="mode-hardcore-label">—</strong></div><div class="mode-track"><span class="mode-fill mode-fill-hardcore" id="mode-hardcore-fill"></span></div></div>
+              </div>
+            </section>
+          </div>
         </section>
 
-        <div class="game-insights-grid">
-          <section class="compact-panel" aria-labelledby="activity-title">
-            <div class="compact-panel-heading"><p class="eyebrow">PARTICIPATION</p><h3 id="activity-title">RUN ACTIVITY</h3></div>
-            <dl class="metric-list">
-              <div><dt>RUNS STARTED</dt><dd><strong id="game-stat-starts">—</strong><small id="game-starts-detail">Loading…</small></dd></div>
-              <div><dt>PLAYERS WHO FINISHED</dt><dd><strong id="game-stat-players">—</strong><small id="game-players-detail">Loading…</small></dd></div>
-              <div><dt>RETURNING GAME VISITORS</dt><dd><strong id="game-stat-returning">—</strong><small id="game-returning-detail">Loading…</small></dd></div>
-              <div><dt>RETURN RATE</dt><dd><strong id="game-stat-return-rate">—</strong><small>Visited on two or more days</small></dd></div>
-            </dl>
-          </section>
-
-          <section class="compact-panel" aria-labelledby="score-profile-title">
-            <div class="compact-panel-heading"><p class="eyebrow">COMPLETED RUNS</p><h3 id="score-profile-title">SCORE PROFILE</h3></div>
-            <dl class="metric-list">
-              <div><dt>AVERAGE SCORE</dt><dd id="game-stat-avg-score">—</dd></div>
-              <div><dt>MEDIAN SCORE</dt><dd id="game-stat-median-score">—</dd></div>
-            </dl>
-          </section>
-
-          <section class="compact-panel" aria-labelledby="run-profile-title">
-            <div class="compact-panel-heading"><p class="eyebrow">COMPLETED RUNS</p><h3 id="run-profile-title">RUN PROFILE</h3></div>
-            <dl class="metric-list">
-              <div><dt>AVERAGE GAME TIME</dt><dd id="game-stat-avg-time">—</dd></div>
-              <div><dt>AVERAGE LONGEST STREAK</dt><dd id="game-stat-avg-streak">—</dd></div>
-              <div><dt>BEST STREAK</dt><dd id="game-stat-high-streak">—</dd></div>
-            </dl>
-          </section>
-
-          <section class="compact-panel mode-panel" aria-labelledby="mode-title">
-            <div class="compact-panel-heading"><p class="eyebrow">RUNS STARTED</p><h3 id="mode-title">MODE SPLIT</h3></div>
-            <div class="mode-row"><div><span>NORMAL</span><strong id="mode-normal-label">—</strong></div><div class="mode-track"><span class="mode-fill mode-fill-normal" id="mode-normal-fill"></span></div></div>
-            <div class="mode-row"><div><span>HARDCORE</span><strong id="mode-hardcore-label">—</strong></div><div class="mode-track"><span class="mode-fill mode-fill-hardcore" id="mode-hardcore-fill"></span></div></div>
-          </section>
-        </div>
-
-        <details class="disclosure-panel detail-panel totals-panel" id="gameplay-totals">
-          <summary>
-            <span><span class="eyebrow">EVERY RECORDED RUN</span><span class="disclosure-title">GAMEPLAY TOTALS</span></span>
-            <span class="disclosure-action" aria-hidden="true">SHOW TOTALS</span>
-          </summary>
-          <div class="totals-groups" id="game-totals-groups" aria-live="polite"><p>Loading…</p></div>
-        </details>
-
         <section class="detail-panel leaderboard-panel" aria-labelledby="leaderboard-title">
-          <div class="detail-panel-heading"><div><p class="eyebrow">HIGH SCORES BY DIFFICULTY</p><h2 id="leaderboard-title">LEADERBOARDS</h2></div></div>
+          <div class="detail-panel-heading"><div><p class="eyebrow">HIGH SCORES BY DIFFICULTY</p><h3 id="leaderboard-title">LEADERBOARDS</h3></div></div>
           <div class="mode-leaderboard-grid" id="mode-leaderboard-grid">
             <section class="mode-leaderboard-board" aria-labelledby="leaderboard-standard-title">
-              <div class="mode-leaderboard-heading"><p class="eyebrow">TOP 10 • ALL TIME</p><h3 id="leaderboard-standard-title">STANDARD MODE</h3></div>
+              <div class="mode-leaderboard-heading"><p class="eyebrow">TOP 10 • ALL TIME</p><h4 id="leaderboard-standard-title">STANDARD MODE</h4></div>
               <div class="table-scroll"><table class="leaderboard-table"><thead><tr><th scope="col">RANK</th><th scope="col">PLAYER</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">TIME</th></tr></thead><tbody id="leaderboard-standard-body"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
             </section>
             <section class="mode-leaderboard-board" aria-labelledby="leaderboard-hardcore-title">
-              <div class="mode-leaderboard-heading"><p class="eyebrow">TOP 10 • ALL TIME</p><h3 id="leaderboard-hardcore-title">HARDCORE MODE</h3></div>
+              <div class="mode-leaderboard-heading"><p class="eyebrow">TOP 10 • ALL TIME</p><h4 id="leaderboard-hardcore-title">HARDCORE MODE</h4></div>
               <div class="table-scroll"><table class="leaderboard-table"><thead><tr><th scope="col">RANK</th><th scope="col">PLAYER</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">TIME</th></tr></thead><tbody id="leaderboard-hardcore-body"><tr><td colspan="5">Loading…</td></tr></tbody></table></div>
             </section>
           </div>
         </section>
+
+        <details class="disclosure-panel detail-panel recent-runs-panel" id="recent-runs">
+          <summary>
+            <span><span class="eyebrow">LATEST COMPLETED GAMES</span><span class="disclosure-title">RECENT RUNS</span><small>Inspect the newest runs and open their full details</small></span>
+            <span class="disclosure-action" aria-hidden="true">SHOW RUNS</span>
+          </summary>
+          <div class="table-scroll recent-runs-scroll">
+            <table class="leaderboard-table recent-runs-table">
+              <thead><tr><th scope="col">COMPLETED</th><th scope="col">PLAYER</th><th scope="col">MODE</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">GAME TIME</th></tr></thead>
+              <tbody id="recent-runs-body"><tr><td colspan="6">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="disclosure-panel detail-panel totals-panel" id="gameplay-totals">
+          <summary>
+            <span><span class="eyebrow">EVERY RECORDED RUN</span><span class="disclosure-title">GAMEPLAY TOTALS</span><small>Lifetime popcorn, combat, and power-up counts</small></span>
+            <span class="disclosure-action" aria-hidden="true">SHOW TOTALS</span>
+          </summary>
+          <div class="totals-groups" id="game-totals-groups" aria-live="polite"><p>Loading…</p></div>
+        </details>
       </section>
 
       <details class="data-notes">

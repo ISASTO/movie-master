@@ -373,7 +373,7 @@
     if (elements.gameTrackingNote) {
       elements.gameTrackingNote.textContent =
         `Game-run tracking began ${formatTrackingDate(state.payload.tracking?.gameStatsStartedAt)}. ` +
-        "Earlier scores and locally stored personal records are not retroactively uploaded.";
+        "Eligible locally stored personal bests are imported once into the all-time leaderboards when the updated game runs.";
     }
   }
 
