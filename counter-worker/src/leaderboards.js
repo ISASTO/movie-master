@@ -107,21 +107,25 @@ function analyticsPlayerName(row) {
 }
 
 function normalizeAnalyticsRows(rows, includeRank = true) {
-  return (rows ?? []).map((row, index) => ({
-    ...(includeRank ? { rank: index + 1 } : {}),
-    runId: row.run_id,
-    player: analyticsPlayerName(row),
-    mode: row.mode,
-    score: Number(row.score ?? 0),
-    longestStreak: Number(row.longest_streak ?? 0),
-    gameTimeSeconds: Number(row.game_time_seconds ?? 0),
-    finishedAt: sqliteTimestampToIso(row.finished_at),
-  }));
+  return (rows ?? []).map((row, index) => {
+    const legacy = Number(row.is_legacy ?? 0) === 1;
+    return {
+      ...(includeRank ? { rank: index + 1 } : {}),
+      runId: legacy ? null : row.run_id,
+      legacy,
+      player: analyticsPlayerName(row),
+      mode: row.mode,
+      score: Number(row.score ?? 0),
+      longestStreak: row.longest_streak == null ? null : Number(row.longest_streak),
+      gameTimeSeconds: row.game_time_seconds == null ? null : Number(row.game_time_seconds),
+      finishedAt: sqliteTimestampToIso(row.finished_at),
+    };
+  });
 }
 
 function bestRunsForMode(mode) {
   return `
-    WITH ranked_runs AS (
+    WITH source_runs AS (
       SELECT
         run_id,
         visitor_id,
@@ -130,12 +134,39 @@ function bestRunsForMode(mode) {
         longest_streak,
         game_time_seconds,
         finished_at,
-        ROW_NUMBER() OVER (
-          PARTITION BY visitor_id
-          ORDER BY score DESC, longest_streak DESC, game_time_seconds DESC, finished_at ASC
-        ) AS player_rank
+        0 AS is_legacy
       FROM game_runs
       WHERE mode = '${mode}'
+
+      UNION ALL
+
+      SELECT
+        'legacy:' || visitor_id || ':' || mode AS run_id,
+        visitor_id,
+        mode,
+        score,
+        NULL AS longest_streak,
+        NULL AS game_time_seconds,
+        imported_at AS finished_at,
+        1 AS is_legacy
+      FROM legacy_leaderboard_scores
+      WHERE mode = '${mode}'
+    ),
+    ranked_runs AS (
+      SELECT
+        source_runs.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY visitor_id
+          ORDER BY score DESC,
+                   CASE WHEN longest_streak IS NULL THEN 1 ELSE 0 END ASC,
+                   longest_streak DESC,
+                   CASE WHEN game_time_seconds IS NULL THEN 1 ELSE 0 END ASC,
+                   game_time_seconds DESC,
+                   is_legacy ASC,
+                   finished_at ASC,
+                   run_id ASC
+        ) AS player_rank
+      FROM source_runs
     )
     SELECT
       ranked_runs.run_id,
@@ -145,15 +176,20 @@ function bestRunsForMode(mode) {
       ranked_runs.longest_streak,
       ranked_runs.game_time_seconds,
       ranked_runs.finished_at,
+      ranked_runs.is_legacy,
       leaderboard_profiles.display_name
     FROM ranked_runs
     LEFT JOIN leaderboard_profiles
       ON leaderboard_profiles.visitor_id = ranked_runs.visitor_id
     WHERE ranked_runs.player_rank = 1
     ORDER BY ranked_runs.score DESC,
+             CASE WHEN ranked_runs.longest_streak IS NULL THEN 1 ELSE 0 END ASC,
              ranked_runs.longest_streak DESC,
+             CASE WHEN ranked_runs.game_time_seconds IS NULL THEN 1 ELSE 0 END ASC,
              ranked_runs.game_time_seconds DESC,
-             ranked_runs.finished_at ASC
+             ranked_runs.is_legacy ASC,
+             ranked_runs.finished_at ASC,
+             ranked_runs.run_id ASC
     LIMIT 10
   `;
 }
@@ -399,6 +435,7 @@ async function handleAnalyticsLeaderboard(request, env, origin) {
   if (request.method !== "GET") {
     return jsonResponse({ error: "Method not allowed" }, 405, origin);
   }
+  await ensureLeaderboardInfrastructure(env.DB);
   const [standardResult, hardcoreResult, recentResult] = await env.DB.batch([
     env.DB.prepare(bestRunsForMode("NORMAL")),
     env.DB.prepare(bestRunsForMode("HARDCORE")),

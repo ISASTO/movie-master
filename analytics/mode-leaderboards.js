@@ -222,8 +222,8 @@
         [`#${entry.rank}`, "leaderboard-rank", "RANK"],
         [entry.player, "leaderboard-player", "PLAYER"],
         [numberFormatter.format(entry.score ?? 0), "leaderboard-score", "SCORE"],
-        [numberFormatter.format(entry.longestStreak ?? 0), "leaderboard-streak", "STREAK"],
-        [formatDuration(entry.gameTimeSeconds), "leaderboard-time", "TIME"],
+        [entry.longestStreak == null ? "—" : numberFormatter.format(entry.longestStreak), "leaderboard-streak", "STREAK"],
+        [entry.gameTimeSeconds == null ? "—" : formatDuration(entry.gameTimeSeconds), "leaderboard-time", "TIME"],
       ];
 
       values.forEach(([value, className, label], index) => {
