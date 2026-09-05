@@ -193,13 +193,6 @@ new_values = '''      const values = [
 '''
 client = replace_once(client, old_values, new_values, "legacy unknown stats display")
 
-client = replace_once(
-    client,
-    '      cell.textContent = "No completed runs recorded yet.";\n',
-    '      cell.textContent = "No leaderboard scores recorded yet.";\n',
-    "analytics empty leaderboard wording",
-)
-
 index = replace_once(
     index,
     '<script src="./mode-leaderboards.js?v=20260902-run-details-2" defer></script>',
