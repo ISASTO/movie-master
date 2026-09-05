@@ -10,8 +10,10 @@ def replace_once(text, old, new, label):
 
 game_path = Path("game/game.js")
 index_path = Path("game/index.html")
+benchmark_path = Path("benchmarks/game-performance.js")
 game = game_path.read_text(encoding="utf-8")
 index = index_path.read_text(encoding="utf-8")
+benchmark = benchmark_path.read_text(encoding="utf-8")
 
 game = replace_once(
     game,
@@ -52,6 +54,13 @@ game = replace_once(
     "gamepad disconnected listener",
 )
 
+benchmark = replace_once(
+    benchmark,
+    '''      activeGamepadIndex = null;\n      gamepadConnectionKnown = true;\n      gamepadMenuContext = entering ? "" : "paused";\n''',
+    '''      activeGamepadIndex = null;\n      gamepadMenuContext = entering ? "" : "paused";\n''',
+    "controller benchmark discovery state",
+)
+
 index = replace_once(
     index,
     '<script src="./game.js?v=20260905-early-finish-1" defer></script>',
@@ -66,4 +75,5 @@ if "function chooseActiveGamepad()" not in game:
 
 game_path.write_text(game, encoding="utf-8")
 index_path.write_text(index, encoding="utf-8")
+benchmark_path.write_text(benchmark, encoding="utf-8")
 print("XInput compatibility patch applied.")
