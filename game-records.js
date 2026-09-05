@@ -3,7 +3,6 @@
 
   const endpoint = "https://movie-master-visitor-counter.isasto.workers.dev/game-event";
   const visitorIdKey = "movie-master-visitor-id";
-  const startButtons = ["start-button", "restart-button", "reset-confirm-button"];
   const GAMEPAD_DEAD_ZONE = 0.18;
   const GAMEPAD_BUTTON_THRESHOLD = 0.5;
   // The browser's disconnect event is immediate. This scan only identifies the
@@ -316,9 +315,14 @@
     }
   };
 
-  for (const id of startButtons) {
-    document.getElementById(id)?.addEventListener("click", beginRun);
-  }
+  window.addEventListener("movie-master:game-run-started", () => {
+    beginRun();
+  });
+  window.addEventListener("movie-master:game-run-finalized", (event) => {
+    if (!runActive) return;
+    const pending = finishRun();
+    if (Array.isArray(event.detail?.pending)) event.detail.pending.push(pending);
+  });
   window.addEventListener("gamepadconnected", () => {
     if (runActive) startGamepadScanner();
   });

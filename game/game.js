@@ -1325,6 +1325,7 @@
     ensureAudio();
     flushRunRecords();
     resetGame();
+    runFinalizedForTracking = false;
     gameState = "running";
     setPausePresentation(false);
     hideResumeCountdown();
@@ -1346,6 +1347,9 @@
     setBanner("KEEP MOVING. COLLECT THE POPCORN.", 2.8, false);
     announce("The Movie Master is ready. Keep moving and collect the popcorn.");
     playCue("start");
+    window.dispatchEvent(new CustomEvent("movie-master:game-run-started", {
+      detail: { mode: runStats.mode },
+    }));
   }
 
   function saveRunRecords() {
@@ -1356,6 +1360,32 @@
     flushRunRecords();
 
     return { finalScore, scoreRecord, streakRecord };
+  }
+
+  let runFinalizedForTracking = false;
+  const EARLY_FINALIZE_STATES = new Set([
+    "running",
+    "paused",
+    "resuming",
+    "reset-confirm",
+    "end-confirm",
+    "exit-confirm",
+  ]);
+
+  function finalizeRunForTracking(reason) {
+    if (runFinalizedForTracking || !EARLY_FINALIZE_STATES.has(gameState)) {
+      flushRunRecords();
+      return null;
+    }
+
+    runFinalizedForTracking = true;
+    const records = saveRunRecords();
+    renderGameStats(records.finalScore);
+    const pending = [];
+    window.dispatchEvent(new CustomEvent("movie-master:game-run-finalized", {
+      detail: { reason, pending },
+    }));
+    return pending.length ? Promise.allSettled(pending) : null;
   }
 
   function endGame(reason = "garbage") {
@@ -1570,7 +1600,7 @@
 
   function confirmResetGame() {
     if (gameState !== "reset-confirm") return;
-    saveRunRecords();
+    finalizeRunForTracking("reset");
     startGame();
   }
 
@@ -1636,8 +1666,14 @@
     beginResumeCountdown();
   }
 
-  function goToMainSite() {
-    flushRunRecords();
+  async function goToMainSite() {
+    const finalization = finalizeRunForTracking("exit");
+    if (finalization) {
+      await Promise.race([
+        finalization,
+        new Promise((resolve) => window.setTimeout(resolve, 650)),
+      ]);
+    }
     window.location.assign(ui.exitButton.href);
   }
 
@@ -5210,7 +5246,13 @@
     if (gameState === "running" || gameState === "resuming") togglePause(true);
   });
 
-  window.addEventListener("pagehide", flushRunRecords);
+  window.addEventListener("pagehide", (event) => {
+    if (event.persisted) {
+      flushRunRecords();
+      return;
+    }
+    finalizeRunForTracking("pagehide");
+  });
 
   ui.startButton.addEventListener("click", startGame);
   ui.startModeButton.addEventListener("click", toggleHardcoreMode);
