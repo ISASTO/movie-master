@@ -9,17 +9,17 @@
     <title>MOVIE MASTER ANALYTICS</title>
     <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://movie-master-visitor-counter.isasto.workers.dev" crossorigin>
-    <link rel="stylesheet" href="./analytics.css?v=20260905-hierarchy-2">
+    <link rel="stylesheet" href="./analytics.css?v=20260906-run-lifecycle-1">
     <link rel="stylesheet" href="./details.css?v=20260905-hierarchy-1">
     <link rel="stylesheet" href="./traffic-series.css?v=20260901-2">
-    <link rel="stylesheet" href="./mode-leaderboards.css?v=20260905-hierarchy-2">
+    <link rel="stylesheet" href="./mode-leaderboards.css?v=20260906-run-lifecycle-1">
     <link rel="stylesheet" href="./run-details-overrides.css?v=20260902-1">
     <script src="./fetch-shim.js?v=20260902-perf-1" defer></script>
     <script src="./dashboard.js?v=20260905-hierarchy-1" defer></script>
-    <script src="./details.js?v=20260905-hierarchy-1" defer></script>
+    <script src="./details.js?v=20260906-run-lifecycle-1" defer></script>
     <script src="./source-breakdown.js?v=20260901-2" defer></script>
     <script src="./store-stats.js?v=20260901-3" defer></script>
-    <script src="./mode-leaderboards.js?v=20260905-legacy-analytics-1" defer></script>
+    <script src="./mode-leaderboards.js?v=20260906-run-lifecycle-1" defer></script>
     <script src="./auto-refresh.js?v=20260902-perf-2" defer></script>
     <script src="./ui.js?v=20260905-hierarchy-2" defer></script>
   </head>
@@ -272,26 +272,21 @@
           <div class="content-heading">
             <div>
               <p class="eyebrow">AT A GLANCE</p>
-              <h3 id="game-at-a-glance-title">RUN HEALTH</h3>
+              <h3 id="game-at-a-glance-title">GAME ACTIVITY</h3>
             </div>
-            <p>Completed runs and performance across all tracked players</p>
+            <p>Recorded games and performance across all tracked players</p>
           </div>
 
           <div class="summary-grid game-primary-grid">
             <article class="summary-card summary-card-primary">
-              <span>COMPLETED RUNS</span>
-              <strong id="game-stat-completed">—</strong>
-              <small id="game-completed-detail">Loading…</small>
-            </article>
-            <article class="summary-card summary-card-primary">
-              <span>RUN COMPLETION RATE</span>
-              <strong id="game-stat-completion">—</strong>
-              <small id="game-completion-detail">Completed runs ÷ runs started</small>
+              <span>GAMES PLAYED</span>
+              <strong id="game-stat-games-played">—</strong>
+              <small id="game-games-played-detail">Loading…</small>
             </article>
             <article class="summary-card summary-card-primary summary-card-highlight">
               <span>HIGH SCORE</span>
               <strong id="game-stat-high-score">—</strong>
-              <small>Best completed run</small>
+              <small>Best recorded game</small>
             </article>
           </div>
 
@@ -301,14 +296,14 @@
               <dl class="metric-list">
                 <div><dt>GAME-PAGE VISITORS</dt><dd><strong id="game-stat-visitors">—</strong><small>Unique browsers that opened the game</small></dd></div>
                 <div><dt>RUNS STARTED</dt><dd><strong id="game-stat-starts">—</strong><small id="game-starts-detail">Loading…</small></dd></div>
-                <div><dt>PLAYERS WHO FINISHED</dt><dd><strong id="game-stat-players">—</strong><small id="game-players-detail">Loading…</small></dd></div>
+                <div><dt>PLAYERS WITH RECORDED GAMES</dt><dd><strong id="game-stat-players">—</strong><small id="game-players-detail">Loading…</small></dd></div>
                 <div><dt>RETURNING GAME VISITORS</dt><dd><strong id="game-stat-returning">—</strong><small id="game-returning-detail">Loading…</small></dd></div>
                 <div><dt>RETURN RATE</dt><dd><strong id="game-stat-return-rate">—</strong><small>Visited on two or more days</small></dd></div>
               </dl>
             </section>
 
             <section class="compact-panel" aria-labelledby="performance-title">
-              <div class="compact-panel-heading"><p class="eyebrow">COMPLETED RUNS</p><h3 id="performance-title">PLAYER PERFORMANCE</h3></div>
+              <div class="compact-panel-heading"><p class="eyebrow">GAMES PLAYED</p><h3 id="performance-title">PLAYER PERFORMANCE</h3></div>
               <dl class="metric-list">
                 <div><dt>AVERAGE SCORE</dt><dd id="game-stat-avg-score">—</dd></div>
                 <div><dt>MEDIAN SCORE</dt><dd id="game-stat-median-score">—</dd></div>
@@ -344,13 +339,13 @@
 
         <details class="disclosure-panel detail-panel recent-runs-panel" id="recent-runs">
           <summary>
-            <span><span class="eyebrow">LATEST COMPLETED GAMES</span><span class="disclosure-title">RECENT RUNS</span><small>Inspect the newest runs and open their full details</small></span>
+            <span><span class="eyebrow">LATEST GAME ATTEMPTS</span><span class="disclosure-title">RECENT RUNS</span><small>Finished games, last-seen pauses, and starts missing a final signal</small></span>
             <span class="disclosure-action" aria-hidden="true">SHOW RUNS</span>
           </summary>
           <div class="table-scroll recent-runs-scroll">
             <table class="leaderboard-table recent-runs-table">
-              <thead><tr><th scope="col">COMPLETED</th><th scope="col">PLAYER</th><th scope="col">MODE</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">GAME TIME</th></tr></thead>
-              <tbody id="recent-runs-body"><tr><td colspan="6">Loading…</td></tr></tbody>
+              <thead><tr><th scope="col">LAST EVENT</th><th scope="col">PLAYER</th><th scope="col">MODE</th><th scope="col">RESULT</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">GAME TIME</th></tr></thead>
+              <tbody id="recent-runs-body"><tr><td colspan="7">Loading…</td></tr></tbody>
             </table>
           </div>
         </details>
@@ -370,7 +365,7 @@
           <p id="tracking-note">Loading traffic tracking history…</p>
           <p id="game-tracking-note">Loading game-stat history…</p>
           <p id="location-note">Loading geography history…</p>
-          <p>Traffic counts use anonymous browser IDs stored locally in each visitor's browser. Players may optionally publish a leaderboard name. Completed runs may store coarse device, browser, control-method and graphics-quality categories plus approximate Cloudflare location. No IP addresses, full user-agent strings, exact screen dimensions or hardware fingerprints are retained.</p>
+          <p>Traffic counts use anonymous browser IDs stored locally in each visitor's browser. Players may optionally publish a leaderboard name. Game attempts may store coarse device, browser, control-method and graphics-quality categories plus approximate Cloudflare location. No IP addresses, full user-agent strings, exact screen dimensions or hardware fingerprints are retained.</p>
         </div>
       </details>
     </main>

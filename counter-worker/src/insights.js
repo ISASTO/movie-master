@@ -1,4 +1,5 @@
 import { buildPublicLeaderboardPayload } from "./leaderboards.js";
+import { ensureRunDataSchema } from "./run-data.js";
 
 const ALLOWED_ORIGINS = new Set([
   "https://moviemaster.vip",
@@ -10,6 +11,16 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 const VALID_SECTIONS = new Set(["site", "game"]);
 const VALID_GAME_SOURCES = new Set(["site", "direct", "unknown"]);
 const VALID_MODES = new Set(["NORMAL", "HARDCORE"]);
+const VALID_GAME_EVENTS = new Set(["start", "checkpoint", "finish"]);
+const VALID_END_REASONS = new Set([
+  "garbage",
+  "missed-popcorn",
+  "manual",
+  "reset",
+  "exit",
+  "pagehide",
+  "unknown",
+]);
 const CHICAGO_TIME_ZONE = "America/Chicago";
 
 function corsHeaders(origin) {
@@ -126,6 +137,89 @@ function validatedRunSummary(body, mode, serverElapsedSeconds) {
     return { ok: false, message: "Run statistics failed validation" };
   }
   return { ok: true, summary };
+}
+
+function runReason(body, event) {
+  const reason = String(body.endReason ?? "").trim().toLowerCase();
+  if (event === "checkpoint") return reason === "hidden" ? "hidden" : "pause";
+  return VALID_END_REASONS.has(reason) ? reason : "unknown";
+}
+
+async function persistRunLifecycle(db, { run, visitor, mode, state, reason, summary }) {
+  await db.prepare(
+    `INSERT INTO game_run_lifecycle (
+       run_id, visitor_id, mode, state, end_reason,
+       score, longest_streak, game_time_seconds, popcorn_collected,
+       popcorn_missed, garbage_destroyed, destroyed_by_stars,
+       destroyed_by_blasts, stars_fired, stars_hit, hits_taken,
+       shield_blocks, blasts_used, powerup_shield, powerup_speed,
+       powerup_super, powerup_magnet, ended_at, updated_at
+     ) VALUES (
+       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+       CASE WHEN ? = 'FINISHED' THEN CURRENT_TIMESTAMP ELSE NULL END,
+       CURRENT_TIMESTAMP
+     )
+     ON CONFLICT(run_id) DO UPDATE SET
+       state = CASE
+         WHEN game_run_lifecycle.state = 'FINISHED' THEN 'FINISHED'
+         ELSE excluded.state
+       END,
+       end_reason = CASE
+         WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.end_reason
+         ELSE excluded.end_reason
+       END,
+       score = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.score ELSE excluded.score END,
+       longest_streak = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.longest_streak ELSE excluded.longest_streak END,
+       game_time_seconds = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.game_time_seconds ELSE excluded.game_time_seconds END,
+       popcorn_collected = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.popcorn_collected ELSE excluded.popcorn_collected END,
+       popcorn_missed = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.popcorn_missed ELSE excluded.popcorn_missed END,
+       garbage_destroyed = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.garbage_destroyed ELSE excluded.garbage_destroyed END,
+       destroyed_by_stars = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.destroyed_by_stars ELSE excluded.destroyed_by_stars END,
+       destroyed_by_blasts = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.destroyed_by_blasts ELSE excluded.destroyed_by_blasts END,
+       stars_fired = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.stars_fired ELSE excluded.stars_fired END,
+       stars_hit = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.stars_hit ELSE excluded.stars_hit END,
+       hits_taken = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.hits_taken ELSE excluded.hits_taken END,
+       shield_blocks = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.shield_blocks ELSE excluded.shield_blocks END,
+       blasts_used = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.blasts_used ELSE excluded.blasts_used END,
+       powerup_shield = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.powerup_shield ELSE excluded.powerup_shield END,
+       powerup_speed = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.powerup_speed ELSE excluded.powerup_speed END,
+       powerup_super = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.powerup_super ELSE excluded.powerup_super END,
+       powerup_magnet = CASE WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.powerup_magnet ELSE excluded.powerup_magnet END,
+       ended_at = CASE
+         WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.ended_at
+         ELSE excluded.ended_at
+       END,
+       updated_at = CASE
+         WHEN game_run_lifecycle.state = 'FINISHED' THEN game_run_lifecycle.updated_at
+         ELSE CURRENT_TIMESTAMP
+       END
+     WHERE game_run_lifecycle.visitor_id = excluded.visitor_id
+       AND game_run_lifecycle.mode = excluded.mode`,
+  ).bind(
+    run,
+    visitor,
+    mode,
+    state,
+    reason,
+    summary.score,
+    summary.longestStreak,
+    summary.gameTimeSeconds,
+    summary.popcornCollected,
+    summary.popcornMissed,
+    summary.garbageDestroyed,
+    summary.destroyedByStars,
+    summary.destroyedByBlasts,
+    summary.starsFired,
+    summary.starsHit,
+    summary.hitsTaken,
+    summary.shieldBlocks,
+    summary.blastsUsed,
+    summary.powerupShield,
+    summary.powerupSpeed,
+    summary.powerupSuper,
+    summary.powerupMagnet,
+    state,
+  ).run();
 }
 
 function roundedCoordinate(value) {
@@ -359,12 +453,13 @@ async function getDetails(env) {
     ),
     env.DB.prepare(
       `SELECT COUNT(*) AS starts,
-              COUNT(DISTINCT visitor_id) AS unique_players,
+              COUNT(DISTINCT visitor_id) AS unique_starters,
               SUM(CASE WHEN visit_date = ? THEN 1 ELSE 0 END) AS starts_today
        FROM game_starts`,
     ).bind(today),
     env.DB.prepare(
-      `SELECT COUNT(*) AS completed,
+      `SELECT COUNT(*) AS games_played,
+              COUNT(DISTINCT visitor_id) AS players,
               AVG(score) AS avg_score,
               MAX(score) AS high_score,
               AVG(game_time_seconds) AS avg_time,
@@ -385,7 +480,7 @@ async function getDetails(env) {
               SUM(powerup_speed) AS powerup_speed,
               SUM(powerup_super) AS powerup_super,
               SUM(powerup_magnet) AS powerup_magnet,
-              SUM(CASE WHEN visit_date = ? THEN 1 ELSE 0 END) AS completed_today
+              SUM(CASE WHEN visit_date = ? THEN 1 ELSE 0 END) AS games_played_today
        FROM game_runs`,
     ).bind(today),
     env.DB.prepare(
@@ -424,10 +519,11 @@ async function getDetails(env) {
   for (const row of metaResult.results ?? []) tracking[row.key] = sqliteTimestampToIso(row.value);
 
   const starts = Number(startsResult.results?.[0]?.starts ?? 0);
-  const uniquePlayers = Number(startsResult.results?.[0]?.unique_players ?? 0);
+  const uniqueStarters = Number(startsResult.results?.[0]?.unique_starters ?? 0);
   const startsToday = Number(startsResult.results?.[0]?.starts_today ?? 0);
   const aggregate = runAggregateResult.results?.[0] ?? {};
-  const completed = Number(aggregate.completed ?? 0);
+  const gamesPlayed = Number(aggregate.games_played ?? 0);
+  const uniquePlayers = Number(aggregate.players ?? 0);
   const gameVisitors = Number(gameVisitorsResult.results?.[0]?.count ?? 0);
   const returningPlayers = Number(returningResult.results?.[0]?.count ?? 0);
   const starsFired = Number(aggregate.stars_fired ?? 0);
@@ -455,13 +551,13 @@ async function getDetails(env) {
       gameVisitors,
       starts,
       startsToday,
-      completed,
-      completedToday: Number(aggregate.completed_today ?? 0),
+      gamesPlayed,
+      gamesPlayedToday: Number(aggregate.games_played_today ?? 0),
       uniquePlayers,
+      uniqueStarters,
       returningPlayers,
       returningRate: gameVisitors > 0 ? (returningPlayers / gameVisitors) * 100 : 0,
-      completionRate: starts > 0 ? (completed / starts) * 100 : 0,
-      averageRunsPerPlayer: uniquePlayers > 0 ? completed / uniquePlayers : 0,
+      averageRunsPerPlayer: uniquePlayers > 0 ? gamesPlayed / uniquePlayers : 0,
       averageScore: Number(aggregate.avg_score ?? 0),
       medianScore: Number(medianResult.results?.[0]?.median_score ?? 0),
       highScore: Number(aggregate.high_score ?? 0),
@@ -519,15 +615,36 @@ export async function handleGameEvent(request, env) {
     return jsonResponse({ error: "Invalid run ID" }, 400, origin);
   }
   if (!VALID_MODES.has(mode)) return jsonResponse({ error: "Invalid mode" }, 400, origin);
-  if (event !== "start" && event !== "finish") {
+  if (!VALID_GAME_EVENTS.has(event)) {
     return jsonResponse({ error: "Invalid event" }, 400, origin);
   }
 
   const visitor = visitorId.toLowerCase();
   const run = runId.toLowerCase();
   const { date } = chicagoParts();
+  await ensureRunDataSchema(env.DB);
 
   if (event === "start") {
+    const existing = await env.DB
+      .prepare(
+        `SELECT visitor_id, mode, run_token
+         FROM game_starts
+         WHERE run_id = ?`,
+      )
+      .bind(run)
+      .first();
+    if (existing) {
+      if (existing.visitor_id !== visitor || existing.mode !== mode) {
+        return jsonResponse({ error: "Run ID is unavailable" }, 409, origin);
+      }
+      return jsonResponse({
+        ok: true,
+        duplicate: true,
+        receiptVersion: existing.run_token ? 2 : 1,
+        runToken: existing.run_token ?? null,
+      }, 200, origin);
+    }
+
     const recent = await env.DB
       .prepare(
         `SELECT COUNT(*) AS count
@@ -552,7 +669,23 @@ export async function handleGameEvent(request, env) {
       .run();
 
     if (Number(inserted?.meta?.changes ?? 0) < 1) {
-      return jsonResponse({ error: "Run ID is unavailable" }, 409, origin);
+      const raced = await env.DB
+        .prepare(
+          `SELECT visitor_id, mode, run_token
+           FROM game_starts
+           WHERE run_id = ?`,
+        )
+        .bind(run)
+        .first();
+      if (!raced || raced.visitor_id !== visitor || raced.mode !== mode) {
+        return jsonResponse({ error: "Run ID is unavailable" }, 409, origin);
+      }
+      return jsonResponse({
+        ok: true,
+        duplicate: true,
+        receiptVersion: raced.run_token ? 2 : 1,
+        runToken: raced.run_token ?? null,
+      }, 200, origin);
     }
     return jsonResponse({
       ok: true,
@@ -584,19 +717,45 @@ export async function handleGameEvent(request, env) {
     return jsonResponse({ error: "Invalid run receipt" }, 409, origin);
   }
 
-  if (startRow.completed_at) {
-    return jsonResponse({
-      ok: true,
-      duplicate: true,
-      leaderboards: await buildPublicLeaderboardPayload(env.DB, visitor),
-    }, 200, origin);
-  }
-
   const validated = validatedRunSummary(body, mode, startRow.server_elapsed_seconds);
   if (!validated.ok) {
     return jsonResponse({ error: validated.message }, 422, origin);
   }
   const summary = validated.summary;
+  const reason = runReason(body, event);
+
+  if (event === "checkpoint") {
+    if (startRow.completed_at) {
+      return jsonResponse({ ok: true, duplicate: true, state: "FINISHED" }, 200, origin);
+    }
+    await persistRunLifecycle(env.DB, {
+      run,
+      visitor,
+      mode,
+      state: "CHECKPOINT",
+      reason,
+      summary,
+    });
+    return jsonResponse({ ok: true, state: "CHECKPOINT" }, 200, origin);
+  }
+
+  if (startRow.completed_at) {
+    await persistRunLifecycle(env.DB, {
+      run,
+      visitor,
+      mode,
+      state: "FINISHED",
+      reason,
+      summary,
+    });
+    return jsonResponse({
+      ok: true,
+      duplicate: true,
+      state: "FINISHED",
+      leaderboards: await buildPublicLeaderboardPayload(env.DB, visitor),
+    }, 200, origin);
+  }
+
   const inserted = await env.DB
     .prepare(
       `INSERT OR IGNORE INTO game_runs (
@@ -635,8 +794,20 @@ export async function handleGameEvent(request, env) {
     )
     .run();
 
+  let duplicate = false;
   if (Number(inserted?.meta?.changes ?? 0) < 1) {
-    return jsonResponse({ error: "Run was already recorded" }, 409, origin);
+    const existingRun = await env.DB
+      .prepare(
+        `SELECT run_id
+         FROM game_runs
+         WHERE run_id = ? AND visitor_id = ? AND mode = ?`,
+      )
+      .bind(run, visitor, mode)
+      .first();
+    if (!existingRun) {
+      return jsonResponse({ error: "Run could not be recorded" }, 409, origin);
+    }
+    duplicate = true;
   }
   await env.DB
     .prepare(
@@ -646,9 +817,19 @@ export async function handleGameEvent(request, env) {
     )
     .bind(run, visitor)
     .run();
+  await persistRunLifecycle(env.DB, {
+    run,
+    visitor,
+    mode,
+    state: "FINISHED",
+    reason,
+    summary,
+  });
 
   return jsonResponse({
     ok: true,
+    duplicate,
+    state: "FINISHED",
     leaderboards: await buildPublicLeaderboardPayload(env.DB, visitor),
   }, 200, origin);
 }

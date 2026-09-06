@@ -54,6 +54,21 @@
     return "UNKNOWN / BEFORE TRACKING";
   };
 
+  const resultLabel = (status, reason) => {
+    if (status === "CHECKPOINT") return "LAST SEEN PAUSED";
+    if (status === "STARTED_ONLY") return "STARTED ONLY";
+    const labels = {
+      garbage: "OVERWHELMED",
+      "missed-popcorn": "MISSED POPCORN",
+      manual: "ENDED MANUALLY",
+      reset: "RESET",
+      exit: "LEFT GAME",
+      pagehide: "PAGE CLOSED / LEFT",
+      unknown: "FINISHED",
+    };
+    return labels[reason] || "FINISHED";
+  };
+
   const ensureRecentRunsPanel = () => {
     let body = document.getElementById("recent-runs-body");
     if (body) return body;
@@ -65,13 +80,13 @@
     panel.id = "recent-runs";
     panel.innerHTML = `
       <summary>
-        <span><span class="eyebrow">LATEST COMPLETED GAMES</span><span class="disclosure-title">RECENT RUNS</span></span>
+        <span><span class="eyebrow">LATEST GAME ATTEMPTS</span><span class="disclosure-title">RECENT RUNS</span></span>
         <span class="disclosure-action" aria-hidden="true">SHOW RUNS</span>
       </summary>
       <div class="table-scroll recent-runs-scroll">
         <table class="leaderboard-table recent-runs-table">
-          <thead><tr><th scope="col">COMPLETED</th><th scope="col">PLAYER</th><th scope="col">MODE</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">GAME TIME</th></tr></thead>
-          <tbody id="recent-runs-body"><tr><td colspan="6">Loading…</td></tr></tbody>
+          <thead><tr><th scope="col">LAST EVENT</th><th scope="col">PLAYER</th><th scope="col">MODE</th><th scope="col">RESULT</th><th scope="col">SCORE</th><th scope="col">STREAK</th><th scope="col">GAME TIME</th></tr></thead>
+          <tbody id="recent-runs-body"><tr><td colspan="7">Loading…</td></tr></tbody>
         </table>
       </div>`;
     totals.insertAdjacentElement("afterend", panel);
@@ -87,7 +102,7 @@
     dialog.innerHTML = `
       <div class="run-detail-shell">
         <div class="run-detail-topbar">
-          <div><p class="eyebrow">COMPLETED RUN</p><h2 id="run-detail-title">RUN DETAILS</h2></div>
+          <div><p class="eyebrow">GAME ATTEMPT</p><h2 id="run-detail-title">RUN DETAILS</h2></div>
           <button type="button" class="run-detail-close" aria-label="Close run details">CLOSE</button>
         </div>
         <div id="run-detail-content" class="run-detail-content"><p>Loading…</p></div>
@@ -108,10 +123,11 @@
   const runDialog = ensureRunDialog();
   const runDetailContent = runDialog?.querySelector("#run-detail-content");
   const runDetailTitle = runDialog?.querySelector("#run-detail-title");
+  const runDetailEyebrow = runDialog?.querySelector(".run-detail-topbar .eyebrow");
 
   const privacyCopy = document.querySelector(".data-notes p:last-child");
   if (privacyCopy) {
-    privacyCopy.textContent = "Traffic uses anonymous browser IDs. Players may optionally publish a leaderboard name. Completed runs can store coarse device, browser, control-method and graphics-quality categories plus approximate Cloudflare location. No IP addresses, full user-agent strings, exact screen dimensions or hardware fingerprints are retained.";
+    privacyCopy.textContent = "Traffic uses anonymous browser IDs. Players may optionally publish a leaderboard name. Game attempts can store coarse device, browser, control-method and graphics-quality categories plus approximate Cloudflare location. No IP addresses, full user-agent strings, exact screen dimensions or hardware fingerprints are retained.";
   }
 
   const renderRunDetails = (run) => {
@@ -119,7 +135,9 @@
     const stats = run.stats || {};
     const powerups = stats.powerups || {};
     const player = run.player || "RUN DETAILS";
+    const result = resultLabel(run.status, run.endReason);
     runDetailTitle.textContent = `${player} • ${run.mode === "HARDCORE" ? "HARDCORE" : "STANDARD"}`;
+    if (runDetailEyebrow) runDetailEyebrow.textContent = result;
     runDetailContent.innerHTML = `
       <section class="run-detail-hero">
         <div><span>SCORE</span><strong>${numberFormatter.format(stats.score || 0)}</strong></div>
@@ -127,8 +145,9 @@
         <div><span>GAME TIME</span><strong>${escapeHtml(formatDuration(stats.gameTimeSeconds))}</strong></div>
       </section>
       <section class="run-detail-meta" aria-label="Run metadata">
-        <div><span>RECORDED</span><strong>${escapeHtml(formatTimestamp(run.finishedAt))}</strong></div>
+        <div><span>LAST EVENT</span><strong>${escapeHtml(formatTimestamp(run.finishedAt || run.endedAt || run.lastEventAt))}</strong></div>
         <div><span>STARTED</span><strong>${escapeHtml(formatTimestamp(run.startedAt))}</strong></div>
+        <div><span>RESULT</span><strong>${escapeHtml(result)}</strong></div>
         <div><span>PLAYER ID</span><strong>${escapeHtml(run.generatedPlayerId || "NOT RECORDED")}</strong></div>
         <div><span>PUBLIC NAME</span><strong>${escapeHtml(run.publicName || "ANONYMOUS")}</strong></div>
         <div><span>LOCATION</span><strong>${escapeHtml(locationLabel(run.location))}</strong></div>
@@ -165,6 +184,7 @@
     if (!runId || !runDialog || !runDetailContent) return;
     runDetailContent.innerHTML = "<p>Loading run details…</p>";
     runDetailTitle.textContent = "RUN DETAILS";
+    if (runDetailEyebrow) runDetailEyebrow.textContent = "GAME ATTEMPT";
     if (!runDialog.open) {
       if (typeof runDialog.showModal === "function") runDialog.showModal();
       else runDialog.setAttribute("open", "");
@@ -210,7 +230,7 @@
       row.className = "leaderboard-empty";
       const cell = document.createElement("td");
       cell.colSpan = 5;
-      cell.textContent = "No completed runs recorded yet.";
+      cell.textContent = "No recorded games yet.";
       row.append(cell);
       tbody.append(row);
       return;
@@ -245,8 +265,8 @@
     if (!rows.length) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 6;
-      cell.textContent = "No completed runs recorded yet.";
+      cell.colSpan = 7;
+      cell.textContent = "No game attempts recorded yet.";
       row.append(cell);
       recentBody.append(row);
       return;
@@ -254,13 +274,15 @@
 
     rows.forEach((entry) => {
       const row = document.createElement("tr");
+      row.classList.add(`run-status-${String(entry.status || "started-only").toLowerCase().replaceAll("_", "-")}`);
       const values = [
-        [formatTimestamp(entry.finishedAt), "recent-completed", "COMPLETED"],
+        [formatTimestamp(entry.lastEventAt || entry.finishedAt || entry.startedAt), "recent-completed", "LAST EVENT"],
         [entry.player, "leaderboard-player", "PLAYER"],
         [entry.mode === "HARDCORE" ? "HARDCORE" : "STANDARD", "recent-mode", "MODE"],
-        [numberFormatter.format(entry.score ?? 0), "leaderboard-score", "SCORE"],
-        [numberFormatter.format(entry.longestStreak ?? 0), "leaderboard-streak", "STREAK"],
-        [formatDuration(entry.gameTimeSeconds), "leaderboard-time", "GAME TIME"],
+        [resultLabel(entry.status, entry.endReason), "recent-result", "RESULT"],
+        [entry.score == null ? "—" : numberFormatter.format(entry.score), "leaderboard-score", "SCORE"],
+        [entry.longestStreak == null ? "—" : numberFormatter.format(entry.longestStreak), "leaderboard-streak", "STREAK"],
+        [entry.gameTimeSeconds == null ? "—" : formatDuration(entry.gameTimeSeconds), "leaderboard-time", "GAME TIME"],
       ];
       values.forEach(([value, className, label]) => {
         const cell = document.createElement("td");
@@ -305,7 +327,7 @@
         tbody.append(row);
       });
       if (recentBody) {
-        recentBody.innerHTML = '<tr><td colspan="6">Recent runs temporarily unavailable.</td></tr>';
+        recentBody.innerHTML = '<tr><td colspan="7">Recent runs temporarily unavailable.</td></tr>';
       }
     } finally {
       window.clearTimeout(timeout);

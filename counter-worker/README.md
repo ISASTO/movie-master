@@ -40,9 +40,9 @@ Wrangler will print the Worker URL, typically similar to:
 - `GET /health` — confirms the Worker is responding.
 - `GET /count` — returns `{ "count": N }`.
 - `POST /visit` — accepts `{ "visitorId": "<uuid>" }`, inserts it once, and returns `{ "count": N }`.
-- `POST /game-event` — records a receipted game start or validated completed run.
+- `POST /game-event` — records an idempotent game start, pause checkpoint, or validated finish. Every received finish is leaderboard-eligible, including resets, manual endings, exits, and page closures.
 - `GET /public-leaderboards` — returns Standard and Hardcore all-time/daily boards.
 - `POST /leaderboard-profile` — validates and saves a public leaderboard name.
-- `GET /mode-leaderboards` — returns the anonymous analytics leaderboard.
+- `GET /mode-leaderboards` — returns the private analytics leaderboards plus recent finished, checkpointed, and start-only attempts.
 
 Run `npm test` before applying a migration or deploying the Worker.

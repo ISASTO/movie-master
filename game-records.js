@@ -3,6 +3,9 @@
 
   const endpoint = "https://movie-master-visitor-counter.isasto.workers.dev/game-event";
   const visitorIdKey = "movie-master-visitor-id";
+  const pendingEventsKey = "movie-master-pending-game-events-v1";
+  const MAX_PENDING_EVENTS = 60;
+  const MAX_PENDING_AGE_MS = 14 * 24 * 60 * 60 * 1000;
   const GAMEPAD_DEAD_ZONE = 0.18;
   const GAMEPAD_BUTTON_THRESHOLD = 0.5;
   // The browser's disconnect event is immediate. This scan only identifies the
@@ -12,6 +15,9 @@
   let runActive = false;
   let activeGamepadIndex = null;
   let gamepadScanTimer = null;
+  let pendingEventsMemory = [];
+  let pendingFlush = null;
+  let pendingRetryTimer = null;
 
   const shareRunStatus = document.getElementById("share-run-status");
   if (shareRunStatus) shareRunStatus.style.marginTop = "28px";
@@ -82,6 +88,151 @@
 
   const dispatchRunEvent = (name, detail = {}) => {
     window.dispatchEvent(new CustomEvent(name, { detail }));
+  };
+
+  const pendingId = (body) => `${body.runId}:${body.event}`;
+
+  const sanitizePendingEvents = (value) => {
+    if (!Array.isArray(value)) return [];
+    const cutoff = Date.now() - MAX_PENDING_AGE_MS;
+    return value.filter((item) =>
+      item
+      && typeof item.createdAt === "number"
+      && item.createdAt >= cutoff
+      && item.body
+      && typeof item.body.runId === "string"
+      && ["start", "checkpoint", "finish"].includes(item.body.event));
+  };
+
+  const readPendingEvents = () => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(pendingEventsKey) || "[]");
+      pendingEventsMemory = sanitizePendingEvents(stored);
+    } catch {
+      pendingEventsMemory = sanitizePendingEvents(pendingEventsMemory);
+    }
+    return pendingEventsMemory.map((item) => ({
+      ...item,
+      body: { ...item.body },
+    }));
+  };
+
+  const writePendingEvents = (items) => {
+    pendingEventsMemory = sanitizePendingEvents(items);
+    try {
+      window.localStorage.setItem(pendingEventsKey, JSON.stringify(pendingEventsMemory));
+    } catch {
+      // The in-memory queue still protects events for the lifetime of this page.
+    }
+  };
+
+  const trimPendingEvents = (items) => {
+    const trimmed = [...items];
+    while (trimmed.length > MAX_PENDING_EVENTS) {
+      const oldestRunId = trimmed[0]?.body?.runId;
+      if (!oldestRunId) {
+        trimmed.shift();
+        continue;
+      }
+      for (let index = trimmed.length - 1; index >= 0; index -= 1) {
+        if (trimmed[index]?.body?.runId === oldestRunId) trimmed.splice(index, 1);
+      }
+    }
+    return trimmed;
+  };
+
+  const enqueuePendingEvent = (body) => {
+    let items = readPendingEvents();
+    const id = pendingId(body);
+
+    if (body.event === "checkpoint") {
+      if (items.some((item) => item.body.runId === body.runId && item.body.event === "finish")) {
+        return;
+      }
+    } else if (body.event === "finish") {
+      items = items.filter((item) =>
+        !(item.body.runId === body.runId && item.body.event === "checkpoint"));
+    }
+
+    const next = { id, createdAt: Date.now(), body: { ...body } };
+    const currentIndex = items.findIndex((item) => item.id === id);
+    if (currentIndex >= 0) items[currentIndex] = next;
+    else items.push(next);
+    writePendingEvents(trimPendingEvents(items));
+  };
+
+  const removePendingEvent = (id) => {
+    writePendingEvents(readPendingEvents().filter((item) => item.id !== id));
+  };
+
+  const attachRunToken = (runId, runToken) => {
+    if (!runToken) return;
+    const items = readPendingEvents().map((item) => {
+      if (item.body.runId === runId && item.body.event !== "start") {
+        return { ...item, body: { ...item.body, runToken } };
+      }
+      return item;
+    });
+    writePendingEvents(items);
+    if (activeRun?.runId === runId) activeRun.runToken = runToken;
+  };
+
+  const schedulePendingRetry = () => {
+    if (pendingRetryTimer !== null) return;
+    pendingRetryTimer = window.setTimeout(() => {
+      pendingRetryTimer = null;
+      void flushPendingEvents();
+    }, 5000);
+  };
+
+  const flushPendingEvents = () => {
+    if (pendingFlush) return pendingFlush;
+    pendingFlush = (async () => {
+      while (true) {
+        const item = readPendingEvents()[0];
+        if (!item) return;
+        try {
+          const result = await requestWithRetry(item.body, item.body.event === "finish" ? 3 : 2);
+          if (item.body.event === "start") attachRunToken(item.body.runId, result?.runToken);
+          removePendingEvent(item.id);
+          if (item.body.event === "finish") {
+            dispatchRunEvent("movie-master:run-recorded", result);
+          }
+        } catch (error) {
+          const status = Number(error?.status ?? 0);
+          const missingReceipt = status === 409
+            && item.body.event !== "start"
+            && !item.body.runToken;
+          const permanent = status >= 400 && status < 500 && status !== 429 && !missingReceipt;
+          if (permanent) {
+            removePendingEvent(item.id);
+            if (item.body.event === "finish") {
+              dispatchRunEvent("movie-master:run-record-failed", {
+                message: error?.message || "Leaderboard submission failed",
+              });
+            }
+            continue;
+          }
+          schedulePendingRetry();
+          return;
+        }
+      }
+    })().finally(() => {
+      pendingFlush = null;
+    });
+    return pendingFlush;
+  };
+
+  const sendBeacon = (body) => {
+    if (!body?.runToken || typeof navigator.sendBeacon !== "function") return false;
+    try {
+      return navigator.sendBeacon(
+        endpoint,
+        new Blob([JSON.stringify(body)], { type: "text/plain;charset=UTF-8" }),
+      );
+    } catch {
+      return false;
+    }
   };
 
   const currentMode = () =>
@@ -245,74 +396,72 @@
       visitorId,
       runId,
       mode,
-      startRequest: requestWithRetry({
-        event: "start",
-        visitorId,
-        runId,
-        mode,
-        receiptVersion: 2,
-      }).catch((error) => ({ error })),
+      runToken: null,
     };
+    enqueuePendingEvent({
+      event: "start",
+      visitorId,
+      runId,
+      mode,
+      receiptVersion: 2,
+    });
+    void flushPendingEvents();
     dispatchRunEvent("movie-master:run-started", { mode });
   };
 
-  const finishRun = async () => {
-    const controlMethod = detectControlMethod();
-    const deviceType = detectDeviceType();
-    const browserName = detectBrowserName();
-    const qualityLevel = detectQualityLevel();
+  const buildRunPayload = (runRecord, event, endReason) => ({
+    event,
+    visitorId: runRecord.visitorId,
+    runId: runRecord.runId,
+    mode: (document.getElementById("stat-mode")?.textContent || currentMode()).trim().toUpperCase(),
+    endReason,
+    score: readInteger("stat-score"),
+    longestStreak: readInteger("stat-longest-streak"),
+    gameTimeSeconds: readDuration("stat-game-time"),
+    popcornCollected: readInteger("stat-popcorn-collected"),
+    popcornMissed: readInteger("stat-popcorn-missed"),
+    garbageDestroyed: readInteger("stat-garbage-destroyed"),
+    destroyedByStars: readInteger("stat-destroyed-by-stars"),
+    destroyedByBlasts: readInteger("stat-destroyed-by-blasts"),
+    starsFired: readInteger("stat-stars-fired"),
+    starsHit: readInteger("stat-stars-hit"),
+    hitsTaken: readInteger("stat-hits-taken"),
+    shieldBlocks: readInteger("stat-shield-blocks"),
+    blastsUsed: readInteger("stat-blasts-used"),
+    powerupShield: readInteger("stat-powerup-shield"),
+    powerupSpeed: readInteger("stat-powerup-speed"),
+    powerupSuper: readInteger("stat-powerup-super"),
+    powerupMagnet: readInteger("stat-powerup-magnet"),
+    deviceType: detectDeviceType(),
+    browserName: detectBrowserName(),
+    controlMethod: detectControlMethod(),
+    qualityLevel: detectQualityLevel(),
+    ...(runRecord.runToken ? { runToken: runRecord.runToken } : {}),
+  });
 
+  const checkpointRun = (reason = "pause") => {
+    if (!runActive || !activeRun) return null;
+    enqueuePendingEvent(buildRunPayload(activeRun, "checkpoint", reason));
+    return flushPendingEvents();
+  };
+
+  const finishRun = (reason = "unknown") => {
+    const runRecord = activeRun;
     runActive = false;
     stopGamepadScanner();
     activeGamepadIndex = null;
-    const runRecord = activeRun;
     activeRun = null;
     if (!runRecord) {
       dispatchRunEvent("movie-master:run-record-failed", {
         message: "Leaderboard identity is unavailable",
       });
-      return;
+      return null;
     }
 
-    const payload = {
-      event: "finish",
-      visitorId: runRecord.visitorId,
-      runId: runRecord.runId,
-      mode: (document.getElementById("stat-mode")?.textContent || currentMode()).trim().toUpperCase(),
-      score: readInteger("stat-score"),
-      longestStreak: readInteger("stat-longest-streak"),
-      gameTimeSeconds: readDuration("stat-game-time"),
-      popcornCollected: readInteger("stat-popcorn-collected"),
-      popcornMissed: readInteger("stat-popcorn-missed"),
-      garbageDestroyed: readInteger("stat-garbage-destroyed"),
-      destroyedByStars: readInteger("stat-destroyed-by-stars"),
-      destroyedByBlasts: readInteger("stat-destroyed-by-blasts"),
-      starsFired: readInteger("stat-stars-fired"),
-      starsHit: readInteger("stat-stars-hit"),
-      hitsTaken: readInteger("stat-hits-taken"),
-      shieldBlocks: readInteger("stat-shield-blocks"),
-      blastsUsed: readInteger("stat-blasts-used"),
-      powerupShield: readInteger("stat-powerup-shield"),
-      powerupSpeed: readInteger("stat-powerup-speed"),
-      powerupSuper: readInteger("stat-powerup-super"),
-      powerupMagnet: readInteger("stat-powerup-magnet"),
-      deviceType,
-      browserName,
-      controlMethod,
-      qualityLevel,
-    };
-
-    try {
-      const startResult = await runRecord.startRequest;
-      if (startResult?.error) throw startResult.error;
-      if (startResult?.runToken) payload.runToken = startResult.runToken;
-      const result = await requestWithRetry(payload, 3);
-      dispatchRunEvent("movie-master:run-recorded", result);
-    } catch (error) {
-      dispatchRunEvent("movie-master:run-record-failed", {
-        message: error?.name === "AbortError" ? "Leaderboard timed out" : error?.message,
-      });
-    }
+    const payload = buildRunPayload(runRecord, "finish", reason);
+    enqueuePendingEvent(payload);
+    if (reason === "pagehide" || reason === "exit") sendBeacon(payload);
+    return flushPendingEvents();
   };
 
   window.addEventListener("movie-master:game-run-started", () => {
@@ -320,8 +469,11 @@
   });
   window.addEventListener("movie-master:game-run-finalized", (event) => {
     if (!runActive) return;
-    const pending = finishRun();
+    const pending = finishRun(event.detail?.reason || "unknown");
     if (Array.isArray(event.detail?.pending)) event.detail.pending.push(pending);
+  });
+  window.addEventListener("movie-master:game-run-checkpoint", (event) => {
+    void checkpointRun(event.detail?.reason || "pause");
   });
   window.addEventListener("gamepadconnected", () => {
     if (runActive) startGamepadScanner();
@@ -332,12 +484,18 @@
   });
   window.addEventListener("keydown", markNonGamepadInput, { capture: true });
   window.addEventListener("pointerdown", markNonGamepadInput, { capture: true });
+  window.addEventListener("online", () => void flushPendingEvents());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void flushPendingEvents();
+  });
 
   const gameover = document.getElementById("gameover-overlay");
   if (gameover) {
     const observer = new MutationObserver(() => {
-      if (!gameover.hidden && runActive) window.setTimeout(() => void finishRun(), 0);
+      if (!gameover.hidden && runActive) window.setTimeout(() => void finishRun("unknown"), 0);
     });
     observer.observe(gameover, { attributes: true, attributeFilter: ["hidden"] });
   }
+
+  void flushPendingEvents();
 })();

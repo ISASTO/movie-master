@@ -1277,7 +1277,7 @@
     resumeCountdownStep = "";
   }
 
-  function pauseRunningGame() {
+  function pauseRunningGame(reason = "pause") {
     flushRunRecords();
     gameState = "paused";
     setPausePresentation(true);
@@ -1291,6 +1291,7 @@
     resetJoystick();
     selectDefaultMenuButton();
     announce("Intermission.");
+    checkpointRunForTracking(reason);
   }
 
   function beginResumeCountdown() {
@@ -1342,6 +1343,7 @@
     flushRunRecords();
     resetGame();
     runFinalizedForTracking = false;
+    window.addEventListener("beforeunload", handleRunBeforeUnload);
     gameState = "running";
     setPausePresentation(false);
     hideResumeCountdown();
@@ -1388,14 +1390,23 @@
     "exit-confirm",
   ]);
 
-  function finalizeRunForTracking(reason) {
+  function checkpointRunForTracking(reason = "pause") {
+    if (runFinalizedForTracking || !EARLY_FINALIZE_STATES.has(gameState)) return;
+    renderGameStats(Math.floor(score));
+    window.dispatchEvent(new CustomEvent("movie-master:game-run-checkpoint", {
+      detail: { reason },
+    }));
+  }
+
+  function finalizeRunForTracking(reason, existingRecords = null) {
     if (runFinalizedForTracking || !EARLY_FINALIZE_STATES.has(gameState)) {
       flushRunRecords();
       return null;
     }
 
     runFinalizedForTracking = true;
-    const records = saveRunRecords();
+    window.removeEventListener("beforeunload", handleRunBeforeUnload);
+    const records = existingRecords ?? saveRunRecords();
     renderGameStats(records.finalScore);
     const pending = [];
     window.dispatchEvent(new CustomEvent("movie-master:game-run-finalized", {
@@ -1407,9 +1418,10 @@
   function endGame(reason = "garbage") {
     if (gameState === "gameover") return;
 
+    const records = saveRunRecords();
+    finalizeRunForTracking(reason, records);
     gameState = "gameover";
     setPausePresentation(false);
-    const records = saveRunRecords();
 
     setFittedNumber(ui.finalScore, formatScore(records.finalScore));
     setFittedNumber(ui.finalLongestStreak, longestStreak);
@@ -1698,9 +1710,9 @@
     goToMainSite();
   }
 
-  function togglePause(forcePause = false) {
+  function togglePause(forcePause = false, reason = "pause") {
     if (gameState === "running") {
-      pauseRunningGame();
+      pauseRunningGame(reason);
       return;
     }
 
@@ -1710,7 +1722,7 @@
     }
 
     if (gameState === "resuming") {
-      pauseRunningGame();
+      pauseRunningGame(reason);
     }
   }
 
@@ -5259,13 +5271,13 @@
     gamepadCancelPressed = false;
     gamepadMenuContext = "";
     resetGamepadMenuNavigation(false);
-    if (gameState === "running" || gameState === "resuming") togglePause(true);
+    if (gameState === "running" || gameState === "resuming") togglePause(true, "blur");
   });
 
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) return;
     flushRunRecords();
-    if (gameState === "running" || gameState === "resuming") togglePause(true);
+    if (gameState === "running" || gameState === "resuming") togglePause(true, "hidden");
   });
 
   window.addEventListener("pagehide", (event) => {
@@ -5275,6 +5287,10 @@
     }
     finalizeRunForTracking("pagehide");
   });
+
+  function handleRunBeforeUnload() {
+    finalizeRunForTracking("pagehide");
+  }
 
   ui.startButton.addEventListener("click", startGame);
   ui.startModeButton.addEventListener("click", toggleHardcoreMode);

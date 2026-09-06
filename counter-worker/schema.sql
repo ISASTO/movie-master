@@ -162,8 +162,8 @@ CREATE TABLE IF NOT EXISTS visitor_locations (
 CREATE INDEX IF NOT EXISTS idx_visitor_locations_section_country
 ON visitor_locations(section, country_code);
 
--- Every distinct game start gets a UUID. Abandoned/reset runs remain starts but
--- do not become completed runs, which makes completion-rate reporting honest.
+-- Every distinct game start gets a UUID. completed_at means that a validated
+-- final signal was recorded; the signal may represent any way the game stopped.
 CREATE TABLE IF NOT EXISTS game_starts (
   run_id TEXT PRIMARY KEY,
   visitor_id TEXT NOT NULL,
@@ -183,7 +183,8 @@ ON game_starts(visit_date, mode);
 CREATE INDEX IF NOT EXISTS idx_game_starts_visitor_started
 ON game_starts(visitor_id, started_at DESC);
 
--- Completed run summaries. Run metadata is intentionally coarse: no IP address,
+-- Finished game summaries. Every stop reason is leaderboard-eligible. Run
+-- metadata is intentionally coarse: no IP address,
 -- full user agent, hardware fingerprint, or exact screen characteristics are stored.
 CREATE TABLE IF NOT EXISTS game_runs (
   run_id TEXT PRIMARY KEY,
@@ -235,6 +236,52 @@ ON game_runs(mode, visitor_id, score DESC, finished_at ASC);
 CREATE INDEX IF NOT EXISTS idx_game_runs_public_daily
 ON game_runs(mode, visit_date, visitor_id, score DESC, finished_at ASC);
 
+-- Latest signal received for each attempt. Every FINISHED row is also stored in
+-- game_runs and is leaderboard-eligible regardless of how the game stopped.
+-- CHECKPOINT rows remain private and help diagnose missing browser exit signals.
+CREATE TABLE IF NOT EXISTS game_run_lifecycle (
+  run_id TEXT PRIMARY KEY,
+  visitor_id TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK (mode IN ('NORMAL', 'HARDCORE')),
+  state TEXT NOT NULL CHECK (state IN ('CHECKPOINT', 'FINISHED')),
+  end_reason TEXT,
+  score INTEGER NOT NULL DEFAULT 0 CHECK (score >= 0),
+  longest_streak INTEGER NOT NULL DEFAULT 0 CHECK (longest_streak >= 0),
+  game_time_seconds INTEGER NOT NULL DEFAULT 0 CHECK (game_time_seconds >= 0),
+  popcorn_collected INTEGER NOT NULL DEFAULT 0 CHECK (popcorn_collected >= 0),
+  popcorn_missed INTEGER NOT NULL DEFAULT 0 CHECK (popcorn_missed >= 0),
+  garbage_destroyed INTEGER NOT NULL DEFAULT 0 CHECK (garbage_destroyed >= 0),
+  destroyed_by_stars INTEGER NOT NULL DEFAULT 0 CHECK (destroyed_by_stars >= 0),
+  destroyed_by_blasts INTEGER NOT NULL DEFAULT 0 CHECK (destroyed_by_blasts >= 0),
+  stars_fired INTEGER NOT NULL DEFAULT 0 CHECK (stars_fired >= 0),
+  stars_hit INTEGER NOT NULL DEFAULT 0 CHECK (stars_hit >= 0),
+  hits_taken INTEGER NOT NULL DEFAULT 0 CHECK (hits_taken >= 0),
+  shield_blocks INTEGER NOT NULL DEFAULT 0 CHECK (shield_blocks >= 0),
+  blasts_used INTEGER NOT NULL DEFAULT 0 CHECK (blasts_used >= 0),
+  powerup_shield INTEGER NOT NULL DEFAULT 0 CHECK (powerup_shield >= 0),
+  powerup_speed INTEGER NOT NULL DEFAULT 0 CHECK (powerup_speed >= 0),
+  powerup_super INTEGER NOT NULL DEFAULT 0 CHECK (powerup_super >= 0),
+  powerup_magnet INTEGER NOT NULL DEFAULT 0 CHECK (powerup_magnet >= 0),
+  device_type TEXT,
+  browser_name TEXT,
+  control_method TEXT,
+  quality_level TEXT,
+  country_code TEXT,
+  region TEXT,
+  region_code TEXT,
+  city TEXT,
+  latitude REAL,
+  longitude REAL,
+  ended_at TEXT,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_game_run_lifecycle_updated
+ON game_run_lifecycle(updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_game_run_lifecycle_visitor
+ON game_run_lifecycle(visitor_id, updated_at DESC);
+
 -- Public leaderboard names are profiles rather than run fields. Renaming a
 -- browser therefore updates all of its historical and future best-score rows.
 CREATE TABLE IF NOT EXISTS leaderboard_profiles (
@@ -258,7 +305,7 @@ WHERE UPPER(TRIM(display_name)) <> 'ANONYMOUS';
 
 -- One-time compatibility bridge for browser high scores saved before the public
 -- leaderboard existed. These affect only all-time public rankings and never
--- masquerade as completed runs in analytics.
+-- masquerade as recorded games in analytics.
 CREATE TABLE IF NOT EXISTS legacy_leaderboard_scores (
   visitor_id TEXT NOT NULL,
   mode TEXT NOT NULL CHECK (mode IN ('NORMAL', 'HARDCORE')),

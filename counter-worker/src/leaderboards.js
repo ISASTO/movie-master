@@ -123,6 +123,23 @@ function normalizeAnalyticsRows(rows, includeRank = true) {
   });
 }
 
+function normalizeRecentAnalyticsRows(rows) {
+  return (rows ?? []).map((row) => ({
+    runId: row.run_id,
+    player: analyticsPlayerName(row),
+    mode: row.mode,
+    status: row.run_status,
+    endReason: row.end_reason || null,
+    score: row.score == null ? null : Number(row.score),
+    longestStreak: row.longest_streak == null ? null : Number(row.longest_streak),
+    gameTimeSeconds: row.game_time_seconds == null ? null : Number(row.game_time_seconds),
+    startedAt: sqliteTimestampToIso(row.started_at),
+    finishedAt: sqliteTimestampToIso(row.finished_at),
+    endedAt: sqliteTimestampToIso(row.ended_at),
+    lastEventAt: sqliteTimestampToIso(row.last_event_at),
+  }));
+}
+
 function bestRunsForMode(mode) {
   return `
     WITH source_runs AS (
@@ -197,18 +214,47 @@ function bestRunsForMode(mode) {
 function recentRunsSql() {
   return `
     SELECT
-      game_runs.run_id,
-      game_runs.visitor_id,
-      game_runs.mode,
-      game_runs.score,
-      game_runs.longest_streak,
-      game_runs.game_time_seconds,
+      game_starts.run_id,
+      game_starts.visitor_id,
+      game_starts.mode,
+      CASE
+        WHEN game_runs.run_id IS NOT NULL THEN game_runs.score
+        WHEN game_run_lifecycle.run_id IS NOT NULL THEN game_run_lifecycle.score
+        ELSE NULL
+      END AS score,
+      CASE
+        WHEN game_runs.run_id IS NOT NULL THEN game_runs.longest_streak
+        WHEN game_run_lifecycle.run_id IS NOT NULL THEN game_run_lifecycle.longest_streak
+        ELSE NULL
+      END AS longest_streak,
+      CASE
+        WHEN game_runs.run_id IS NOT NULL THEN game_runs.game_time_seconds
+        WHEN game_run_lifecycle.run_id IS NOT NULL THEN game_run_lifecycle.game_time_seconds
+        ELSE NULL
+      END AS game_time_seconds,
+      game_starts.started_at,
       game_runs.finished_at,
+      game_run_lifecycle.ended_at,
+      game_run_lifecycle.end_reason,
+      CASE
+        WHEN game_runs.run_id IS NOT NULL THEN 'FINISHED'
+        WHEN game_run_lifecycle.state = 'CHECKPOINT' THEN 'CHECKPOINT'
+        ELSE 'STARTED_ONLY'
+      END AS run_status,
+      COALESCE(
+        game_runs.finished_at,
+        game_run_lifecycle.updated_at,
+        game_starts.started_at
+      ) AS last_event_at,
       leaderboard_profiles.display_name
-    FROM game_runs
+    FROM game_starts
+    LEFT JOIN game_runs
+      ON game_runs.run_id = game_starts.run_id
+    LEFT JOIN game_run_lifecycle
+      ON game_run_lifecycle.run_id = game_starts.run_id
     LEFT JOIN leaderboard_profiles
-      ON leaderboard_profiles.visitor_id = game_runs.visitor_id
-    ORDER BY game_runs.finished_at DESC, game_runs.run_id DESC
+      ON leaderboard_profiles.visitor_id = game_starts.visitor_id
+    ORDER BY last_event_at DESC, game_starts.run_id DESC
     LIMIT 15
   `;
 }
@@ -445,7 +491,7 @@ async function handleAnalyticsLeaderboard(request, env, origin) {
     generatedAt: new Date().toISOString(),
     standard: normalizeAnalyticsRows(standardResult.results),
     hardcore: normalizeAnalyticsRows(hardcoreResult.results),
-    recent: normalizeAnalyticsRows(recentResult.results, false),
+    recent: normalizeRecentAnalyticsRows(recentResult.results),
   }, 200, origin);
 }
 

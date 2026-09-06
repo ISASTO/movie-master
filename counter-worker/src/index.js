@@ -113,7 +113,7 @@ function sqliteTimestampToChicagoDate(value) {
 
 async function getCount(db) {
   const row = await db
-    .prepare("SELECT visitor_count AS count FROM visitor_stats WHERE id = 1")
+    .prepare("SELECT visitor_count AS count FROM section_stats WHERE section = 'site'")
     .first();
 
   return Number(row?.count ?? 0);
@@ -246,27 +246,29 @@ async function recordVisit(env, visitorId, section) {
   const statements = [
     env.DB
       .prepare(
-        "INSERT OR IGNORE INTO visitor_sections (visitor_id, section) VALUES (?, ?)",
-      )
-      .bind(normalizedId, section),
-    env.DB
-      .prepare(
         `INSERT OR IGNORE INTO visitor_daily (visitor_id, section, visit_date)
          VALUES (?, ?, ?)`,
       )
       .bind(normalizedId, section, visitDate),
+    env.DB
+      .prepare(
+        "INSERT OR IGNORE INTO visitor_sections (visitor_id, section) VALUES (?, ?)",
+      )
+      .bind(normalizedId, section),
   ];
 
   if (section === "site") {
-    statements.unshift(
+    statements.push(
       env.DB
         .prepare("INSERT OR IGNORE INTO visitors (visitor_id) VALUES (?)")
         .bind(normalizedId),
     );
   }
 
-  // D1 batches are transactional. Keep the legacy visitor row, section row,
-  // daily row, and both trigger-maintained counters in one all-or-nothing write.
+  // D1 commits batch statements sequentially. Put the daily and canonical
+  // section rows first; all writes are idempotent, so a client retry repairs a
+  // partial batch without double-counting. /count and analytics both read the
+  // section counter, so their public totals stay consistent meanwhile.
   await env.DB.batch(statements);
 }
 

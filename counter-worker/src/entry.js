@@ -115,9 +115,9 @@ export default {
       }
     }
 
-    // Capture the tiny categorical run metadata once, at completion. The game
+    // Capture coarse metadata on checkpoints and finished games. The lifecycle
     // event itself is handled immediately; metadata persistence is deferred so
-    // it cannot add latency to the game-over transition.
+    // it cannot add latency to pausing, game over, or navigation.
     if (request.method === "POST" && url.pathname === "/game-event") {
       const telemetry = await captureRunTelemetry(request);
       const response = await handleGameEvent(request, env);

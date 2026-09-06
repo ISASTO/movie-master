@@ -5,7 +5,7 @@ import test from "node:test";
 
 import visitorWorker from "../src/index.js";
 import { alignSnapshotSiteVisitors } from "../src/entry.js";
-import { handleGameEvent } from "../src/insights.js";
+import { handleEnhancedRequest, handleGameEvent } from "../src/insights.js";
 import {
   buildPublicLeaderboardPayload,
   handleLeaderboardRequest,
@@ -57,21 +57,15 @@ class TestD1 {
   }
 
   async batch(statements) {
-    this.database.exec("BEGIN");
-    try {
-      const results = [];
-      for (const statement of statements) {
-        if (this.batchFailurePattern?.test(statement.sql)) {
-          throw new Error(`Injected batch failure for ${statement.sql}`);
-        }
-        results.push(await statement.all());
+    const results = [];
+    for (const statement of statements) {
+      if (this.batchFailurePattern?.test(statement.sql)) {
+        throw new Error(`Injected batch failure for ${statement.sql}`);
       }
-      this.database.exec("COMMIT");
-      return results;
-    } catch (error) {
-      this.database.exec("ROLLBACK");
-      throw error;
+      // D1 executes batch statements sequentially in auto-commit mode.
+      results.push(await statement.all());
     }
+    return results;
   }
 
   close() {
@@ -88,6 +82,11 @@ function visitRequest(visitorId) {
 }
 
 function insertRun(db, { runId, visitorId, mode = "NORMAL", date = "2026-09-02", score, finishedAt }) {
+  db.database.prepare(
+    `INSERT OR IGNORE INTO game_starts
+      (run_id, visitor_id, mode, visit_date, completed_at, started_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+  ).run(runId, visitorId, mode, date, finishedAt, finishedAt);
   db.database.prepare(
     `INSERT INTO game_runs
       (run_id, visitor_id, mode, visit_date, score, finished_at)
@@ -179,6 +178,24 @@ test("the public leaderboard migration upgrades the deployed table shape", () =>
   database.close();
 });
 
+test("the run lifecycle migration adds durable attempt state", () => {
+  const database = new DatabaseSync(":memory:");
+  database.exec(readFileSync(
+    new URL("../migrations/0003_game_run_lifecycle.sql", import.meta.url),
+    "utf8",
+  ));
+  const columns = new Set(
+    database.prepare("PRAGMA table_info(game_run_lifecycle)").all().map((row) => row.name),
+  );
+  for (const column of ["run_id", "state", "end_reason", "score", "ended_at", "updated_at"]) {
+    assert.ok(columns.has(column), `missing ${column}`);
+  }
+  assert.ok(database.prepare(
+    "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_game_run_lifecycle_updated'",
+  ).get());
+  database.close();
+});
+
 test("visitor reconciliation repairs interrupted legacy writes and cached totals", () => {
   const database = new DatabaseSync(":memory:");
   database.exec(readFileSync(new URL("../schema.sql", import.meta.url), "utf8"));
@@ -212,10 +229,10 @@ test("visitor reconciliation repairs interrupted legacy writes and cached totals
   database.close();
 });
 
-test("a failed site-visit batch leaves every visitor table unchanged", async (t) => {
+test("a retry heals a partially committed site-visit batch without double-counting", async (t) => {
   const db = new TestD1();
   t.after(() => db.close());
-  db.batchFailurePattern = /INSERT OR IGNORE INTO visitor_daily/;
+  db.batchFailurePattern = /INSERT OR IGNORE INTO visitor_sections/;
   const originalError = console.error;
   console.error = () => {};
   t.after(() => { console.error = originalError; });
@@ -224,13 +241,24 @@ test("a failed site-visit batch leaves every visitor table unchanged", async (t)
   assert.equal(response.status, 500);
   assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitors").get().count, 0);
   assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_sections").get().count, 0);
-  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_daily").get().count, 0);
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_daily").get().count, 1);
   assert.equal(db.database.prepare(
     "SELECT visitor_count FROM visitor_stats WHERE id = 1",
   ).get().visitor_count, 0);
   assert.equal(db.database.prepare(
     "SELECT visitor_count FROM section_stats WHERE section = 'site'",
   ).get().visitor_count, 0);
+
+  db.batchFailurePattern = null;
+  const retry = await visitorWorker.fetch(visitRequest(VISITORS[0]), { DB: db });
+  assert.equal(retry.status, 200);
+  assert.deepEqual(await retry.json(), { count: 1, section: "site" });
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitors").get().count, 1);
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_sections").get().count, 1);
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_daily").get().count, 1);
+  assert.equal(db.database.prepare(
+    "SELECT visitor_count FROM section_stats WHERE section = 'site'",
+  ).get().visitor_count, 1);
 });
 
 test("site visits keep legacy, section, and daily totals idempotently aligned", async (t) => {
@@ -477,7 +505,7 @@ test("legacy browser bests import once into all-time boards only", async (t) => 
   assert.equal(stored.score, 12345);
 });
 
-test("analytics returns the 15 most recent completed runs", async (t) => {
+test("analytics returns the 15 most recent recorded games", async (t) => {
   const db = new TestD1();
   t.after(() => db.close());
   for (let index = 0; index < 17; index += 1) {
@@ -499,7 +527,8 @@ test("analytics returns the 15 most recent completed runs", async (t) => {
   assert.equal(payload.recent.length, 15);
   assert.equal(payload.recent[0].score, 1016);
   assert.equal(payload.recent.at(-1).score, 1002);
-  assert.ok(payload.recent.every((run) => run.runId && run.finishedAt));
+  assert.ok(payload.recent.every((run) =>
+    run.runId && run.finishedAt && run.status === "FINISHED"));
 });
 
 test("version-two runs require one-use receipts and return placements", async (t) => {
@@ -512,6 +541,13 @@ test("version-two runs require one-use receipts and return placements", async (t
   assert.equal(startResponse.status, 200);
   const start = await startResponse.json();
   assert.match(start.runToken, /^[0-9a-f-]{36}$/);
+  const repeatedStart = await handleGameEvent(gameRequest({
+    event: "start", visitorId: VISITORS[0], runId, mode: "NORMAL", receiptVersion: 2,
+  }), { DB: db });
+  assert.equal(repeatedStart.status, 200);
+  const repeated = await repeatedStart.json();
+  assert.equal(repeated.duplicate, true);
+  assert.equal(repeated.runToken, start.runToken);
 
   const finishBody = {
     event: "finish", visitorId: VISITORS[0], runId, runToken: start.runToken,
@@ -524,6 +560,155 @@ test("version-two runs require one-use receipts and return placements", async (t
   const duplicate = await handleGameEvent(gameRequest(finishBody), { DB: db });
   assert.equal(duplicate.status, 200);
   assert.equal((await duplicate.json()).duplicate, true);
+});
+
+test("every recorded ending reason is leaderboard-eligible and anonymous by default", async (t) => {
+  const db = new TestD1();
+  t.after(() => db.close());
+  const reasons = ["garbage", "missed-popcorn", "manual", "reset", "exit", "pagehide"];
+
+  for (let index = 0; index < reasons.length; index += 1) {
+    const runId = `51000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`;
+    const start = await (await handleGameEvent(gameRequest({
+      event: "start",
+      visitorId: VISITORS[0],
+      runId,
+      mode: "NORMAL",
+      receiptVersion: 2,
+    }), { DB: db })).json();
+    const finish = await handleGameEvent(gameRequest({
+      event: "finish",
+      visitorId: VISITORS[0],
+      runId,
+      runToken: start.runToken,
+      mode: "NORMAL",
+      endReason: reasons[index],
+      ...validSummary({ score: 334 + index }),
+    }), { DB: db });
+    assert.equal(finish.status, 200, reasons[index]);
+  }
+
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM game_runs").get().count, 6);
+  assert.deepEqual(db.database.prepare(
+    "SELECT end_reason FROM game_run_lifecycle ORDER BY run_id",
+  ).all().map((row) => row.end_reason), reasons);
+  const board = await buildPublicLeaderboardPayload(db, VISITORS[0]);
+  assert.equal(board.boards.NORMAL.allTime.top[0].name, "ANONYMOUS");
+  assert.equal(board.boards.NORMAL.allTime.top[0].score, 339);
+});
+
+test("checkpoints and start-only attempts appear privately, then a finish becomes public", async (t) => {
+  const db = new TestD1();
+  t.after(() => db.close());
+  const checkpointRunId = "52000000-0000-4000-8000-000000000001";
+  const startOnlyRunId = "52000000-0000-4000-8000-000000000002";
+  const checkpointStart = await (await handleGameEvent(gameRequest({
+    event: "start",
+    visitorId: VISITORS[0],
+    runId: checkpointRunId,
+    mode: "HARDCORE",
+    receiptVersion: 2,
+  }), { DB: db })).json();
+  await handleGameEvent(gameRequest({
+    event: "start",
+    visitorId: VISITORS[1],
+    runId: startOnlyRunId,
+    mode: "NORMAL",
+    receiptVersion: 2,
+  }), { DB: db });
+
+  const checkpoint = await handleGameEvent(gameRequest({
+    event: "checkpoint",
+    visitorId: VISITORS[0],
+    runId: checkpointRunId,
+    runToken: checkpointStart.runToken,
+    mode: "HARDCORE",
+    endReason: "hidden",
+    ...validSummary({ score: 500, hitsTaken: 1 }),
+  }), { DB: db });
+  assert.equal(checkpoint.status, 200);
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM game_runs").get().count, 0);
+
+  const privateResponse = await handleLeaderboardRequest(
+    new Request("https://worker.example/mode-leaderboards", {
+      headers: { Origin: "https://moviemaster.vip" },
+    }),
+    { DB: db },
+  );
+  const privatePayload = await privateResponse.json();
+  assert.deepEqual(new Set(privatePayload.recent.map((run) => run.status)),
+    new Set(["CHECKPOINT", "STARTED_ONLY"]));
+  const checkpointRow = privatePayload.recent.find((run) => run.runId === checkpointRunId);
+  assert.equal(checkpointRow.score, 500);
+  assert.equal(checkpointRow.endReason, "hidden");
+
+  const checkpointDetails = await handleRunDetailsRequest(
+    new Request(`https://worker.example/run-details?runId=${checkpointRunId}`, {
+      headers: { Origin: "https://moviemaster.vip" },
+    }),
+    { DB: db },
+  );
+  assert.equal((await checkpointDetails.json()).status, "CHECKPOINT");
+  const startOnlyDetails = await handleRunDetailsRequest(
+    new Request(`https://worker.example/run-details?runId=${startOnlyRunId}`, {
+      headers: { Origin: "https://moviemaster.vip" },
+    }),
+    { DB: db },
+  );
+  assert.equal((await startOnlyDetails.json()).status, "STARTED_ONLY");
+
+  const finish = await handleGameEvent(gameRequest({
+    event: "finish",
+    visitorId: VISITORS[0],
+    runId: checkpointRunId,
+    runToken: checkpointStart.runToken,
+    mode: "HARDCORE",
+    endReason: "exit",
+    ...validSummary({ score: 500, hitsTaken: 1 }),
+  }), { DB: db });
+  assert.equal(finish.status, 200);
+  const finished = await finish.json();
+  assert.equal(finished.leaderboards.boards.HARDCORE.allTime.top[0].score, 500);
+  assert.deepEqual({ ...db.database.prepare(
+    "SELECT state, end_reason FROM game_run_lifecycle WHERE run_id = ?",
+  ).get(checkpointRunId) }, { state: "FINISHED", end_reason: "exit" });
+});
+
+test("game analytics reports games played without a completion-rate metric", async (t) => {
+  const db = new TestD1();
+  t.after(() => db.close());
+  const runId = "53000000-0000-4000-8000-000000000001";
+  const start = await (await handleGameEvent(gameRequest({
+    event: "start",
+    visitorId: VISITORS[0],
+    runId,
+    mode: "NORMAL",
+    receiptVersion: 2,
+  }), { DB: db })).json();
+  await handleGameEvent(gameRequest({
+    event: "finish",
+    visitorId: VISITORS[0],
+    runId,
+    runToken: start.runToken,
+    mode: "NORMAL",
+    endReason: "reset",
+    ...validSummary(),
+  }), { DB: db });
+
+  const response = await handleEnhancedRequest(
+    new Request("https://worker.example/details", {
+      headers: { Origin: "https://moviemaster.vip" },
+    }),
+    { DB: db },
+    null,
+    visitorWorker,
+  );
+  assert.equal(response.status, 200);
+  const game = (await response.json()).game;
+  assert.equal(game.starts, 1);
+  assert.equal(game.gamesPlayed, 1);
+  assert.equal(game.uniquePlayers, 1);
+  assert.equal("completionRate" in game, false);
 });
 
 test("unstarted, incorrectly receipted, and inconsistent runs are rejected", async (t) => {
@@ -643,4 +828,21 @@ test("legacy cached clients remain compatible during rollout", async (t) => {
     ...validSummary({ hitsTaken: 1 }),
   }), { DB: db });
   assert.equal(finish.status, 200);
+});
+
+test("browser lifecycle wiring queues retries and covers every game stop path", () => {
+  const recordsSource = readFileSync(new URL("../../game-records.js", import.meta.url), "utf8");
+  const gameSource = readFileSync(new URL("../../game/game.js", import.meta.url), "utf8");
+  const analyticsHtml = readFileSync(new URL("../../analytics/index.html", import.meta.url), "utf8");
+
+  assert.match(recordsSource, /movie-master-pending-game-events-v1/);
+  assert.match(recordsSource, /navigator\.sendBeacon/);
+  assert.match(recordsSource, /movie-master:game-run-checkpoint/);
+  assert.match(recordsSource, /movie-master:game-run-finalized/);
+  assert.match(gameSource, /function endGame\(reason = "garbage"\)/);
+  for (const reason of ["missed-popcorn", "manual", "reset", "exit", "pagehide"]) {
+    assert.match(gameSource, new RegExp(`(?:endGame|finalizeRunForTracking)\\(\"${reason}\"`));
+  }
+  assert.match(analyticsHtml, />GAMES PLAYED</);
+  assert.doesNotMatch(analyticsHtml, /RUN COMPLETION RATE/);
 });

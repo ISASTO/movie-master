@@ -37,12 +37,11 @@
 
   const summaryIds = {
     starts: "game-stat-starts",
-    completed: "game-stat-completed",
+    gamesPlayed: "game-stat-games-played",
     visitors: "game-stat-visitors",
     players: "game-stat-players",
     returning: "game-stat-returning",
     returnRate: "game-stat-return-rate",
-    completion: "game-stat-completion",
     averageScore: "game-stat-avg-score",
     medianScore: "game-stat-median-score",
     highScore: "game-stat-high-score",
@@ -332,18 +331,17 @@
     if (!state.payload) return;
     const game = state.payload.game ?? {};
     const starts = Number(game.starts ?? 0);
-    const completed = Number(game.completed ?? 0);
+    const gamesPlayed = Number(game.gamesPlayed ?? 0);
     const gameVisitors = Number(game.gameVisitors ?? 0);
     const returning = Number(game.returningPlayers ?? 0);
     const averageRunsPerPlayer = Number(game.averageRunsPerPlayer ?? 0);
 
     setText(summaryIds.starts, numberFormatter.format(starts));
-    setText(summaryIds.completed, numberFormatter.format(completed));
+    setText(summaryIds.gamesPlayed, numberFormatter.format(gamesPlayed));
     setText(summaryIds.visitors, numberFormatter.format(gameVisitors));
     setText(summaryIds.players, numberFormatter.format(game.uniquePlayers ?? 0));
     setText(summaryIds.returning, numberFormatter.format(returning));
     setText(summaryIds.returnRate, formatPercent(game.returningRate));
-    setText(summaryIds.completion, formatPercent(game.completionRate));
     setText(summaryIds.averageScore, numberFormatter.format(Math.round(game.averageScore ?? 0)));
     setText(summaryIds.medianScore, numberFormatter.format(Math.round(game.medianScore ?? 0)));
     setText(summaryIds.highScore, numberFormatter.format(game.highScore ?? 0));
@@ -352,14 +350,10 @@
     setText(summaryIds.highStreak, numberFormatter.format(game.highStreak ?? 0));
 
     setText("game-starts-detail", `${numberFormatter.format(game.startsToday ?? 0)} today`);
-    setText("game-completed-detail", `${numberFormatter.format(game.completedToday ?? 0)} today`);
-    setText(
-      "game-completion-detail",
-      `${numberFormatter.format(completed)} of ${numberFormatter.format(starts)} started runs completed`,
-    );
+    setText("game-games-played-detail", `${numberFormatter.format(game.gamesPlayedToday ?? 0)} today`);
     setText(
       "game-players-detail",
-      `${oneDecimalFormatter.format(averageRunsPerPlayer)} completed ${averageRunsPerPlayer === 1 ? "run" : "runs"} per finishing player`,
+      `${oneDecimalFormatter.format(averageRunsPerPlayer)} recorded ${averageRunsPerPlayer === 1 ? "game" : "games"} per player`,
     );
     setText(
       "game-returning-detail",
