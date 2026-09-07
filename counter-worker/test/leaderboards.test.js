@@ -57,15 +57,23 @@ class TestD1 {
   }
 
   async batch(statements) {
-    const results = [];
-    for (const statement of statements) {
-      if (this.batchFailurePattern?.test(statement.sql)) {
-        throw new Error(`Injected batch failure for ${statement.sql}`);
+    // Match D1's documented rollback of the entire failed batch.
+    // https://developers.cloudflare.com/d1/worker-api/d1-database/#batch
+    this.database.exec("BEGIN");
+    try {
+      const results = [];
+      for (const statement of statements) {
+        if (this.batchFailurePattern?.test(statement.sql)) {
+          throw new Error(`Injected batch failure for ${statement.sql}`);
+        }
+        results.push(await statement.all());
       }
-      // D1 executes batch statements sequentially in auto-commit mode.
-      results.push(await statement.all());
+      this.database.exec("COMMIT");
+      return results;
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
     }
-    return results;
   }
 
   close() {
@@ -229,7 +237,7 @@ test("visitor reconciliation repairs interrupted legacy writes and cached totals
   database.close();
 });
 
-test("a retry heals a partially committed site-visit batch without double-counting", async (t) => {
+test("a failed site-visit batch rolls back and a retry counts exactly once", async (t) => {
   const db = new TestD1();
   t.after(() => db.close());
   db.batchFailurePattern = /INSERT OR IGNORE INTO visitor_sections/;
@@ -241,7 +249,7 @@ test("a retry heals a partially committed site-visit batch without double-counti
   assert.equal(response.status, 500);
   assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitors").get().count, 0);
   assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_sections").get().count, 0);
-  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_daily").get().count, 1);
+  assert.equal(db.database.prepare("SELECT COUNT(*) AS count FROM visitor_daily").get().count, 0);
   assert.equal(db.database.prepare(
     "SELECT visitor_count FROM visitor_stats WHERE id = 1",
   ).get().visitor_count, 0);
@@ -707,6 +715,8 @@ test("game analytics reports games played without a completion-rate metric", asy
   const game = (await response.json()).game;
   assert.equal(game.starts, 1);
   assert.equal(game.gamesPlayed, 1);
+  assert.equal(game.completed, game.gamesPlayed);
+  assert.equal(game.completedToday, game.gamesPlayedToday);
   assert.equal(game.uniquePlayers, 1);
   assert.equal("completionRate" in game, false);
 });

@@ -56,6 +56,15 @@ and completes four increasingly rapid dimming passes:
 node benchmarks/game-performance.js --verify-popcorn-warning
 ```
 
+Verify game-event delivery and analytics rollout compatibility without sending
+test visits or scores to production. This executes the real browser scripts in
+an isolated DOM/network harness and covers every finish reason, quick exits,
+receipt recovery ordering, independent run retries, and replacement checkpoints:
+
+```sh
+node --test benchmarks/browser-data.test.cjs counter-worker/test/*.test.js
+```
+
 Compare `unitMedianMs` and the per-work-unit value derived from `p95Ms` between
 runs. Canvas-operation and scene counts should remain stable when validating a
 performance-only change that is intended to preserve High-quality output.

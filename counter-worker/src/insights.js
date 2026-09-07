@@ -553,6 +553,10 @@ async function getDetails(env) {
       startsToday,
       gamesPlayed,
       gamesPlayedToday: Number(aggregate.games_played_today ?? 0),
+      // Keep cached, pre-rollout analytics pages readable as Pages and this
+      // Worker are released independently. The UI now calls these games played.
+      completed: gamesPlayed,
+      completedToday: Number(aggregate.games_played_today ?? 0),
       uniquePlayers,
       uniqueStarters,
       returningPlayers,

@@ -331,7 +331,9 @@
     if (!state.payload) return;
     const game = state.payload.game ?? {};
     const starts = Number(game.starts ?? 0);
-    const gamesPlayed = Number(game.gamesPlayed ?? 0);
+    // Pages and the Worker deploy separately. Accept the previous API names
+    // during rollout instead of turning existing games into a false zero.
+    const gamesPlayed = Number(game.gamesPlayed ?? game.completed ?? 0);
     const gameVisitors = Number(game.gameVisitors ?? 0);
     const returning = Number(game.returningPlayers ?? 0);
     const averageRunsPerPlayer = Number(game.averageRunsPerPlayer ?? 0);
@@ -350,7 +352,7 @@
     setText(summaryIds.highStreak, numberFormatter.format(game.highStreak ?? 0));
 
     setText("game-starts-detail", `${numberFormatter.format(game.startsToday ?? 0)} today`);
-    setText("game-games-played-detail", `${numberFormatter.format(game.gamesPlayedToday ?? 0)} today`);
+    setText("game-games-played-detail", `${numberFormatter.format(game.gamesPlayedToday ?? game.completedToday ?? 0)} today`);
     setText(
       "game-players-detail",
       `${oneDecimalFormatter.format(averageRunsPerPlayer)} recorded ${averageRunsPerPlayer === 1 ? "game" : "games"} per player`,

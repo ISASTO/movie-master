@@ -265,10 +265,9 @@ async function recordVisit(env, visitorId, section) {
     );
   }
 
-  // D1 commits batch statements sequentially. Put the daily and canonical
-  // section rows first; all writes are idempotent, so a client retry repairs a
-  // partial batch without double-counting. /count and analytics both read the
-  // section counter, so their public totals stay consistent meanwhile.
+  // D1 batches are transactions: a failed statement rolls back the sequence.
+  // Every insert is idempotent, so retrying a lost response cannot double-count.
+  // /count and analytics also share the canonical section counter.
   await env.DB.batch(statements);
 }
 

@@ -274,12 +274,13 @@
 
     rows.forEach((entry) => {
       const row = document.createElement("tr");
-      row.classList.add(`run-status-${String(entry.status || "started-only").toLowerCase().replaceAll("_", "-")}`);
+      const status = entry.status || (entry.finishedAt ? "FINISHED" : "STARTED_ONLY");
+      row.classList.add(`run-status-${String(status).toLowerCase().replaceAll("_", "-")}`);
       const values = [
         [formatTimestamp(entry.lastEventAt || entry.finishedAt || entry.startedAt), "recent-completed", "LAST EVENT"],
         [entry.player, "leaderboard-player", "PLAYER"],
         [entry.mode === "HARDCORE" ? "HARDCORE" : "STANDARD", "recent-mode", "MODE"],
-        [resultLabel(entry.status, entry.endReason), "recent-result", "RESULT"],
+        [resultLabel(status, entry.endReason), "recent-result", "RESULT"],
         [entry.score == null ? "—" : numberFormatter.format(entry.score), "leaderboard-score", "SCORE"],
         [entry.longestStreak == null ? "—" : numberFormatter.format(entry.longestStreak), "leaderboard-streak", "STREAK"],
         [entry.gameTimeSeconds == null ? "—" : formatDuration(entry.gameTimeSeconds), "leaderboard-time", "GAME TIME"],

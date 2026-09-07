@@ -161,8 +161,14 @@
     writePendingEvents(trimPendingEvents(items));
   };
 
-  const removePendingEvent = (id) => {
-    writePendingEvents(readPendingEvents().filter((item) => item.id !== id));
+  const removePendingEvent = (sent) => {
+    // A second pause may replace a checkpoint while its earlier request is in
+    // flight. Only acknowledge the snapshot that was actually sent.
+    const sentBody = JSON.stringify(sent.body);
+    writePendingEvents(readPendingEvents().filter((item) =>
+      item.id !== sent.id
+      || item.createdAt !== sent.createdAt
+      || JSON.stringify(item.body) !== sentBody));
   };
 
   const attachRunToken = (runId, runToken) => {
@@ -187,14 +193,18 @@
 
   const flushPendingEvents = () => {
     if (pendingFlush) return pendingFlush;
+    if (!readPendingEvents().length) return Promise.resolve();
     pendingFlush = (async () => {
+      const deferredRuns = new Set();
       while (true) {
-        const item = readPendingEvents()[0];
+        // Preserve each game's start-before-finish ordering, without letting
+        // one temporarily unrecordable game hold up every subsequent game.
+        const item = readPendingEvents().find((entry) => !deferredRuns.has(entry.body.runId));
         if (!item) return;
         try {
           const result = await requestWithRetry(item.body, item.body.event === "finish" ? 3 : 2);
           if (item.body.event === "start") attachRunToken(item.body.runId, result?.runToken);
-          removePendingEvent(item.id);
+          removePendingEvent(item);
           if (item.body.event === "finish") {
             dispatchRunEvent("movie-master:run-recorded", result);
           }
@@ -205,7 +215,7 @@
             && !item.body.runToken;
           const permanent = status >= 400 && status < 500 && status !== 429 && !missingReceipt;
           if (permanent) {
-            removePendingEvent(item.id);
+            removePendingEvent(item);
             if (item.body.event === "finish") {
               dispatchRunEvent("movie-master:run-record-failed", {
                 message: error?.message || "Leaderboard submission failed",
@@ -213,12 +223,13 @@
             }
             continue;
           }
+          deferredRuns.add(item.body.runId);
           schedulePendingRetry();
-          return;
         }
       }
     })().finally(() => {
       pendingFlush = null;
+      if (readPendingEvents().length) schedulePendingRetry();
     });
     return pendingFlush;
   };
