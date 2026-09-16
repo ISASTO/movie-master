@@ -54,6 +54,51 @@
     });
   }
 
+  function setUpTextContacts() {
+    // This acknowledgement masks the display, not the public website's source.
+    const phoneNumber = "612-443-6846";
+    const contacts = [...document.querySelectorAll("[data-text-contact]")]
+      .map((card) => ({
+        gate: card.querySelector("[data-text-gate]"),
+        revealButton: card.querySelector("[data-reveal-phone]"),
+        details: card.querySelector("[data-text-details]"),
+        number: card.querySelector("[data-phone-number]"),
+        smsLink: card.querySelector("[data-sms-link]"),
+        copyButton: card.querySelector("[data-copy-phone]"),
+        status: card.querySelector("[data-phone-status]"),
+      }))
+      .filter((contact) => Object.values(contact).every(Boolean));
+
+    contacts.forEach((contact) => {
+      contact.revealButton.addEventListener("click", () => {
+        // Agreement applies across this page and resets when the page reloads.
+        contacts.forEach((entry) => {
+          entry.number.textContent = phoneNumber;
+          entry.smsLink.href = `sms:+1${phoneNumber.replace(/\D/g, "")}`;
+          entry.smsLink.setAttribute("aria-label", `Send a text to the Movie Master at ${phoneNumber}`);
+          entry.revealButton.setAttribute("aria-expanded", "true");
+          entry.details.hidden = false;
+          entry.gate.hidden = true;
+        });
+        contact.smsLink.focus();
+      });
+
+      contact.copyButton.addEventListener("click", async () => {
+        if (contact.details.hidden) return;
+        let copied = false;
+        try {
+          copied = await copyText(phoneNumber);
+        } catch {
+          // Leave the displayed number available for manual selection.
+        }
+        contact.status.textContent = copied
+          ? "NUMBER COPIED. TEXT ONLY, PLEASE."
+          : "Select the number above to copy it.";
+        contact.copyButton.focus();
+      });
+    });
+  }
+
   function buildMarquee() {
     const track = document.querySelector("#marquee-track");
     const testimonials = [...document.querySelectorAll(".testimonial-card.testimonial-marquee-source")];
@@ -578,5 +623,6 @@
   setUpVisitorCounter();
   setUpPurchaseFlow();
   setUpEmailCopyButtons();
+  setUpTextContacts();
   setUpActionBar();
 })();

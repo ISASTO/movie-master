@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#17100b">
+    <meta name="format-detection" content="telephone=no">
     <meta
       name="description"
       content="Get personalized movie recommendations from the Movie Master — the home of Blockbuster Smash Hit Masterpieces."
@@ -48,8 +49,8 @@
         "url": "https://moviemaster.vip/"
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260905-welcome-balanced-lines">
-    <script src="./script.js?v=20260904-support-modal-1" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260916-text-contact-1">
+    <script src="./script.js?v=20260916-text-contact-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to the Movie Master</a>
@@ -182,6 +183,29 @@
                   role="status"
                   aria-live="polite"
                 ></span>
+                <div class="text-contact" data-text-contact>
+                  <p class="text-contact-label">TEXT THE MOVIE MASTER</p>
+                  <p class="text-contact-note" id="hero-text-note">Text only. No calls.</p>
+                  <div class="text-contact-gate" data-text-gate>
+                    <span class="text-contact-number" aria-label="Phone number: 612, remaining digits hidden">612-•••-••••</span>
+                    <button
+                      class="text-contact-button"
+                      type="button"
+                      data-reveal-phone
+                      aria-describedby="hero-text-note"
+                      aria-controls="hero-text-details"
+                      aria-expanded="false"
+                    >I AGREE. SHOW NUMBER</button>
+                  </div>
+                  <div class="text-contact-details" id="hero-text-details" data-text-details hidden>
+                    <span class="text-contact-number" data-phone-number></span>
+                    <div class="text-contact-actions">
+                      <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
+                      <button class="text-contact-copy" type="button" data-copy-phone aria-describedby="hero-text-status">COPY NUMBER</button>
+                    </div>
+                    <span class="text-contact-status" id="hero-text-status" data-phone-status role="status" aria-live="polite"></span>
+                  </div>
+                </div>
               </div>
               <a class="hero-packages-button" href="#offer">
                 <span>VIEW RECOMMENDATION PACKAGES</span>
@@ -356,7 +380,7 @@
                 <h4>SEND YOUR PURCHASE REQUEST</h4>
                 <p>
                   Press the package's purchase button, copy the prepared message,
-                  and send it to the Movie Master through Facebook or email.
+                  and send it to the Movie Master by text, Facebook, or email.
                 </p>
               </div>
             </li>
@@ -1241,6 +1265,29 @@
               role="status"
               aria-live="polite"
             ></span>
+            <div class="text-contact" data-text-contact>
+              <p class="text-contact-label">TEXT THE MOVIE MASTER</p>
+              <p class="text-contact-note" id="final-text-note">Text only. No calls.</p>
+              <div class="text-contact-gate" data-text-gate>
+                <span class="text-contact-number" aria-label="Phone number: 612, remaining digits hidden">612-•••-••••</span>
+                <button
+                  class="text-contact-button"
+                  type="button"
+                  data-reveal-phone
+                  aria-describedby="final-text-note"
+                  aria-controls="final-text-details"
+                  aria-expanded="false"
+                >I AGREE. SHOW NUMBER</button>
+              </div>
+              <div class="text-contact-details" id="final-text-details" data-text-details hidden>
+                <span class="text-contact-number" data-phone-number></span>
+                <div class="text-contact-actions">
+                  <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
+                  <button class="text-contact-copy" type="button" data-copy-phone aria-describedby="final-text-status">COPY NUMBER</button>
+                </div>
+                <span class="text-contact-status" id="final-text-status" data-phone-status role="status" aria-live="polite"></span>
+              </div>
+            </div>
           </div>
           <div class="reservation-package-selector finale-package-selector" role="group" aria-label="Select your package">
             <p class="reservation-selector-label">SELECT YOUR PACKAGE</p>
@@ -1321,7 +1368,7 @@
 
           <div class="purchase-request" id="purchase-request" hidden>
             <p class="purchase-instruction">
-              Copy the message below, then send it to the Movie Master through Facebook or email.
+              Copy the message below, then send it to the Movie Master by text, Facebook, or email.
             </p>
 
             <textarea
@@ -1357,6 +1404,30 @@
                 <span aria-hidden="true">✉</span>
                 SEND BY EMAIL
               </a>
+            </div>
+
+            <div class="text-contact" data-text-contact>
+              <p class="text-contact-label">TEXT THE MOVIE MASTER</p>
+              <p class="text-contact-note" id="purchase-text-note">Text only. No calls.</p>
+              <div class="text-contact-gate" data-text-gate>
+                <span class="text-contact-number" aria-label="Phone number: 612, remaining digits hidden">612-•••-••••</span>
+                <button
+                  class="text-contact-button"
+                  type="button"
+                  data-reveal-phone
+                  aria-describedby="purchase-text-note"
+                  aria-controls="purchase-text-details"
+                  aria-expanded="false"
+                >I AGREE. SHOW NUMBER</button>
+              </div>
+              <div class="text-contact-details" id="purchase-text-details" data-text-details hidden>
+                <span class="text-contact-number" data-phone-number></span>
+                <div class="text-contact-actions">
+                  <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
+                  <button class="text-contact-copy" type="button" data-copy-phone aria-describedby="purchase-text-status">COPY NUMBER</button>
+                </div>
+                <span class="text-contact-status" id="purchase-text-status" data-phone-status role="status" aria-live="polite"></span>
+              </div>
             </div>
 
             <div class="purchase-email-copy">

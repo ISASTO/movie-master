@@ -920,6 +920,103 @@ h3 {
   text-transform: uppercase;
 }
 
+/* The number is revealed after the visitor agrees to text only. */
+.text-contact {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--gold-dark);
+  text-align: center;
+}
+
+.text-contact-label {
+  margin: 0 0 4px;
+  color: var(--gold-deep);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+}
+
+.text-contact-note {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.text-contact-gate,
+.text-contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.text-contact-number {
+  color: var(--ink);
+  font-size: clamp(1.15rem, 2.6vw, 1.45rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  white-space: nowrap;
+  user-select: text;
+}
+
+.text-contact-details {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.text-contact-button,
+.text-contact-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 13px;
+  border: 2px solid var(--ink);
+  background: var(--gold);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  text-decoration: none;
+}
+
+.text-contact-copy {
+  background: var(--paper-light);
+}
+
+.text-contact-button:hover,
+.text-contact-copy:hover {
+  background: var(--gold-bright);
+}
+
+.text-contact-button:focus-visible,
+.text-contact-copy:focus-visible {
+  outline: 3px solid var(--purple);
+  outline-offset: 3px;
+}
+
+.text-contact-status {
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.text-contact-status:empty {
+  display: none;
+}
+
 .hero-packages-button {
   position: relative;
   z-index: 1;
@@ -3398,8 +3495,10 @@ h3 {
 }
 
 .purchase-dialog-content {
+  max-height: calc(100dvh - 30px);
   padding: 24px clamp(24px, 4vw, 38px) 22px;
-  overflow: visible;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .purchase-dialog-close {
@@ -4737,11 +4836,11 @@ h3 {
 
   .purchase-dialog {
     width: calc(100% - 10px);
-    max-height: none;
+    max-height: calc(100dvh - 12px);
   }
 
   .purchase-dialog-shell {
-    max-height: none;
+    max-height: calc(100dvh - 12px);
     border-width: 3px;
     outline-width: 2px;
     outline-offset: -7px;
@@ -4749,9 +4848,9 @@ h3 {
   }
 
   .purchase-dialog-content {
-    max-height: none;
+    max-height: calc(100dvh - 18px);
     padding: 36px 10px 10px;
-    overflow: visible;
+    overflow-y: auto;
   }
 
   .purchase-dialog-close {
