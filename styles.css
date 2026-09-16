@@ -922,23 +922,14 @@ h3 {
 
 /* The number is revealed after the visitor agrees to text only. */
 .text-contact {
-  margin-top: 12px;
-  padding-top: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 2px dashed var(--gold-dark);
   text-align: center;
 }
 
-.text-contact-label {
-  margin: 0 0 4px;
-  color: var(--gold-deep);
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  line-height: 1.25;
-}
-
 .text-contact-note {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   color: var(--ink);
   font-size: 0.95rem;
   font-weight: 800;
@@ -946,12 +937,12 @@ h3 {
 }
 
 .text-contact-gate,
-.text-contact-actions {
+.text-contact-details {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px 12px;
 }
 
 .text-contact-number {
@@ -965,12 +956,6 @@ h3 {
   user-select: text;
 }
 
-.text-contact-details {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-}
-
 .text-contact-button,
 .text-contact-copy {
   display: inline-flex;
@@ -978,7 +963,7 @@ h3 {
   justify-content: center;
   min-height: 44px;
   max-width: 100%;
-  padding: 10px 13px;
+  padding: 8px 10px;
   border: 2px solid var(--ink);
   background: var(--gold);
   color: var(--ink);
@@ -1007,6 +992,7 @@ h3 {
 }
 
 .text-contact-status {
+  flex-basis: 100%;
   color: var(--ink);
   font-size: 0.8rem;
   font-weight: 700;
