@@ -91,9 +91,11 @@
         } catch {
           // Leave the displayed number available for manual selection.
         }
+        contact.copyButton.textContent = copied ? "COPIED!" : "COPY NUMBER";
+        contact.status.classList.toggle("visually-hidden", copied);
         contact.status.textContent = copied
           ? "NUMBER COPIED. TEXT ONLY, PLEASE."
-          : "Select the number above to copy it.";
+          : "Select the number to copy it.";
         contact.copyButton.focus();
       });
     });

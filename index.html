@@ -49,8 +49,8 @@
         "url": "https://moviemaster.vip/"
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260916-text-contact-2">
-    <script src="./script.js?v=20260916-text-contact-1" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260917-text-contact-3">
+    <script src="./script.js?v=20260917-text-contact-3" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to the Movie Master</a>
@@ -186,21 +186,30 @@
                 <div class="text-contact" data-text-contact>
                   <p class="text-contact-note" id="hero-text-note">TEXT ONLY. NO CALLS.</p>
                   <div class="text-contact-gate" data-text-gate>
-                    <span class="text-contact-number" aria-label="Phone number: 612, remaining digits hidden">612-•••-••••</span>
+                    <span class="text-contact-number text-contact-number--masked">
+                      <svg class="text-contact-lock" width="16" height="18" viewBox="0 0 16 18" fill="none" aria-hidden="true" focusable="false">
+                        <rect x="2" y="8" width="12" height="8" rx="1" stroke="currentColor" stroke-width="2"/>
+                        <path d="M5 8V5a3 3 0 0 1 6 0v3" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      <span aria-hidden="true">612-•••-••••</span>
+                      <span class="visually-hidden">Phone number: 612, remaining digits hidden</span>
+                    </span>
                     <button
-                      class="text-contact-button"
+                      class="text-contact-button text-contact-reveal"
                       type="button"
                       data-reveal-phone
                       aria-describedby="hero-text-note"
                       aria-controls="hero-text-details"
                       aria-expanded="false"
-                    >I AGREE. SHOW NUMBER</button>
+                    >AGREE &amp; REVEAL</button>
                   </div>
                   <div class="text-contact-details" id="hero-text-details" data-text-details hidden>
                     <span class="text-contact-number" data-phone-number></span>
-                    <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
-                    <button class="text-contact-copy" type="button" data-copy-phone aria-describedby="hero-text-status">COPY NUMBER</button>
-                    <span class="text-contact-status" id="hero-text-status" data-phone-status role="status" aria-live="polite"></span>
+                    <div class="text-contact-actions">
+                      <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
+                      <button class="text-contact-copy" type="button" data-copy-phone aria-label="Copy phone number" aria-describedby="hero-text-status">COPY NUMBER</button>
+                    </div>
+                    <span class="text-contact-status visually-hidden" id="hero-text-status" data-phone-status role="status" aria-live="polite"></span>
                   </div>
                 </div>
               </div>
@@ -1265,21 +1274,30 @@
             <div class="text-contact" data-text-contact>
               <p class="text-contact-note" id="final-text-note">TEXT ONLY. NO CALLS.</p>
               <div class="text-contact-gate" data-text-gate>
-                <span class="text-contact-number" aria-label="Phone number: 612, remaining digits hidden">612-•••-••••</span>
+                <span class="text-contact-number text-contact-number--masked">
+                  <svg class="text-contact-lock" width="16" height="18" viewBox="0 0 16 18" fill="none" aria-hidden="true" focusable="false">
+                    <rect x="2" y="8" width="12" height="8" rx="1" stroke="currentColor" stroke-width="2"/>
+                    <path d="M5 8V5a3 3 0 0 1 6 0v3" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span aria-hidden="true">612-•••-••••</span>
+                  <span class="visually-hidden">Phone number: 612, remaining digits hidden</span>
+                </span>
                 <button
-                  class="text-contact-button"
+                  class="text-contact-button text-contact-reveal"
                   type="button"
                   data-reveal-phone
                   aria-describedby="final-text-note"
                   aria-controls="final-text-details"
                   aria-expanded="false"
-                >I AGREE. SHOW NUMBER</button>
+                >AGREE &amp; REVEAL</button>
               </div>
               <div class="text-contact-details" id="final-text-details" data-text-details hidden>
                 <span class="text-contact-number" data-phone-number></span>
-                <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
-                <button class="text-contact-copy" type="button" data-copy-phone aria-describedby="final-text-status">COPY NUMBER</button>
-                <span class="text-contact-status" id="final-text-status" data-phone-status role="status" aria-live="polite"></span>
+                <div class="text-contact-actions">
+                  <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
+                  <button class="text-contact-copy" type="button" data-copy-phone aria-label="Copy phone number" aria-describedby="final-text-status">COPY NUMBER</button>
+                </div>
+                <span class="text-contact-status visually-hidden" id="final-text-status" data-phone-status role="status" aria-live="polite"></span>
               </div>
             </div>
           </div>
@@ -1403,21 +1421,30 @@
             <div class="text-contact" data-text-contact>
               <p class="text-contact-note" id="purchase-text-note">TEXT ONLY. NO CALLS.</p>
               <div class="text-contact-gate" data-text-gate>
-                <span class="text-contact-number" aria-label="Phone number: 612, remaining digits hidden">612-•••-••••</span>
+                <span class="text-contact-number text-contact-number--masked">
+                  <svg class="text-contact-lock" width="16" height="18" viewBox="0 0 16 18" fill="none" aria-hidden="true" focusable="false">
+                    <rect x="2" y="8" width="12" height="8" rx="1" stroke="currentColor" stroke-width="2"/>
+                    <path d="M5 8V5a3 3 0 0 1 6 0v3" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span aria-hidden="true">612-•••-••••</span>
+                  <span class="visually-hidden">Phone number: 612, remaining digits hidden</span>
+                </span>
                 <button
-                  class="text-contact-button"
+                  class="text-contact-button text-contact-reveal"
                   type="button"
                   data-reveal-phone
                   aria-describedby="purchase-text-note"
                   aria-controls="purchase-text-details"
                   aria-expanded="false"
-                >I AGREE. SHOW NUMBER</button>
+                >AGREE &amp; REVEAL</button>
               </div>
               <div class="text-contact-details" id="purchase-text-details" data-text-details hidden>
                 <span class="text-contact-number" data-phone-number></span>
-                <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
-                <button class="text-contact-copy" type="button" data-copy-phone aria-describedby="purchase-text-status">COPY NUMBER</button>
-                <span class="text-contact-status" id="purchase-text-status" data-phone-status role="status" aria-live="polite"></span>
+                <div class="text-contact-actions">
+                  <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
+                  <button class="text-contact-copy" type="button" data-copy-phone aria-label="Copy phone number" aria-describedby="purchase-text-status">COPY NUMBER</button>
+                </div>
+                <span class="text-contact-status visually-hidden" id="purchase-text-status" data-phone-status role="status" aria-live="polite"></span>
               </div>
             </div>
 
