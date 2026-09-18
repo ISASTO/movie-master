@@ -23,7 +23,7 @@
       temporaryField.style.position = "fixed";
       temporaryField.style.opacity = "0";
       temporaryField.style.pointerEvents = "none";
-      document.body.append(temporaryField);
+      (document.querySelector("dialog[open]") ?? document.body).append(temporaryField);
     }
 
     temporaryField.focus();
@@ -78,6 +78,7 @@
           entry.smsLink.setAttribute("aria-label", `Send a text to the Movie Master at ${phoneNumber}`);
           entry.revealButton.setAttribute("aria-expanded", "true");
           entry.details.hidden = false;
+          entry.number.closest("[data-phone-display]")?.removeAttribute("hidden");
           entry.gate.hidden = true;
         });
         contact.smsLink.focus();
@@ -392,36 +393,33 @@
     const closeButton = document.querySelector("#purchase-dialog-close");
     const requestPanel = document.querySelector("#purchase-request");
     const dialogTitle = document.querySelector("#purchase-dialog-title");
-    const packageSelector = document.querySelector(".purchase-package-selector");
+    const packageSelector = document.querySelector("#purchase-package-selector");
+    const packageSummary = document.querySelector("#purchase-summary");
+    const packageName = document.querySelector("#purchase-package-name");
+    const packageDetail = document.querySelector("#purchase-package-detail");
+    const changePackageButton = document.querySelector("#purchase-change-package");
+    const messageDetails = document.querySelector("#purchase-message-details");
     const messageField = document.querySelector("#purchase-message");
     const copyMessageButton = document.querySelector("#copy-message-button");
     const messageCopyStatus = document.querySelector("#message-copy-status");
     const emailLink = document.querySelector("#purchase-email-link");
-    const emailCopyStatus = document.querySelector("#email-copy-status");
     const payments = document.querySelector("#purchase-payments");
     const paymentTitle = document.querySelector("#purchase-payment-title");
     const paymentStatus = document.querySelector("#payment-copy-status");
-    const paymentCopyButtons = [...document.querySelectorAll("[data-payment-copy]")];
+    const paymentMethods = [...document.querySelectorAll('[name="purchase-payment-method"]')];
+    const paymentRecipient = document.querySelector("#purchase-payment-recipient");
+    const paymentCopyButton = document.querySelector("#purchase-copy-recipient");
+    const paymentLink = document.querySelector("#purchase-payment-open");
+    const paymentLinkLabel = document.querySelector("#purchase-payment-open-label");
     const instructionTitle = document.querySelector("#purchase-instruction-title");
     const instructionDetail = document.querySelector("#purchase-instruction-detail");
     const packageButtons = [...document.querySelectorAll("[data-package]")];
     const packageSelectors = [...document.querySelectorAll("[data-package-select]")];
     const generalLaunchButtons = [...document.querySelectorAll("[data-purchase-launch]")];
 
-    if (
-      !dialog ||
-      !closeButton ||
-      !requestPanel ||
-      !messageField ||
-      !copyMessageButton ||
-      !messageCopyStatus ||
-      !emailLink ||
-      !emailCopyStatus
-    ) {
-      return;
-    }
+    if (!dialog || !closeButton || !requestPanel || !messageField || !emailLink ||
+        !packageSummary || !changePackageButton || !paymentRecipient || !paymentLink) return;
 
-    const emailAddress = movieMasterEmail;
     const emailSubject = "Movie Master Package Purchase Request";
     const packageMessages = {
       five:
@@ -431,106 +429,130 @@
       vip:
         "Hello Mr. Movie Master sir. I would like the $20 VIP Package: 20 Blockbuster Smash Hit Masterpieces, 3 R&B music videos, and my VIP certificate. Please send my recommendations here. Thank you.",
       support:
-        "Hello Mr. Movie Master, sir. I would like to give you money for free to help grow your business. I do not require any movie recommendations in return. Thank you.",
+        "Hello Mr. Movie Master, sir. I would like to support your website and help your business grow. This is a contribution, with no recommendations needed. Thank you.",
       lifetime:
         "Hello Mr. Movie Master sir. I am interested in applying for the Ultimate Lifetime Membership for $1,000,000. I understand that membership requires your personal approval. Please tell me what I must do to prove that I am worthy. Thank you.",
     };
     const packageSubjects = {
-      support: "Give the Movie Master Money",
+      support: "Support the Movie Master",
       lifetime: "Ultimate Lifetime Membership Inquiry",
     };
     const packagePrices = { five: 5, ten: 10, vip: 20 };
+    const packageNames = {
+      five: "5 recommendations · $5",
+      ten: "10 recommendations · $10",
+      vip: "VIP package · $20",
+      support: "Help cover website costs and grow the business.",
+      lifetime: "Ultimate Lifetime Membership",
+    };
+    const methods = {
+      paypal: {
+        name: "PayPal",
+        recipient: "refreshingspring148@gmail.com",
+        url: "https://www.paypal.com/myaccount/transfer/",
+        copyLabel: "Copy PayPal email",
+      },
+      venmo: {
+        name: "Venmo",
+        recipient: "@Freshwater55",
+        url: "https://venmo.com/Freshwater55",
+        copyLabel: "Copy Venmo username",
+      },
+      cashapp: {
+        name: "Cash App",
+        recipient: "$Livinglife5444",
+        url: "https://cash.app/$Livinglife5444",
+        copyLabel: "Copy Cash App Cashtag",
+      },
+    };
     let launchElement = null;
+    let selectedMethod = "paypal";
+
+    const clearPaymentStatus = () => {
+      paymentStatus.textContent = "";
+      paymentStatus.classList.add("visually-hidden");
+      paymentCopyButton.textContent = "Copy";
+    };
 
     const clearCopyStatuses = () => {
       messageCopyStatus.textContent = "";
-      emailCopyStatus.textContent = "";
-      copyMessageButton.textContent = "COPY MESSAGE";
       messageCopyStatus.classList.add("visually-hidden");
-      if (paymentStatus) {
-        paymentStatus.textContent = "";
-        paymentStatus.classList.add("visually-hidden");
-      }
-      paymentCopyButtons.forEach((button) => {
-        button.classList.remove("is-copied");
-        button.querySelector("[data-payment-copy-label]").textContent = "COPY";
-      });
+      copyMessageButton.textContent = "COPY MESSAGE";
+      clearPaymentStatus();
+    };
+
+    const selectPaymentMethod = (key) => {
+      const method = methods[key];
+      if (!method) return;
+      selectedMethod = key;
+      paymentRecipient.textContent = method.recipient;
+      paymentCopyButton.setAttribute("aria-label", method.copyLabel);
+      paymentLink.href = method.url;
+      paymentLink.setAttribute("aria-label", "Open " + method.name + " in a new tab");
+      paymentLinkLabel.textContent = "OPEN " + method.name.toUpperCase();
+      clearPaymentStatus();
     };
 
     const sizeMessageField = () => {
+      if (!messageDetails.open || requestPanel.hidden) return;
       messageField.style.height = "auto";
-      messageField.style.height = `${messageField.scrollHeight + 2}px`;
+      messageField.style.height = (messageField.scrollHeight + 2) + "px";
     };
 
     const selectPackage = (packageKey) => {
       const message = packageMessages[packageKey];
       if (!message) return;
-
+      const isSupport = packageKey === "support";
+      const isLifetime = packageKey === "lifetime";
       packageSelectors.forEach((button) => {
-        button.setAttribute(
-          "aria-pressed",
-          String(button.dataset.packageSelect === packageKey),
-        );
+        button.setAttribute("aria-pressed", String(button.dataset.packageSelect === packageKey));
       });
-
-      if (payments) payments.hidden = packageKey === "lifetime";
-      if (paymentTitle && packageKey !== "lifetime") {
-        paymentTitle.textContent = packageKey === "support"
-          ? "GIVE ANY AMOUNT"
-          : "PAY $" + packagePrices[packageKey] + " WITH";
-      }
-      if (instructionTitle && instructionDetail) {
-        instructionTitle.textContent = packageKey === "lifetime"
-          ? "MESSAGE THE MOVIE MASTER TO APPLY."
-          : packageKey === "support"
-            ? "HELP THE MOVIE MASTER GROW HIS BUSINESS."
-            : "AFTER PAYING, MESSAGE THE MOVIE MASTER.";
-        instructionDetail.textContent = packageKey === "lifetime"
-          ? "Membership requires his personal approval."
-          : packageKey === "support"
-            ? "No recommendations are included. You can message him before or after giving."
-            : "Include your payment name and method. Recommendations are not sent automatically.";
-      }
-
+      packageSelector.hidden = true;
+      changePackageButton.hidden = isSupport || isLifetime;
+      changePackageButton.setAttribute("aria-expanded", "false");
+      packageSummary.hidden = false;
+      packageName.textContent = packageNames[packageKey];
+      packageDetail.textContent = packageKey === "vip"
+        ? "20 movies, 3 R&B videos + VIP certificate"
+        : "";
+      packageDetail.hidden = !packageDetail.textContent;
+      dialogTitle.textContent = isSupport ? "SUPPORT THE MOVIE MASTER"
+        : isLifetime ? "MEMBERSHIP INQUIRY" : "YOUR PACKAGE";
+      payments.hidden = isLifetime;
+      paymentTitle.textContent = isSupport ? "CONTRIBUTE ANY AMOUNT"
+        : isLifetime ? "" : "PAY $" + packagePrices[packageKey] + " WITH";
+      instructionTitle.textContent = isLifetime
+        ? "MESSAGE THE MOVIE MASTER TO APPLY"
+        : "MESSAGE THE MOVIE MASTER";
+      instructionDetail.textContent = isLifetime
+        ? "Membership requires his personal approval."
+        : isSupport
+          ? "Thank you for your support. No recommendations are included. You can message him before or after contributing."
+          : "After paying, send your payment name and method. Recommendations aren’t automatic. You can also message first.";
+      messageDetails.open = false;
       messageField.value = message;
       const subject = packageSubjects[packageKey] ?? emailSubject;
-      emailLink.href = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+      emailLink.href = "mailto:" + movieMasterEmail + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(message);
       requestPanel.hidden = false;
       clearCopyStatuses();
-      window.requestAnimationFrame(() => {
-        sizeMessageField();
-      });
     };
 
     const clearPackageSelection = () => {
       packageSelectors.forEach((button) => button.setAttribute("aria-pressed", "false"));
+      dialogTitle.textContent = "CHOOSE YOUR PACKAGE";
+      packageSelector.hidden = false;
+      packageSummary.hidden = true;
+      changePackageButton.setAttribute("aria-expanded", "false");
       requestPanel.hidden = true;
+      messageDetails.open = false;
       messageField.value = "";
       clearCopyStatuses();
     };
 
     const openDialog = (packageKey, trigger) => {
       launchElement = trigger;
-      const isLifetimeInquiry = packageKey === "lifetime";
-      const isSupportInquiry = packageKey === "support";
-
-      dialog.classList.toggle("is-lifetime-inquiry", isLifetimeInquiry);
-      dialog.classList.toggle("is-support-inquiry", isSupportInquiry);
-      if (dialogTitle) {
-        dialogTitle.textContent = isLifetimeInquiry
-          ? "INQUIRE ABOUT ULTIMATE LIFETIME MEMBERSHIP"
-          : isSupportInquiry
-            ? "GIVE THE MOVIE MASTER MONEY"
-            : "PURCHASE A PACKAGE";
-      }
-      if (packageSelector) packageSelector.hidden = isLifetimeInquiry || isSupportInquiry;
-
-      if (packageKey) {
-        selectPackage(packageKey);
-      } else {
-        clearPackageSelection();
-      }
-
+      if (packageKey) selectPackage(packageKey);
+      else clearPackageSelection();
       if (typeof dialog.showModal === "function") {
         if (!dialog.open) dialog.showModal();
       } else {
@@ -539,9 +561,8 @@
     };
 
     const closeDialog = () => {
-      if (typeof dialog.close === "function") {
-        dialog.close();
-      } else {
+      if (typeof dialog.close === "function") dialog.close();
+      else {
         dialog.removeAttribute("open");
         launchElement?.focus();
       }
@@ -550,13 +571,27 @@
     packageButtons.forEach((button) => {
       button.addEventListener("click", () => openDialog(button.dataset.package, button));
     });
-
     generalLaunchButtons.forEach((button) => {
       button.addEventListener("click", () => openDialog(null, button));
     });
-
     packageSelectors.forEach((button) => {
-      button.addEventListener("click", () => selectPackage(button.dataset.packageSelect));
+      button.addEventListener("click", () => {
+        selectPackage(button.dataset.packageSelect);
+        // Keep keyboard focus in view when the package choices collapse.
+        paymentMethods.find((input) => input.checked)?.focus();
+      });
+    });
+    changePackageButton.addEventListener("click", () => {
+      packageSelector.hidden = !packageSelector.hidden;
+      changePackageButton.setAttribute("aria-expanded", String(!packageSelector.hidden));
+      if (!packageSelector.hidden) {
+        packageSelectors.find((button) => button.getAttribute("aria-pressed") === "true")?.focus();
+      }
+    });
+    paymentMethods.forEach((input) => {
+      input.addEventListener("change", () => {
+        if (input.checked) selectPaymentMethod(input.value);
+      });
     });
 
     closeButton.addEventListener("click", closeDialog);
@@ -565,31 +600,29 @@
     });
     dialog.addEventListener("close", () => launchElement?.focus());
 
-    paymentCopyButtons.forEach((button) => {
-      button.addEventListener("click", async () => {
-        const recipient = button.closest(".purchase-payment")
-          ?.querySelector("[data-payment-recipient]")?.textContent.trim();
-        if (!recipient || !paymentStatus) return;
-        let copied = false;
-        try {
-          copied = await copyText(recipient);
-        } catch {
-          // The recipient remains visible and selectable if copying is blocked.
-        }
-        button.classList.toggle("is-copied", copied);
-        button.querySelector("[data-payment-copy-label]").textContent = copied ? "✓" : "COPY";
-        paymentStatus.classList.toggle("visually-hidden", copied);
-        paymentStatus.textContent = copied
-          ? `${button.dataset.paymentCopy}: ${recipient} copied.`
-          : `Select and copy this ${button.dataset.paymentCopy} recipient: ${recipient}`;
-        button.focus();
-      });
+    paymentCopyButton.addEventListener("click", async () => {
+      const methodKey = selectedMethod;
+      const method = methods[methodKey];
+      let copied = false;
+      try {
+        copied = await copyText(method.recipient);
+      } catch {
+        // Keep the displayed recipient available for manual selection.
+      }
+      // Do not show stale feedback if the method changed while copying.
+      if (methodKey !== selectedMethod) return;
+      paymentCopyButton.textContent = copied ? "Copied!" : "Copy";
+      paymentStatus.classList.toggle("visually-hidden", copied);
+      paymentStatus.textContent = copied
+        ? method.name + " recipient copied."
+        : "Select and copy this recipient: " + method.recipient;
+      paymentCopyButton.focus();
     });
 
     copyMessageButton.addEventListener("click", async () => {
       let copied = false;
       try {
-        copied = await copyText(messageField.value, messageField);
+        copied = await copyText(messageField.value);
       } catch {
         // Keep the message available for manual selection.
       }
@@ -599,9 +632,9 @@
       copyMessageButton.focus();
     });
 
-    window.addEventListener("resize", () => {
-      if (!requestPanel.hidden) sizeMessageField();
-    });
+    messageDetails.addEventListener("toggle", sizeMessageField);
+    window.addEventListener("resize", sizeMessageField);
+    selectPaymentMethod(selectedMethod);
   }
 
   function setUpActionBar() {

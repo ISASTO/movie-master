@@ -49,8 +49,8 @@
         "url": "https://moviemaster.vip/"
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20260918-payments-1">
-    <script src="./script.js?v=20260918-payments-1" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260918-purchase-simple-1">
+    <script src="./script.js?v=20260918-purchase-simple-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to the Movie Master</a>
@@ -621,12 +621,12 @@
       <section class="section support-section" aria-labelledby="support-title">
         <div class="page-shell support-shell">
           <div class="support-strip reveal-on-scroll">
-            <p class="support-eyebrow">WANT TO HELP THE MOVIE MASTER GROW?</p>
-            <h2 class="visually-hidden" id="support-title">Give the Movie Master Money</h2>
+            <p class="support-eyebrow">HELP KEEP THE MOVIE MASTER GOING</p>
+            <h2 class="visually-hidden" id="support-title">Support the Movie Master</h2>
             <button class="package-purchase-button support-money-button" type="button" data-package="support">
-              GIVE THE MOVIE MASTER MONEY
+              SUPPORT THE MOVIE MASTER
             </button>
-            <p class="support-copy">This isn't a recommendation package. You are just giving the Movie Master money for free.</p>
+            <p class="support-copy">Your extra support helps cover website costs and grow the business. Any amount is appreciated.</p>
           </div>
         </div>
       </section>
@@ -1343,162 +1343,79 @@
 
     <dialog class="purchase-dialog" id="purchase-dialog" aria-labelledby="purchase-dialog-title">
       <div class="purchase-dialog-shell">
-        <button
-          class="purchase-dialog-close"
-          id="purchase-dialog-close"
-          type="button"
-          aria-label="Close purchase window"
-        >
-          ×
-        </button>
-
+        <button class="purchase-dialog-close" id="purchase-dialog-close" type="button" aria-label="Close purchase window">×</button>
         <div class="purchase-dialog-content">
-          <h2 id="purchase-dialog-title">PURCHASE A PACKAGE</h2>
+          <h2 id="purchase-dialog-title">CHOOSE YOUR PACKAGE</h2>
 
-          <div
-            class="purchase-package-selector"
-            role="group"
-            aria-labelledby="package-selector-title"
-          >
-            <h3 id="package-selector-title">SELECT YOUR PACKAGE</h3>
+          <div class="purchase-summary" id="purchase-summary" hidden>
+            <div>
+              <strong id="purchase-package-name"></strong>
+              <p id="purchase-package-detail" hidden></p>
+            </div>
+            <button class="purchase-quiet-button" id="purchase-change-package" type="button" aria-controls="purchase-package-selector" aria-expanded="false">Change</button>
+          </div>
+
+          <div class="purchase-package-selector" id="purchase-package-selector" role="group" aria-label="Choose your package">
             <div class="purchase-package-options">
               <button type="button" data-package-select="five" aria-pressed="false">
-                <strong>$5</strong>
-                <span>5 Blockbuster Smash Hit Masterpieces</span>
+                <strong>$5</strong><span>5 recommendations</span>
               </button>
               <button type="button" data-package-select="ten" aria-pressed="false">
-                <strong>$10</strong>
-                <span>10 Blockbuster Smash Hit Masterpieces</span>
+                <strong>$10</strong><span>10 recommendations</span>
               </button>
               <button type="button" data-package-select="vip" aria-pressed="false">
-                <strong>VIP $20</strong>
-                <span>Movie Master VIP Package</span>
+                <strong>VIP · $20</strong><span>20 movies + extras</span>
               </button>
             </div>
           </div>
 
           <div class="purchase-request" id="purchase-request" hidden>
             <section class="purchase-payments" id="purchase-payments" aria-labelledby="purchase-payment-title">
-              <div class="purchase-payment-heading">
-                <h3 id="purchase-payment-title">PAY FOR YOUR PACKAGE</h3>
-                <span>OR MESSAGE FIRST</span>
+              <h3 id="purchase-payment-title">PAY WITH</h3>
+              <fieldset class="purchase-payment-methods">
+                <legend class="visually-hidden">Payment method</legend>
+                <label><input type="radio" name="purchase-payment-method" value="paypal" checked><span>PayPal</span></label>
+                <label><input type="radio" name="purchase-payment-method" value="venmo"><span>Venmo</span></label>
+                <label><input type="radio" name="purchase-payment-method" value="cashapp"><span>Cash App</span></label>
+              </fieldset>
+              <div class="purchase-recipient">
+                <span id="purchase-payment-recipient">refreshingspring148@gmail.com</span>
+                <button class="purchase-quiet-button" id="purchase-copy-recipient" type="button" aria-label="Copy PayPal email">Copy</button>
               </div>
-              <div class="purchase-payment-options">
-                <div class="purchase-payment">
-                  <a class="purchase-payment-link" href="https://www.paypal.com/myaccount/transfer/" target="_blank" rel="noopener noreferrer" aria-label="Open PayPal in a new tab. Pay refreshingspring148@gmail.com.">
-                    <strong>PAYPAL <span aria-hidden="true">↗</span></strong>
-                    <span class="purchase-payment-recipient" data-payment-recipient>refreshingspring148@<wbr>gmail.com</span>
-                  </a>
-                  <button class="purchase-payment-copy" type="button" data-payment-copy="PayPal" aria-label="Copy PayPal email" title="Copy PayPal email">
-                    <span data-payment-copy-label aria-hidden="true">COPY</span>
-                  </button>
-                </div>
-                <div class="purchase-payment">
-                  <a class="purchase-payment-link" href="https://venmo.com/Freshwater55" target="_blank" rel="noopener noreferrer" aria-label="Open Venmo in a new tab. Pay @Freshwater55.">
-                    <strong>VENMO <span aria-hidden="true">↗</span></strong>
-                    <span class="purchase-payment-recipient" data-payment-recipient>@Freshwater55</span>
-                  </a>
-                  <button class="purchase-payment-copy" type="button" data-payment-copy="Venmo" aria-label="Copy Venmo username" title="Copy Venmo username">
-                    <span data-payment-copy-label aria-hidden="true">COPY</span>
-                  </button>
-                </div>
-                <div class="purchase-payment">
-                  <a class="purchase-payment-link" href="https://cash.app/$Livinglife5444" target="_blank" rel="noopener noreferrer" aria-label="Open Cash App in a new tab. Pay $Livinglife5444.">
-                    <strong>CASH APP <span aria-hidden="true">↗</span></strong>
-                    <span class="purchase-payment-recipient" data-payment-recipient>$Livinglife5444</span>
-                  </a>
-                  <button class="purchase-payment-copy" type="button" data-payment-copy="Cash App" aria-label="Copy Cash App Cashtag" title="Copy Cash App Cashtag">
-                    <span data-payment-copy-label aria-hidden="true">COPY</span>
-                  </button>
-                </div>
-              </div>
-              <p class="purchase-payment-status visually-hidden" id="payment-copy-status" role="status" aria-live="polite"></p>
+              <p class="purchase-copy-status visually-hidden" id="payment-copy-status" role="status" aria-live="polite"></p>
+              <a class="purchase-payment-open" id="purchase-payment-open" href="https://www.paypal.com/myaccount/transfer/" target="_blank" rel="noopener noreferrer" aria-label="Open PayPal in a new tab">
+                <span id="purchase-payment-open-label">OPEN PAYPAL</span><span aria-hidden="true">↗</span>
+              </a>
             </section>
 
-            <p class="purchase-instruction">
-              <strong id="purchase-instruction-title">AFTER PAYING, MESSAGE THE MOVIE MASTER.</strong>
-              <span id="purchase-instruction-detail">Include your payment name and method. Recommendations are not sent automatically.</span>
-            </p>
-
-            <textarea
-              class="purchase-message"
-              id="purchase-message"
-              rows="3"
-              readonly
-              aria-label="Purchase request message"
-            ></textarea>
-            <span class="purchase-copy-status visually-hidden" id="message-copy-status" role="status" aria-live="polite"></span>
-
-            <div class="purchase-contact-links">
-              <button class="purchase-copy-button" id="copy-message-button" type="button">
-                COPY MESSAGE
-              </button>
-              <a
-                class="purchase-contact-button purchase-contact-facebook"
-                href="https://www.facebook.com/robert.cravens.7"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <span aria-hidden="true">f</span>
-                FACEBOOK
-              </a>
-              <a
-                class="purchase-contact-button purchase-contact-email"
-                id="purchase-email-link"
-                href="mailto:rcravens60@gmail.com"
-              >
-                <span aria-hidden="true">✉</span>
-                EMAIL
-              </a>
-            </div>
-
-            <div class="text-contact" data-text-contact>
-              <p class="text-contact-note" id="purchase-text-note">TEXT ONLY. NO CALLS.</p>
-              <div class="text-contact-gate" data-text-gate>
-                <span class="text-contact-number text-contact-number--masked">
-                  <svg class="text-contact-lock" width="16" height="18" viewBox="0 0 16 18" fill="none" aria-hidden="true" focusable="false">
-                    <rect x="2" y="8" width="12" height="8" rx="1" stroke="currentColor" stroke-width="2"/>
-                    <path d="M5 8V5a3 3 0 0 1 6 0v3" stroke="currentColor" stroke-width="2"/>
-                  </svg>
-                  <span aria-hidden="true">612-•••-••••</span>
-                  <span class="visually-hidden">Phone number: 612, remaining digits hidden</span>
+            <section class="purchase-contact" aria-labelledby="purchase-instruction-title" data-text-contact>
+              <h3 id="purchase-instruction-title">MESSAGE THE MOVIE MASTER</h3>
+              <p class="purchase-instruction" id="purchase-instruction-detail">After paying, send your payment name and method. Recommendations aren’t automatic. You can also message first.</p>
+              <p class="visually-hidden" id="purchase-text-note">Reveal the number by agreeing to text only. No calls.</p>
+              <div class="purchase-contact-links">
+                <span data-text-gate>
+                  <button class="purchase-contact-button" type="button" data-reveal-phone aria-describedby="purchase-text-note" aria-controls="purchase-text-details purchase-phone-display" aria-expanded="false">TEXT ONLY. NO CALLS.</button>
                 </span>
-                <button
-                  class="text-contact-button text-contact-reveal"
-                  type="button"
-                  data-reveal-phone
-                  aria-describedby="purchase-text-note"
-                  aria-controls="purchase-text-details"
-                  aria-expanded="false"
-                >AGREE &amp; REVEAL</button>
+                <span id="purchase-text-details" data-text-details hidden>
+                  <a class="purchase-contact-button" data-sms-link>SEND A TEXT</a>
+                </span>
+                <a class="purchase-contact-button" id="purchase-email-link" href="mailto:rcravens60@gmail.com">EMAIL</a>
+                <a class="purchase-contact-button" href="https://www.facebook.com/robert.cravens.7" target="_blank" rel="noopener noreferrer">FACEBOOK</a>
               </div>
-              <div class="text-contact-details" id="purchase-text-details" data-text-details hidden>
-                <span class="text-contact-number" data-phone-number></span>
-                <div class="text-contact-actions">
-                  <a class="text-contact-button" data-sms-link>SEND A TEXT</a>
-                  <button class="text-contact-copy" type="button" data-copy-phone aria-label="Copy phone number" aria-describedby="purchase-text-status">COPY NUMBER</button>
-                </div>
-                <span class="text-contact-status visually-hidden" id="purchase-text-status" data-phone-status role="status" aria-live="polite"></span>
+              <div class="purchase-phone-row" id="purchase-phone-display" data-phone-display hidden>
+                <span data-phone-number></span>
+                <button class="purchase-quiet-button" type="button" data-copy-phone aria-label="Copy phone number" aria-describedby="purchase-text-status">COPY NUMBER</button>
+                <span class="purchase-copy-status visually-hidden" id="purchase-text-status" data-phone-status role="status" aria-live="polite"></span>
               </div>
-            </div>
+            </section>
 
-            <div class="purchase-email-copy">
-              <strong>rcravens60@gmail.com</strong>
-              <button
-                id="copy-email-button"
-                type="button"
-                data-copy-email
-                aria-describedby="email-copy-status"
-              >
-                COPY EMAIL ADDRESS
-              </button>
-              <span
-                id="email-copy-status"
-                data-email-copy-status
-                role="status"
-                aria-live="polite"
-              ></span>
-            </div>
+            <details class="purchase-message-details" id="purchase-message-details">
+              <summary>View or copy message</summary>
+              <textarea class="purchase-message" id="purchase-message" rows="3" readonly aria-label="Purchase request message"></textarea>
+              <button class="purchase-quiet-button" id="copy-message-button" type="button">COPY MESSAGE</button>
+              <span class="purchase-copy-status visually-hidden" id="message-copy-status" role="status" aria-live="polite"></span>
+              <p class="purchase-email-address">Email: <a href="mailto:rcravens60@gmail.com">rcravens60@gmail.com</a></p>
+            </details>
           </div>
         </div>
       </div>
