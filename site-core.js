@@ -398,6 +398,12 @@
     const messageCopyStatus = document.querySelector("#message-copy-status");
     const emailLink = document.querySelector("#purchase-email-link");
     const emailCopyStatus = document.querySelector("#email-copy-status");
+    const payments = document.querySelector("#purchase-payments");
+    const paymentTitle = document.querySelector("#purchase-payment-title");
+    const paymentStatus = document.querySelector("#payment-copy-status");
+    const paymentCopyButtons = [...document.querySelectorAll("[data-payment-copy]")];
+    const instructionTitle = document.querySelector("#purchase-instruction-title");
+    const instructionDetail = document.querySelector("#purchase-instruction-detail");
     const packageButtons = [...document.querySelectorAll("[data-package]")];
     const packageSelectors = [...document.querySelectorAll("[data-package-select]")];
     const generalLaunchButtons = [...document.querySelectorAll("[data-purchase-launch]")];
@@ -419,13 +425,13 @@
     const emailSubject = "Movie Master Package Purchase Request";
     const packageMessages = {
       five:
-        "Hello Mr. Movie Master sir. I am interested in purchasing 5 Blockbuster Smash Hit Masterpieces for $5. Please provide your payment information so I can pay you via PayPal, Venmo, or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I would like 5 Blockbuster Smash Hit Masterpieces for $5. Please send my recommendations here. Thank you.",
       ten:
-        "Hello Mr. Movie Master sir. I am interested in purchasing 10 Blockbuster Smash Hit Masterpieces for $10. Please provide your payment information so I can pay you via PayPal, Venmo, or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I would like 10 Blockbuster Smash Hit Masterpieces for $10. Please send my recommendations here. Thank you.",
       vip:
-        "Hello Mr. Movie Master sir. I am interested in purchasing the Movie Master VIP Package for $20. It includes 20 Blockbuster Smash Hit Masterpieces, 3 of the best R&B music videos ever made, and a VIP certificate to prove my VIP status. Please provide your payment information so I can pay you via PayPal, Venmo, or Cash App. Thank you.",
+        "Hello Mr. Movie Master sir. I would like the $20 VIP Package: 20 Blockbuster Smash Hit Masterpieces, 3 R&B music videos, and my VIP certificate. Please send my recommendations here. Thank you.",
       support:
-        "Hello Mr. Movie Master, sir. I am interested in giving you money for free to help grow your business. I do not require any movie recommendations in return. Please provide your PayPal, Venmo, or Cash App payment information. Thank you.",
+        "Hello Mr. Movie Master, sir. I would like to give you money for free to help grow your business. I do not require any movie recommendations in return. Thank you.",
       lifetime:
         "Hello Mr. Movie Master sir. I am interested in applying for the Ultimate Lifetime Membership for $1,000,000. I understand that membership requires your personal approval. Please tell me what I must do to prove that I am worthy. Thank you.",
     };
@@ -433,11 +439,22 @@
       support: "Give the Movie Master Money",
       lifetime: "Ultimate Lifetime Membership Inquiry",
     };
+    const packagePrices = { five: 5, ten: 10, vip: 20 };
     let launchElement = null;
 
     const clearCopyStatuses = () => {
       messageCopyStatus.textContent = "";
       emailCopyStatus.textContent = "";
+      copyMessageButton.textContent = "COPY MESSAGE";
+      messageCopyStatus.classList.add("visually-hidden");
+      if (paymentStatus) {
+        paymentStatus.textContent = "";
+        paymentStatus.classList.add("visually-hidden");
+      }
+      paymentCopyButtons.forEach((button) => {
+        button.classList.remove("is-copied");
+        button.querySelector("[data-payment-copy-label]").textContent = "COPY";
+      });
     };
 
     const sizeMessageField = () => {
@@ -455,6 +472,25 @@
           String(button.dataset.packageSelect === packageKey),
         );
       });
+
+      if (payments) payments.hidden = packageKey === "lifetime";
+      if (paymentTitle && packageKey !== "lifetime") {
+        paymentTitle.textContent = packageKey === "support"
+          ? "GIVE ANY AMOUNT"
+          : "PAY $" + packagePrices[packageKey] + " WITH";
+      }
+      if (instructionTitle && instructionDetail) {
+        instructionTitle.textContent = packageKey === "lifetime"
+          ? "MESSAGE THE MOVIE MASTER TO APPLY."
+          : packageKey === "support"
+            ? "HELP THE MOVIE MASTER GROW HIS BUSINESS."
+            : "AFTER PAYING, MESSAGE THE MOVIE MASTER.";
+        instructionDetail.textContent = packageKey === "lifetime"
+          ? "Membership requires his personal approval."
+          : packageKey === "support"
+            ? "No recommendations are included. You can message him before or after giving."
+            : "Include your payment name and method. Recommendations are not sent automatically.";
+      }
 
       messageField.value = message;
       const subject = packageSubjects[packageKey] ?? emailSubject;
@@ -485,7 +521,7 @@
           ? "INQUIRE ABOUT ULTIMATE LIFETIME MEMBERSHIP"
           : isSupportInquiry
             ? "GIVE THE MOVIE MASTER MONEY"
-            : "CONTACT THE MOVIE MASTER TO PURCHASE";
+            : "PURCHASE A PACKAGE";
       }
       if (packageSelector) packageSelector.hidden = isLifetimeInquiry || isSupportInquiry;
 
@@ -529,9 +565,37 @@
     });
     dialog.addEventListener("close", () => launchElement?.focus());
 
+    paymentCopyButtons.forEach((button) => {
+      button.addEventListener("click", async () => {
+        const recipient = button.closest(".purchase-payment")
+          ?.querySelector("[data-payment-recipient]")?.textContent.trim();
+        if (!recipient || !paymentStatus) return;
+        let copied = false;
+        try {
+          copied = await copyText(recipient);
+        } catch {
+          // The recipient remains visible and selectable if copying is blocked.
+        }
+        button.classList.toggle("is-copied", copied);
+        button.querySelector("[data-payment-copy-label]").textContent = copied ? "✓" : "COPY";
+        paymentStatus.classList.toggle("visually-hidden", copied);
+        paymentStatus.textContent = copied
+          ? `${button.dataset.paymentCopy}: ${recipient} copied.`
+          : `Select and copy this ${button.dataset.paymentCopy} recipient: ${recipient}`;
+        button.focus();
+      });
+    });
+
     copyMessageButton.addEventListener("click", async () => {
-      const copied = await copyText(messageField.value, messageField);
-      messageCopyStatus.textContent = copied ? "MESSAGE COPIED" : "";
+      let copied = false;
+      try {
+        copied = await copyText(messageField.value, messageField);
+      } catch {
+        // Keep the message available for manual selection.
+      }
+      copyMessageButton.textContent = copied ? "COPIED!" : "COPY MESSAGE";
+      messageCopyStatus.classList.toggle("visually-hidden", copied);
+      messageCopyStatus.textContent = copied ? "MESSAGE COPIED" : "Select the message to copy it.";
       copyMessageButton.focus();
     });
 

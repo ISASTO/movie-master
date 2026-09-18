@@ -3625,20 +3625,130 @@ h3 {
   margin-top: 14px;
 }
 
-.purchase-instruction {
-  max-width: 660px;
-  margin: 0 auto 8px;
-  font-size: 0.94rem;
+.purchase-payments {
+  margin-bottom: 12px;
+}
+
+.purchase-payment-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 6px;
+}
+
+.purchase-payment-heading h3 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.purchase-payment-heading > span {
+  font-size: 0.72rem;
   font-weight: 700;
+}
+
+.purchase-payment-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.purchase-payment {
+  display: flex;
+  min-width: 0;
+  border: 2px solid var(--ink);
+  background: var(--white);
+  box-shadow: 2px 2px 0 var(--gold-dark);
+}
+
+.purchase-payment-link {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 58px;
+  padding: 7px 9px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.purchase-payment-link strong {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.84rem;
+  line-height: 1.2;
+}
+
+.purchase-payment-recipient {
+  min-width: 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.purchase-payment-copy {
+  flex: 0 0 44px;
+  min-height: 44px;
+  padding: 4px;
+  border: 0;
+  border-left: 1px solid var(--gold-dark);
+  background: var(--gold-light);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.purchase-payment-copy.is-copied {
+  background: var(--gold);
+  font-size: 1.15rem;
+}
+
+.purchase-payment-link:hover,
+.purchase-payment-copy:hover {
+  background: var(--gold-bright);
+}
+
+.purchase-payment-link:focus-visible,
+.purchase-payment-copy:focus-visible {
+  outline: 3px solid var(--purple);
+  outline-offset: -3px;
+}
+
+.purchase-payment-status {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.purchase-instruction {
+  display: grid;
+  gap: 3px;
+  margin: 0 auto 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
   line-height: 1.35;
   text-align: center;
+}
+
+.purchase-instruction strong {
+  font-size: 0.88rem;
+  font-weight: 800;
 }
 
 .purchase-message {
   display: block;
   width: 100%;
-  min-height: 104px;
-  padding: 13px 16px;
+  min-height: 0;
+  padding: 11px 14px;
   resize: none;
   overflow: hidden;
   border: 3px solid var(--ink);
@@ -3654,15 +3764,6 @@ h3 {
 .purchase-message:focus-visible {
   outline: 4px solid var(--gold);
   outline-offset: 2px;
-}
-
-.purchase-copy-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 15px;
-  min-height: 42px;
-  margin-top: 7px;
 }
 
 .purchase-copy-button,
@@ -3702,7 +3803,7 @@ h3 {
 
 .purchase-contact-links {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
   margin-top: 9px;
 }
@@ -4937,11 +5038,42 @@ h3 {
     box-shadow: inset 5px 0 0 rgba(227, 161, 11, 0.28);
   }
 
-  .purchase-copy-row {
-    flex-direction: row;
+  .purchase-payments {
+    margin-bottom: 9px;
+  }
+
+  .purchase-payment-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
-    min-height: 34px;
-    margin-top: 5px;
+  }
+
+  .purchase-payment:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .purchase-payment-link {
+    padding: 6px 8px;
+  }
+
+  .purchase-payment:first-child .purchase-payment-link {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    min-height: 44px;
+  }
+
+  .purchase-payment:first-child .purchase-payment-recipient {
+    text-align: right;
+  }
+
+  .purchase-instruction {
+    padding-inline: 0;
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .purchase-instruction strong {
+    font-size: 0.8rem;
   }
 
   .purchase-copy-status {
@@ -4958,7 +5090,7 @@ h3 {
   }
 
   .purchase-contact-links {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 5px;
     margin-top: 6px;
   }
@@ -4969,14 +5101,11 @@ h3 {
     padding: 5px;
     border-width: 2px;
     box-shadow: 3px 3px 0 var(--gold-dark);
-    font-size: 0.58rem;
+    font-size: 0.68rem;
   }
 
   .purchase-contact-button span {
-    width: 23px;
-    height: 23px;
-    border-width: 1px;
-    font-size: 0.82rem;
+    display: none;
   }
 
   .purchase-email-copy {

@@ -7,8 +7,9 @@
 
     const copy = step.querySelector("p");
     if (copy) {
+      step.querySelector("h4").textContent = "PAY NOW OR MESSAGE FIRST";
       copy.textContent =
-        "The Movie Master will reply with the information you need to pay through PayPal, Venmo, or Cash App.";
+        "PayPal, Venmo, and Cash App details are in the purchase window. You can message him first; after paying, message him to receive your recommendations.";
     }
   });
 
@@ -18,7 +19,7 @@
 
     const answer = item.querySelector("p");
     if (answer) {
-      answer.textContent = "The Movie Master accepts PayPal, Venmo, and Cash App.";
+      answer.textContent = "PayPal, Venmo, and Cash App details are in the purchase window. You can pay now or message him first. After paying, message him with your payment name and method to receive your recommendations; they are not sent automatically.";
     }
   });
 })();
