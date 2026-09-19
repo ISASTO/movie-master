@@ -26,12 +26,14 @@
       (document.querySelector("dialog[open]") ?? document.body).append(temporaryField);
     }
 
-    temporaryField.focus();
-    temporaryField.select();
-    temporaryField.setSelectionRange(0, temporaryField.value.length);
-    const copied = document.execCommand("copy");
-    if (isTemporary) temporaryField.remove();
-    return copied;
+    try {
+      temporaryField.focus();
+      temporaryField.select();
+      temporaryField.setSelectionRange(0, temporaryField.value.length);
+      return document.execCommand("copy");
+    } finally {
+      if (isTemporary) temporaryField.remove();
+    }
   }
 
   function setUpEmailCopyButtons() {
@@ -80,6 +82,7 @@
           entry.details.hidden = false;
           entry.number.closest("[data-phone-display]")?.removeAttribute("hidden");
           entry.gate.hidden = true;
+          entry.smsLink.dispatchEvent(new Event("phone-revealed"));
         });
         contact.smsLink.focus();
       });
@@ -399,15 +402,27 @@
     const packageDetail = document.querySelector("#purchase-package-detail");
     const changePackageButton = document.querySelector("#purchase-change-package");
     const messageDetails = document.querySelector("#purchase-message-details");
+    const editMessageButton = document.querySelector("#purchase-edit-message");
     const messageField = document.querySelector("#purchase-message");
+    const messageHelp = document.querySelector("#purchase-message-help");
     const copyMessageButton = document.querySelector("#copy-message-button");
     const messageCopyStatus = document.querySelector("#message-copy-status");
     const emailLink = document.querySelector("#purchase-email-link");
+    const emailFallback = document.querySelector("#purchase-email-fallback");
+    const facebookLink = document.querySelector("#purchase-facebook-link");
+    const smsLink = dialog?.querySelector("[data-sms-link]");
+    const messageFirstButton = document.querySelector("#purchase-message-first");
+    const paymentNameRow = document.querySelector("#purchase-payment-name-row");
+    const paymentNameField = document.querySelector("#purchase-payment-name");
+    const paymentNameLabel = document.querySelector("#purchase-payment-name-label");
+    const deliveryNote = document.querySelector("#purchase-delivery");
     const payments = document.querySelector("#purchase-payments");
     const paymentTitle = document.querySelector("#purchase-payment-title");
     const paymentStatus = document.querySelector("#payment-copy-status");
     const paymentMethods = [...document.querySelectorAll('[name="purchase-payment-method"]')];
     const paymentRecipient = document.querySelector("#purchase-payment-recipient");
+    const recipientLabel = document.querySelector("#purchase-recipient-label");
+    const paymentHelp = document.querySelector("#purchase-payment-help");
     const paymentCopyButton = document.querySelector("#purchase-copy-recipient");
     const paymentLink = document.querySelector("#purchase-payment-open");
     const paymentLinkLabel = document.querySelector("#purchase-payment-open-label");
@@ -418,16 +433,17 @@
     const generalLaunchButtons = [...document.querySelectorAll("[data-purchase-launch]")];
 
     if (!dialog || !closeButton || !requestPanel || !messageField || !emailLink ||
-        !packageSummary || !changePackageButton || !paymentRecipient || !paymentLink) return;
+        !packageSummary || !changePackageButton || !paymentRecipient || !paymentLink ||
+        !editMessageButton || !paymentNameField || !smsLink) return;
 
     const emailSubject = "Movie Master Package Purchase Request";
     const packageMessages = {
       five:
-        "Hello Mr. Movie Master sir. I would like 5 Blockbuster Smash Hit Masterpieces for $5. Please send my recommendations here. Thank you.",
+        "Hello Mr. Movie Master sir. I would like 5 Blockbuster Smash Hit Masterpiece recommendations for $5. Please send my recommendations here. Thank you.",
       ten:
-        "Hello Mr. Movie Master sir. I would like 10 Blockbuster Smash Hit Masterpieces for $10. Please send my recommendations here. Thank you.",
+        "Hello Mr. Movie Master sir. I would like 10 Blockbuster Smash Hit Masterpiece recommendations for $10. Please send my recommendations here. Thank you.",
       vip:
-        "Hello Mr. Movie Master sir. I would like the $20 VIP Package: 20 Blockbuster Smash Hit Masterpieces, 3 R&B music videos, and my VIP certificate. Please send my recommendations here. Thank you.",
+        "Hello Mr. Movie Master sir. I would like the $20 VIP Package: 20 Blockbuster Smash Hit Masterpiece recommendations, 3 R&B music videos, and my VIP certificate. Please send my recommendations here. Thank you.",
       support:
         "Hello Mr. Movie Master, sir. I would like to support your website and help your business grow. This is a contribution, with no recommendations needed. Thank you.",
       lifetime:
@@ -465,8 +481,99 @@
         copyLabel: "Copy Cash App Cashtag",
       },
     };
+    const sessionKey = "movie-master-purchase-draft-v1";
+    const sessionMaxAge = 4 * 60 * 60 * 1000;
+    const drafts = Object.create(null);
     let launchElement = null;
+    let selectedPackage = null;
     let selectedMethod = "paypal";
+    let paymentOpened = false;
+
+    const isRecommendationPackage = () => Object.hasOwn(packagePrices, selectedPackage);
+
+    const rememberDraft = () => {
+      if (!selectedPackage) return;
+      drafts[selectedPackage] = {
+        message: messageField.value.slice(0, 4000),
+        paymentName: paymentNameField.value.slice(0, 120),
+      };
+    };
+
+    const saveSession = () => {
+      if (!selectedPackage) return;
+      rememberDraft();
+      try {
+        // This tab only; never a payment receipt, order, or persistent profile.
+        sessionStorage.setItem(sessionKey, JSON.stringify({
+          version: 1,
+          updatedAt: Date.now(),
+          packageKey: selectedPackage,
+          method: selectedMethod,
+          paymentOpened,
+          open: dialog.open,
+          drafts,
+        }));
+      } catch {
+        // Storage may be disabled or full. The current window remains usable.
+      }
+    };
+
+    const readSession = () => {
+      try {
+        const value = JSON.parse(sessionStorage.getItem(sessionKey));
+        const age = Date.now() - value?.updatedAt;
+        if (value?.version !== 1 || !Number.isFinite(age) || age < 0 || age > sessionMaxAge ||
+            !Object.hasOwn(packageMessages, value.packageKey) || !Object.hasOwn(methods, value.method)) return null;
+        Object.keys(packageMessages).forEach((key) => {
+          const draft = value.drafts?.[key];
+          if (typeof draft?.message === "string" && typeof draft?.paymentName === "string") {
+            drafts[key] = { message: draft.message.slice(0, 4000), paymentName: draft.paymentName.slice(0, 120) };
+          }
+        });
+        return value;
+      } catch {
+        return null;
+      }
+    };
+
+    const composedMessage = () => {
+      const name = paymentNameField.value.trim();
+      const details = isRecommendationPackage() && name
+        ? "\n\nName on payment: " + name + "\nPayment method: " + methods[selectedMethod].name
+        : "";
+      return messageField.value.trim() + details;
+    };
+
+    const updateMessageLinks = () => {
+      const message = composedMessage();
+      const subject = packageSubjects[selectedPackage] ?? emailSubject;
+      emailLink.href = "mailto:" + movieMasterEmail + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(message);
+      // Keep the number gated. Apple documents number-only SMS links; retain
+      // the copy fallback there, and use the standard body field elsewhere.
+      if (!smsLink.closest("[data-text-details]").hidden && smsLink.hasAttribute("href")) {
+        const numberOnly = smsLink.getAttribute("href").split("?")[0];
+        const appleDevice = /iPad|iPhone|iPod|Macintosh|Mac OS X/.test(navigator.userAgent);
+        smsLink.href = numberOnly + (appleDevice ? "" : "?body=" + encodeURIComponent(message));
+      }
+    };
+
+    const updatePaymentHelp = () => {
+      if (!selectedPackage) return;
+      const amount = isRecommendationPackage() ? "$" + packagePrices[selectedPackage] : "your amount";
+      paymentHelp.textContent = selectedMethod === "paypal"
+        ? "Copy this email into PayPal and enter " + amount + ". Then return here."
+        : "Check the recipient and enter " + amount + " in " + methods[selectedMethod].name + ". Then return here.";
+    };
+
+    const updateInstruction = () => {
+      instructionDetail.textContent = selectedPackage === "lifetime"
+        ? "Membership requires his personal approval."
+        : selectedPackage === "support"
+          ? "Thank you for your support. No recommendations are included. You can message him before or after contributing."
+          : paymentOpened
+            ? "If you’ve paid, add your payment name and send a message below. Recommendations aren’t automatic."
+            : "Recommendations aren’t automatic—message him after paying.";
+    };
 
     const clearPaymentStatus = () => {
       paymentStatus.textContent = "";
@@ -477,7 +584,7 @@
     const clearCopyStatuses = () => {
       messageCopyStatus.textContent = "";
       messageCopyStatus.classList.add("visually-hidden");
-      copyMessageButton.textContent = "COPY MESSAGE";
+      copyMessageButton.textContent = "Copy message";
       clearPaymentStatus();
     };
 
@@ -485,23 +592,30 @@
       const method = methods[key];
       if (!method) return;
       selectedMethod = key;
+      paymentMethods.forEach((input) => { input.checked = input.value === key; });
+      paymentNameLabel.textContent = "Name on " + method.name + " payment (if you’ve paid)";
+      recipientLabel.textContent = method.name + " recipient";
       paymentRecipient.textContent = method.recipient;
       paymentCopyButton.setAttribute("aria-label", method.copyLabel);
       paymentLink.href = method.url;
       paymentLink.setAttribute("aria-label", "Open " + method.name + " in a new tab");
       paymentLinkLabel.textContent = "OPEN " + method.name.toUpperCase();
       clearPaymentStatus();
+      updatePaymentHelp();
+      updateMessageLinks();
     };
 
     const sizeMessageField = () => {
-      if (!messageDetails.open || requestPanel.hidden) return;
+      if (messageDetails.hidden || requestPanel.hidden) return;
       messageField.style.height = "auto";
       messageField.style.height = (messageField.scrollHeight + 2) + "px";
     };
 
     const selectPackage = (packageKey) => {
-      const message = packageMessages[packageKey];
-      if (!message) return;
+      if (!Object.hasOwn(packageMessages, packageKey)) return;
+      rememberDraft();
+      if (selectedPackage !== packageKey) paymentOpened = false;
+      selectedPackage = packageKey;
       const isSupport = packageKey === "support";
       const isLifetime = packageKey === "lifetime";
       packageSelectors.forEach((button) => {
@@ -513,26 +627,31 @@
       packageSummary.hidden = false;
       packageName.textContent = packageNames[packageKey];
       packageDetail.textContent = packageKey === "vip"
-        ? "20 movies, 3 R&B videos + VIP certificate"
+        ? "20 recommendations, 3 R&B videos + VIP certificate"
         : "";
       packageDetail.hidden = !packageDetail.textContent;
       dialogTitle.textContent = isSupport ? "SUPPORT THE MOVIE MASTER"
         : isLifetime ? "MEMBERSHIP INQUIRY" : "YOUR PACKAGE";
       payments.hidden = isLifetime;
+      messageFirstButton.hidden = isSupport || isLifetime;
       paymentTitle.textContent = isSupport ? "CONTRIBUTE ANY AMOUNT"
-        : isLifetime ? "" : "PAY $" + packagePrices[packageKey] + " WITH";
+        : isLifetime ? "" : "1. PAY $" + packagePrices[packageKey];
       instructionTitle.textContent = isLifetime
         ? "MESSAGE THE MOVIE MASTER TO APPLY"
-        : "MESSAGE THE MOVIE MASTER";
-      instructionDetail.textContent = isLifetime
-        ? "Membership requires his personal approval."
-        : isSupport
-          ? "Thank you for your support. No recommendations are included. You can message him before or after contributing."
-          : "After paying, send your payment name and method. Recommendations aren’t automatic. You can also message first.";
-      messageDetails.open = false;
-      messageField.value = message;
-      const subject = packageSubjects[packageKey] ?? emailSubject;
-      emailLink.href = "mailto:" + movieMasterEmail + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(message);
+        : isSupport ? "MESSAGE HIM (OPTIONAL)" : "2. MESSAGE THE MOVIE MASTER";
+      paymentNameRow.hidden = !isRecommendationPackage();
+      deliveryNote.hidden = !isRecommendationPackage();
+      updateInstruction();
+      messageDetails.hidden = true;
+      editMessageButton.setAttribute("aria-expanded", "false");
+      messageField.value = drafts[packageKey]?.message ?? packageMessages[packageKey];
+      paymentNameField.value = drafts[packageKey]?.paymentName ?? "";
+      messageHelp.textContent = isRecommendationPackage()
+        ? "Edit your request or add movie preferences. Your payment name and selected method are added if you fill in the name above. Your draft stays in this tab."
+        : "Edit your message before sending. Your draft stays in this tab.";
+      emailFallback.hidden = true;
+      updatePaymentHelp();
+      updateMessageLinks();
       requestPanel.hidden = false;
       clearCopyStatuses();
     };
@@ -544,7 +663,8 @@
       packageSummary.hidden = true;
       changePackageButton.setAttribute("aria-expanded", "false");
       requestPanel.hidden = true;
-      messageDetails.open = false;
+      selectedPackage = null;
+      messageDetails.hidden = true;
       messageField.value = "";
       clearCopyStatuses();
     };
@@ -552,18 +672,21 @@
     const openDialog = (packageKey, trigger) => {
       launchElement = trigger;
       if (packageKey) selectPackage(packageKey);
+      else if (selectedPackage) selectPackage(selectedPackage);
       else clearPackageSelection();
       if (typeof dialog.showModal === "function") {
         if (!dialog.open) dialog.showModal();
       } else {
         dialog.setAttribute("open", "");
       }
+      saveSession();
     };
 
     const closeDialog = () => {
       if (typeof dialog.close === "function") dialog.close();
       else {
         dialog.removeAttribute("open");
+        saveSession();
         launchElement?.focus();
       }
     };
@@ -577,6 +700,7 @@
     packageSelectors.forEach((button) => {
       button.addEventListener("click", () => {
         selectPackage(button.dataset.packageSelect);
+        saveSession();
         // Keep keyboard focus in view when the package choices collapse.
         paymentMethods.find((input) => input.checked)?.focus();
       });
@@ -590,7 +714,10 @@
     });
     paymentMethods.forEach((input) => {
       input.addEventListener("change", () => {
-        if (input.checked) selectPaymentMethod(input.value);
+        if (!input.checked) return;
+        selectPaymentMethod(input.value);
+        clearCopyStatuses();
+        saveSession();
       });
     });
 
@@ -598,7 +725,50 @@
     dialog.addEventListener("click", (event) => {
       if (event.target === dialog) closeDialog();
     });
-    dialog.addEventListener("close", () => launchElement?.focus());
+    dialog.addEventListener("close", () => {
+      saveSession();
+      launchElement?.focus();
+    });
+
+    paymentLink.addEventListener("click", () => {
+      // Opening a provider says nothing about whether a payment succeeded.
+      paymentOpened = true;
+      updateInstruction();
+      saveSession();
+    });
+
+    messageFirstButton.addEventListener("click", () => {
+      instructionDetail.textContent = "You can message him before paying. Leave the payment name blank if you haven’t paid yet.";
+      const firstContact = [...dialog.querySelectorAll(".purchase-contact-button")]
+        .find((button) => !button.closest("[hidden]"));
+      firstContact?.focus();
+    });
+
+    const showMessageEditor = () => {
+      messageDetails.hidden = false;
+      editMessageButton.setAttribute("aria-expanded", "true");
+      sizeMessageField();
+    };
+
+    editMessageButton.addEventListener("click", () => {
+      if (messageDetails.hidden) {
+        showMessageEditor();
+        messageField.focus();
+      } else {
+        messageDetails.hidden = true;
+        editMessageButton.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    [messageField, paymentNameField].forEach((field) => {
+      field.addEventListener("input", () => {
+        clearCopyStatuses();
+        updateMessageLinks();
+        sizeMessageField();
+        saveSession();
+      });
+    });
+    smsLink.addEventListener("phone-revealed", updateMessageLinks);
 
     paymentCopyButton.addEventListener("click", async () => {
       const methodKey = selectedMethod;
@@ -619,21 +789,54 @@
       paymentCopyButton.focus();
     });
 
-    copyMessageButton.addEventListener("click", async () => {
+    const copyMessage = async (channel = "") => {
+      const message = composedMessage();
+      const packageKey = selectedPackage;
       let copied = false;
       try {
-        copied = await copyText(messageField.value);
+        // Copy the complete message, including the separate payment-name field.
+        if (message) copied = await copyText(message);
       } catch {
         // Keep the message available for manual selection.
       }
-      copyMessageButton.textContent = copied ? "COPIED!" : "COPY MESSAGE";
-      messageCopyStatus.classList.toggle("visually-hidden", copied);
-      messageCopyStatus.textContent = copied ? "MESSAGE COPIED" : "Select the message to copy it.";
-      copyMessageButton.focus();
+      if (packageKey !== selectedPackage || message !== composedMessage()) return;
+      copyMessageButton.textContent = copied ? "Copied!" : "Copy message";
+      messageCopyStatus.classList.toggle("visually-hidden", copied && !channel);
+      messageCopyStatus.textContent = copied
+        ? channel === "Facebook"
+          ? "Message copied. Open Message on his Facebook profile and paste it."
+          : channel === "text"
+            ? "Message copied. Paste it if your text app leaves the message blank."
+            : "Message copied, including any payment details you entered."
+        : message
+          ? "Copy isn’t available. Select your message below, and include your payment name and method if you’ve paid."
+          : "Write a message below before copying.";
+      if (!copied) showMessageEditor();
+      if (!channel) (copied ? copyMessageButton : messageField).focus();
+    };
+
+    copyMessageButton.addEventListener("click", () => { void copyMessage(); });
+    facebookLink.addEventListener("click", () => { void copyMessage("Facebook"); });
+    smsLink.addEventListener("click", () => { void copyMessage("text"); });
+    emailLink.addEventListener("click", () => { emailFallback.hidden = false; });
+
+    window.addEventListener("resize", sizeMessageField);
+    window.addEventListener("pagehide", saveSession);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden" && dialog.open) saveSession();
     });
 
-    messageDetails.addEventListener("toggle", sizeMessageField);
-    window.addEventListener("resize", sizeMessageField);
+    const saved = readSession();
+    if (saved) {
+      selectPaymentMethod(saved.method);
+      selectPackage(saved.packageKey);
+      paymentOpened = saved.paymentOpened === true;
+      updateInstruction();
+      if (saved.open === true) {
+        const trigger = generalLaunchButtons.find((button) => button.getClientRects().length);
+        openDialog(saved.packageKey, trigger);
+      }
+    }
     selectPaymentMethod(selectedMethod);
   }
 

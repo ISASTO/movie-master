@@ -8,7 +8,6 @@
     document.head.append(script);
   };
 
-  load("./site-core.js?v=20260918-purchase-simple-1");
-  load("./payment-options.js?v=20260918-payments-1");
+  load("./site-core.js?v=20260919-purchase-handoff-1");
   load("./store-click.js?v=20260901-1");
 })();

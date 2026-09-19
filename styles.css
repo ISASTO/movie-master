@@ -2138,7 +2138,7 @@ h3 {
 .process-film {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
   margin: 0;
   padding: 35px 14px;
@@ -2153,7 +2153,7 @@ h3 {
 
 .process-film li {
   position: relative;
-  min-height: 258px;
+  min-height: 230px;
   padding: 62px 16px 20px;
   border: 2px solid var(--gold-dark);
   background: var(--paper-light);
@@ -2161,14 +2161,14 @@ h3 {
 
 .process-film p {
   margin: 0;
-  font-size: 0.86rem;
+  font-size: 1rem;
   line-height: 1.4;
 }
 
 .process-copy h4 {
   margin: 0 0 10px;
   color: var(--gold-dark);
-  font-size: 0.76rem;
+  font-size: 0.95rem;
   font-weight: 800;
   letter-spacing: 0.045em;
   line-height: 1.16;
@@ -3571,7 +3571,7 @@ h3 {
   color: var(--ink);
   cursor: pointer;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -3613,16 +3613,33 @@ h3 {
 }
 
 .purchase-package-options span {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .purchase-request h3 {
   margin: 0 0 8px;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 800;
   line-height: 1.35;
   letter-spacing: 0.045em;
+}
+
+.purchase-step-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 12px;
+}
+
+.purchase-step-heading h3 {
+  margin-bottom: 0;
+}
+
+.purchase-step-heading .purchase-quiet-button {
+  padding-inline: 0;
 }
 
 .purchase-payment-methods {
@@ -3662,11 +3679,31 @@ h3 {
   margin-bottom: 8px;
 }
 
-.purchase-recipient > span {
+.purchase-recipient > div {
   min-width: 0;
   font-size: 0.95rem;
   overflow-wrap: anywhere;
   user-select: text;
+}
+
+.purchase-field-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.purchase-field-label > span {
+  font-weight: 400;
+}
+
+.purchase-payment-help,
+.purchase-message-help,
+.purchase-delivery {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .purchase-payment-open {
@@ -3686,8 +3723,8 @@ h3 {
 }
 
 .purchase-contact {
-  margin-top: 22px;
-  padding-top: 20px;
+  margin-top: 18px;
+  padding-top: 16px;
   border-top: 1px solid rgba(18, 12, 8, 0.28);
 }
 
@@ -3697,9 +3734,39 @@ h3 {
   line-height: 1.45;
 }
 
+.purchase-payment-name input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(18, 12, 8, 0.6);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.purchase-payment-name input::placeholder {
+  color: #645b50;
+  opacity: 1;
+}
+
+.purchase-message-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 12px;
+}
+
+.purchase-message-tools .purchase-quiet-button {
+  padding-inline: 0;
+}
+
 .purchase-contact-links {
   display: grid;
-  grid-template-columns: 1.45fr 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -3712,18 +3779,33 @@ h3 {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 44px;
+  min-height: 54px;
+  height: 100%;
   padding: 8px 6px;
   border: 1px solid rgba(18, 12, 8, 0.6);
   background: transparent;
   color: var(--ink);
   cursor: pointer;
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.3;
   text-align: center;
   text-decoration: none;
+}
+
+.purchase-reveal-button {
+  flex-direction: column;
+  gap: 3px;
+}
+
+.purchase-reveal-button small {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.purchase-delivery {
+  margin: 10px 0 0;
 }
 
 .purchase-phone-row {
@@ -3745,18 +3827,11 @@ h3 {
 }
 
 .purchase-message-details {
-  margin-top: 8px;
+  margin-bottom: 12px;
 }
 
-.purchase-message-details summary {
-  width: fit-content;
-  min-height: 44px;
-  padding-block: 12px 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  line-height: 1.4;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.purchase-message-help {
+  margin: 6px 0 0;
 }
 
 .purchase-message {
@@ -3764,8 +3839,9 @@ h3 {
   width: 100%;
   min-height: 4.5em;
   padding: 10px;
-  resize: none;
-  overflow: hidden;
+  max-height: 16rem;
+  resize: vertical;
+  overflow-y: auto;
   border: 1px solid rgba(18, 12, 8, 0.45);
   border-radius: 0;
   background: var(--white);
@@ -3777,13 +3853,13 @@ h3 {
 
 .purchase-copy-status {
   margin: 0 0 8px;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
 .purchase-email-address {
-  margin: 0;
+  margin: 8px 0 0;
   font-size: 0.9rem;
   overflow-wrap: anywhere;
 }
@@ -3934,17 +4010,11 @@ h3 {
   }
 
   .process-film {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .process-film li {
-    grid-column: span 2;
     min-height: 230px;
-  }
-
-  .process-film li:nth-child(4),
-  .process-film li:nth-child(5) {
-    grid-column: span 3;
   }
 
   .testimonial-grid {
@@ -4269,20 +4339,12 @@ h3 {
   }
 
   .process-film {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .process-film li {
     grid-column: auto;
     min-height: 180px;
-  }
-
-  .process-film li:nth-child(4) {
-    grid-column: auto;
-  }
-
-  .process-film li:nth-child(5) {
-    grid-column: 1 / -1;
   }
 
   
@@ -4837,11 +4899,6 @@ h3 {
     padding: 16px 14px;
   }
 
-  .process-film li:nth-child(4),
-  .process-film li:nth-child(5) {
-    grid-column: 1;
-  }
-
   .step-number {
     position: static;
     width: 38px;
@@ -4862,7 +4919,7 @@ h3 {
 
   .process-film p {
     grid-column: 1 / -1;
-    font-size: 0.92rem;
+    font-size: 1rem;
   }
 
   
