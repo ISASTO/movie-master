@@ -672,7 +672,7 @@
     const openDialog = (packageKey, trigger) => {
       launchElement = trigger;
       if (packageKey) selectPackage(packageKey);
-      else if (selectedPackage) selectPackage(selectedPackage);
+      else if (isRecommendationPackage()) selectPackage(selectedPackage);
       else clearPackageSelection();
       if (typeof dialog.showModal === "function") {
         if (!dialog.open) dialog.showModal();

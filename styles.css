@@ -3881,6 +3881,20 @@ h3 {
   background-color: var(--gold-bright);
 }
 
+@media (max-width: 400px) {
+  .purchase-package-options {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-package-options button {
+    grid-template-columns: 5rem minmax(0, 1fr);
+    align-items: center;
+    min-height: 52px;
+    padding: 10px 12px;
+    text-align: left;
+  }
+}
+
 .footer-inner {
   display: flex;
   flex-wrap: wrap;
