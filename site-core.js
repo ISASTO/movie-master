@@ -391,6 +391,97 @@
       });
   }
 
+  function createPurchaseDialogViewport(dialog) {
+    const page = document.documentElement;
+    const body = document.body;
+    const content = dialog.querySelector(".purchase-dialog-content");
+    const viewport = window.visualViewport;
+    let pagePosition = null;
+    let viewportFrame = 0;
+    let keepFocusVisible = false;
+
+    const updateViewport = () => {
+      if (!pagePosition) return;
+      // The keyboard can shrink the visible screen without changing 100dvh.
+      dialog.style.setProperty("--purchase-viewport-height", (viewport?.height || window.innerHeight) + "px");
+      dialog.style.setProperty("--purchase-viewport-width", (viewport?.width || window.innerWidth) + "px");
+      dialog.style.setProperty("--purchase-viewport-top", Math.max(0, viewport?.offsetTop || 0) + "px");
+      dialog.style.setProperty("--purchase-viewport-left", Math.max(0, viewport?.offsetLeft || 0) + "px");
+    };
+
+    const revealFocusedField = () => {
+      const field = document.activeElement;
+      if (!content || !content.contains(field) || !field.matches("input, textarea")) return;
+      const visible = content.getBoundingClientRect();
+      const focused = field.getBoundingClientRect();
+      // Scroll only checkout, never the fixed page or the browser viewport.
+      if (focused.top < visible.top + 12) {
+        content.scrollTop -= visible.top + 12 - focused.top;
+      } else if (focused.bottom > visible.bottom - 12) {
+        content.scrollTop += Math.min(focused.bottom - visible.bottom + 12, focused.top - visible.top - 12);
+      }
+    };
+
+    const queueViewportUpdate = (event) => {
+      if (!pagePosition) return;
+      if (event.type !== "scroll") keepFocusVisible = true;
+      if (viewportFrame) return;
+      viewportFrame = window.requestAnimationFrame(() => {
+        viewportFrame = 0;
+        updateViewport();
+        if (keepFocusVisible && pagePosition) revealFocusedField();
+        keepFocusVisible = false;
+      });
+    };
+
+    const lock = () => {
+      if (pagePosition) return;
+      pagePosition = { x: window.scrollX, y: window.scrollY };
+      // Fixing the body also stops touch scrolling in mobile Safari. Keep its
+      // original width so removing the page scrollbar doesn't shift the layout.
+      body.style.setProperty("--purchase-page-width", page.clientWidth + "px");
+      body.style.setProperty("--purchase-page-top", -pagePosition.y + "px");
+      body.style.setProperty("--purchase-page-left", -pagePosition.x + "px");
+      page.classList.add("purchase-open");
+      const menu = document.querySelector("#mobile-nav-panel");
+      if (menu) menu.hidden = true;
+      document.querySelector("#mobile-menu-button")?.setAttribute("aria-expanded", "false");
+      updateViewport();
+      ["resize", "pageshow", "focus"].forEach((type) => window.addEventListener(type, queueViewportUpdate));
+      viewport?.addEventListener("resize", queueViewportUpdate);
+      viewport?.addEventListener("scroll", queueViewportUpdate);
+      dialog.addEventListener("focusin", queueViewportUpdate);
+    };
+
+    const unlock = () => {
+      if (!pagePosition) return false;
+      const position = pagePosition;
+      pagePosition = null;
+      window.cancelAnimationFrame(viewportFrame);
+      viewportFrame = 0;
+      keepFocusVisible = false;
+      ["resize", "pageshow", "focus"].forEach((type) => window.removeEventListener(type, queueViewportUpdate));
+      viewport?.removeEventListener("resize", queueViewportUpdate);
+      viewport?.removeEventListener("scroll", queueViewportUpdate);
+      dialog.removeEventListener("focusin", queueViewportUpdate);
+
+      // The site uses smooth anchor scrolling. Restore instantly, without
+      // overwriting a pre-existing inline scroll preference.
+      const behavior = page.style.getPropertyValue("scroll-behavior");
+      const priority = page.style.getPropertyPriority("scroll-behavior");
+      page.style.setProperty("scroll-behavior", "auto", "important");
+      page.classList.remove("purchase-open");
+      ["width", "top", "left"].forEach((key) => body.style.removeProperty("--purchase-page-" + key));
+      ["height", "width", "top", "left"].forEach((key) => dialog.style.removeProperty("--purchase-viewport-" + key));
+      window.scrollTo(position.x, position.y);
+      if (behavior) page.style.setProperty("scroll-behavior", behavior, priority);
+      else page.style.removeProperty("scroll-behavior");
+      return true;
+    };
+
+    return { lock, unlock };
+  }
+
   function setUpPurchaseFlow() {
     const dialog = document.querySelector("#purchase-dialog");
     const closeButton = document.querySelector("#purchase-dialog-close");
@@ -435,6 +526,8 @@
     if (!dialog || !closeButton || !requestPanel || !messageField || !emailLink ||
         !packageSummary || !changePackageButton || !paymentRecipient || !paymentLink ||
         !editMessageButton || !paymentNameField || !smsLink) return;
+
+    const dialogViewport = createPurchaseDialogViewport(dialog);
 
     const emailSubject = "Movie Master Package Purchase Request";
     const packageMessages = {
@@ -674,21 +767,32 @@
       if (packageKey) selectPackage(packageKey);
       else if (isRecommendationPackage()) selectPackage(selectedPackage);
       else clearPackageSelection();
-      if (typeof dialog.showModal === "function") {
-        if (!dialog.open) dialog.showModal();
-      } else {
-        dialog.setAttribute("open", "");
+      dialogViewport.lock();
+      try {
+        if (typeof dialog.showModal === "function") {
+          if (!dialog.open) dialog.showModal();
+        } else {
+          dialog.setAttribute("open", "");
+        }
+      } catch (error) {
+        dialogViewport.unlock();
+        throw error;
       }
       saveSession();
     };
 
+    const finishClosingDialog = () => {
+      // A queued native close event must not unlock a newly reopened dialog.
+      if (dialog.open) return;
+      const wasLocked = dialogViewport.unlock();
+      saveSession();
+      if (wasLocked) launchElement?.focus({ preventScroll: true });
+    };
+
     const closeDialog = () => {
       if (typeof dialog.close === "function") dialog.close();
-      else {
-        dialog.removeAttribute("open");
-        saveSession();
-        launchElement?.focus();
-      }
+      else dialog.removeAttribute("open");
+      finishClosingDialog();
     };
 
     packageButtons.forEach((button) => {
@@ -722,13 +826,15 @@
     });
 
     closeButton.addEventListener("click", closeDialog);
+    let pressedBackdrop = false;
+    dialog.addEventListener("pointerdown", (event) => {
+      pressedBackdrop = event.target === dialog;
+    });
     dialog.addEventListener("click", (event) => {
-      if (event.target === dialog) closeDialog();
+      if (event.target === dialog && pressedBackdrop) closeDialog();
+      pressedBackdrop = false;
     });
-    dialog.addEventListener("close", () => {
-      saveSession();
-      launchElement?.focus();
-    });
+    dialog.addEventListener("close", finishClosingDialog);
 
     paymentLink.addEventListener("click", () => {
       // Opening a provider says nothing about whether a payment succeeded.

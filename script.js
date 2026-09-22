@@ -8,6 +8,6 @@
     document.head.append(script);
   };
 
-  load("./site-core.js?v=20260919-purchase-handoff-2");
+  load("./site-core.js?v=20260919-mobile-dialog-1");
   load("./store-click.js?v=20260901-1");
 })();
