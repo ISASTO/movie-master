@@ -186,5 +186,5 @@ html.controller-input .purchase-dialog .controller-selected {
     grid-template-columns: 48px minmax(0, 1fr);
     column-gap: 10px;
   }
-  .game-package-card .game-package-price { font-size: 1.8rem; }
+  .game-package-card .game-package-price { font-size: 1.5rem; }
 }
