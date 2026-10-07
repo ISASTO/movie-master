@@ -182,6 +182,11 @@ html.controller-input .purchase-dialog .controller-selected {
   .game-package-launch.secondary-button { width: 100%; }
 }
 @media (max-width: 360px) {
+  .gameover-panel .run-actions .secondary-button {
+    padding-inline: 3px;
+    font-size: 0.75rem;
+    letter-spacing: 0.015em;
+  }
   .game-package-card {
     grid-template-columns: 48px minmax(0, 1fr);
     column-gap: 10px;
