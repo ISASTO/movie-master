@@ -1,4 +1,14 @@
 /* A quiet invitation after the score, with the main site's paper-and-gold offers. */
+.gameover-panel {
+  padding-bottom: clamp(24px, 3vw, 36px);
+}
+.gameover-panel .share-run-status:empty,
+#gameover-hardcore-warning[hidden] {
+  display: none;
+}
+.gameover-panel .share-run-status:not(:empty) {
+  margin-top: 12px;
+}
 .gameover-offer {
   display: flex;
   align-items: center;
@@ -81,21 +91,25 @@
   font-size: 2.6rem;
   font-weight: 800;
   line-height: 1.1;
+  grid-row: 1;
 }
 .game-package-price > span {
   font-size: 1.1rem;
   letter-spacing: 0.04em;
 }
 .game-package-title {
+  grid-row: 2;
   font-size: 1.15rem;
   font-weight: 800;
   line-height: 1.3;
 }
 .game-package-description {
+  grid-row: 3;
   font-size: 1rem;
   line-height: 1.45;
 }
 .game-package-action {
+  grid-row: 4;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -136,22 +150,26 @@ html.controller-input .purchase-dialog .controller-selected {
   .game-package-options { grid-template-columns: 1fr; gap: 10px; }
   .game-package-card {
     grid-template-columns: 68px minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     gap: 5px 12px;
     padding: 14px;
   }
+  .game-package-card.game-package-vip {
+    grid-template-rows: auto auto auto;
+  }
   .game-package-card .game-package-price {
     grid-column: 1;
-    grid-row: 1 / span 3;
+    grid-row: 1 / -1;
     flex-direction: column;
     gap: 3px;
     align-self: center;
     font-size: 2rem;
   }
-  .game-package-title { grid-column: 2; font-size: 1rem; }
-  .game-package-description { grid-column: 2; font-size: 0.925rem; line-height: 1.35; }
+  .game-package-title { grid-column: 2; grid-row: 1; font-size: 1rem; }
+  .game-package-description { grid-column: 2; grid-row: 2; font-size: 0.925rem; line-height: 1.35; }
   .game-package-action {
     grid-column: 2;
+    grid-row: 2;
     min-height: 32px;
     margin: 2px 0 0;
     padding: 0;
@@ -159,9 +177,11 @@ html.controller-input .purchase-dialog .controller-selected {
     background: transparent;
     font-size: 0.8125rem;
   }
+  .game-package-vip .game-package-action { grid-row: 3; }
   .game-package-intro { margin-bottom: 16px; font-size: 1rem; }
 }
 @media (max-width: 500px) {
+  .gameover-panel { padding-bottom: 20px; }
   .gameover-panel .run-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
