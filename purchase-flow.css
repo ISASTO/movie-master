@@ -1,0 +1,545 @@
+/* Shared checkout layout for the main site and the game. */
+.purchase-dialog [hidden] { display: none !important; }
+
+html.purchase-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+  scroll-behavior: auto;
+}
+
+html.purchase-open body {
+  position: fixed;
+  top: var(--purchase-page-top);
+  left: var(--purchase-page-left);
+  width: var(--purchase-page-width);
+  overflow: hidden;
+}
+
+html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.purchase-dialog {
+  --purchase-dialog-gap: 10px;
+  position: fixed;
+  z-index: 2000;
+  top: var(--purchase-viewport-top, 0px);
+  left: var(--purchase-viewport-left, 0px);
+  right: auto;
+  bottom: auto;
+  width: var(--purchase-viewport-width, 100%);
+  height: var(--purchase-viewport-height, 100dvh);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding:
+    max(var(--purchase-dialog-gap), env(safe-area-inset-top))
+    max(var(--purchase-dialog-gap), env(safe-area-inset-right))
+    max(var(--purchase-dialog-gap), env(safe-area-inset-bottom))
+    max(var(--purchase-dialog-gap), env(safe-area-inset-left));
+  overflow: hidden;
+  overscroll-behavior: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.purchase-dialog::backdrop {
+  background: rgba(7, 5, 4, 0.82);
+  backdrop-filter: blur(3px);
+}
+
+.purchase-dialog[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: purchase-dialog-arrive 180ms ease-out;
+}
+
+@keyframes purchase-dialog-arrive {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.purchase-dialog-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(620px, 100%);
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  outline: 2px solid var(--gold);
+  outline-offset: -8px;
+  background:
+    repeating-linear-gradient(0deg, rgba(79, 35, 0, 0.018) 0 1px, transparent 1px 4px),
+    var(--paper-light);
+  box-shadow: 7px 7px 0 rgba(227, 161, 11, 0.35);
+}
+
+.purchase-dialog-content {
+  min-height: 0;
+  padding: 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.purchase-dialog-close {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0 0 4px;
+  border: 0;
+  background: var(--paper-light);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.purchase-dialog h2 {
+  margin: 0 40px 18px 0;
+  font-size: clamp(1.35rem, 3vw, 1.65rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.purchase-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.purchase-summary > div {
+  min-width: 0;
+}
+
+.purchase-summary strong {
+  font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.purchase-summary p {
+  margin: 3px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.purchase-quiet-button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.purchase-package-selector {
+  margin-bottom: 18px;
+}
+
+.purchase-package-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.purchase-package-options button {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 10px 6px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+.purchase-package-options button[aria-pressed="true"] {
+  background: var(--gold-light);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.purchase-package-options strong {
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.purchase-package-options span {
+  font-size: 0.9rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.purchase-request h3 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.35;
+  letter-spacing: 0.045em;
+}
+
+.purchase-step-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 12px;
+}
+
+.purchase-step-heading h3 {
+  margin-bottom: 0;
+}
+
+.purchase-step-heading .purchase-quiet-button {
+  padding-inline: 0;
+}
+
+.purchase-payment-methods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.purchase-payment-methods label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.purchase-payment-methods input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.purchase-recipient {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  margin-bottom: 8px;
+}
+
+.purchase-recipient > div {
+  min-width: 0;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.purchase-field-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.purchase-field-label > span {
+  font-weight: 400;
+}
+
+.purchase-payment-help,
+.purchase-message-help,
+.purchase-delivery {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.purchase-payment-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 2px solid var(--ink);
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.purchase-contact {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(18, 12, 8, 0.28);
+}
+
+.purchase-instruction {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.purchase-payment-name input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(18, 12, 8, 0.6);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.purchase-payment-name input::placeholder {
+  color: #645b50;
+  opacity: 1;
+}
+
+.purchase-message-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 12px;
+}
+
+.purchase-message-tools .purchase-quiet-button {
+  padding-inline: 0;
+}
+
+.purchase-contact-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.purchase-contact-links > span {
+  min-width: 0;
+}
+
+.purchase-contact-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 54px;
+  height: 100%;
+  padding: 8px 6px;
+  border: 1px solid rgba(18, 12, 8, 0.6);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  text-decoration: none;
+}
+
+.purchase-reveal-button {
+  flex-direction: column;
+  gap: 3px;
+}
+
+.purchase-reveal-button small {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.purchase-delivery {
+  margin: 10px 0 0;
+}
+
+.purchase-phone-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 12px;
+  margin-top: 4px;
+}
+
+.purchase-phone-row > [data-phone-number] {
+  font-size: 1.05rem;
+  font-weight: 600;
+  user-select: text;
+}
+
+.purchase-phone-row > [role="status"] {
+  flex-basis: 100%;
+}
+
+.purchase-message-details {
+  margin-bottom: 12px;
+}
+
+.purchase-message-help {
+  margin: 6px 0 0;
+}
+
+.purchase-message {
+  display: block;
+  width: 100%;
+  min-height: 4.5em;
+  padding: 10px;
+  max-height: 16rem;
+  resize: vertical;
+  overflow-y: auto;
+  border: 1px solid rgba(18, 12, 8, 0.45);
+  border-radius: 0;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.purchase-copy-status {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.purchase-email-address {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.purchase-email-address a {
+  color: inherit;
+}
+
+.purchase-dialog :is(button, a, summary, input, textarea):focus-visible {
+  outline: 3px solid var(--purple);
+  outline-offset: 3px;
+}
+
+.purchase-dialog :is(button, a):hover {
+  background-color: var(--gold-light);
+}
+
+.purchase-payment-open:hover {
+  background-color: var(--gold-bright);
+}
+
+@media (max-width: 400px) {
+  .purchase-package-options {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-package-options button {
+    grid-template-columns: 5rem minmax(0, 1fr);
+    align-items: center;
+    min-height: 52px;
+    padding: 10px 12px;
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  .purchase-dialog {
+    --purchase-dialog-gap: 6px;
+  }
+
+  .purchase-dialog-shell {
+    box-shadow: 3px 3px 0 rgba(227, 161, 11, 0.35);
+  }
+
+  .purchase-dialog-content {
+    padding: 22px 16px 16px;
+  }
+
+  .purchase-dialog h2 {
+    margin-bottom: 16px;
+  }
+
+  .purchase-summary {
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+
+  .purchase-summary strong {
+    font-size: 1rem;
+  }
+
+  .purchase-package-options {
+    gap: 6px;
+  }
+
+  .purchase-payment-methods {
+    gap: 2px 16px;
+  }
+
+  .purchase-contact {
+    margin-top: 18px;
+    padding-top: 16px;
+  }
+
+  .purchase-contact-links {
+    gap: 6px;
+  }
+}
+
+@media (min-width: 561px) and (max-height: 620px),
+  (max-width: 560px) and (max-height: 520px) {
+  .purchase-dialog {
+    --purchase-dialog-gap: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) { .purchase-dialog[open] { animation: none; } }

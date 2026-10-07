@@ -65,6 +65,19 @@ receipt recovery ordering, independent run retries, and replacement checkpoints:
 node --test benchmarks/browser-data.test.cjs counter-worker/test/*.test.js
 ```
 
+Verify the shared purchase flow, in-game offer selection, draft restoration,
+keyboard/controller handling and mobile viewport locking:
+
+```sh
+npm --prefix benchmarks install
+npm --prefix benchmarks run test:purchase
+```
+
+For a visual responsive pass, open
+`benchmarks/fixtures/game-purchase-preview.html` on the served site. It reuses
+the actual game markup, styles and checkout script inside a sized iframe,
+without loading gameplay or analytics scripts. It does not send test runs.
+
 Compare `unitMedianMs` and the per-work-unit value derived from `p95Ms` between
 runs. Canvas-operation and scene counts should remain stable when validating a
 performance-only change that is intended to preserve High-quality output.

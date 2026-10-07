@@ -7,7 +7,7 @@ const path = require("node:path");
 const { test } = require("node:test");
 const vm = require("node:vm");
 
-const source = readFileSync(path.join(__dirname, "../site-core.js"), "utf8");
+const source = readFileSync(path.join(__dirname, "../purchase-flow.js"), "utf8");
 const start = source.indexOf("  function createPurchaseDialogViewport(");
 const end = source.indexOf("  function setUpPurchaseFlow(", start);
 assert.ok(start >= 0 && end > start);

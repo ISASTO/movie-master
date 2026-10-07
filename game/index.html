@@ -26,10 +26,13 @@
     <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">
     <link rel="stylesheet" href="./game.css?v=20260904-usability-1">
     <link rel="stylesheet" href="./leaderboard-upgrades.css?v=20260904-usability-1">
+    <link rel="stylesheet" href="../purchase-flow.css?v=20261007-game-packages-1">
+    <link rel="stylesheet" href="./packages.css?v=20261007-game-packages-1">
     <script src="../visitor-tracker.js?v=20260902-perf-1" data-visitor-section="game" defer></script>
     <script src="../game-records.js?v=20260907-run-rollout-1" defer></script>
     <script src="./leaderboard.js?v=20260902-perf-2" defer></script>
-    <script src="./game.js?v=20260906-run-lifecycle-1" defer></script>
+    <script src="../purchase-flow.js?v=20261007-game-packages-1" defer></script>
+    <script src="./game.js?v=20261007-game-packages-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#game-canvas">Skip to the game</a>
@@ -298,11 +301,17 @@
               <button class="secondary-button" id="stats-button" type="button">GAME STATS</button>
               <button class="secondary-button" id="share-run-button" type="button">SHARE RUN</button>
               <button class="secondary-button leaderboard-open-button" id="gameover-leaderboards-button" type="button">LEADERBOARDS</button>
-              <button class="secondary-button" id="gameover-main-site-button" type="button">MAIN SITE</button>
               <button class="secondary-button mode-toggle" id="gameover-mode-button" type="button">
                 HARDCORE MODE: OFF
               </button>
             </div>
+            <section class="gameover-offer" aria-labelledby="gameover-offer-title">
+              <div>
+                <h3 id="gameover-offer-title">FIND YOUR NEXT BLOCKBUSTER.</h3>
+                <p>Personal movie recommendations from $5.</p>
+              </div>
+              <button class="secondary-button game-package-launch" id="gameover-packages-button" type="button" aria-haspopup="dialog" aria-controls="purchase-dialog">VIEW PACKAGES</button>
+            </section>
             <p class="share-run-status" id="share-run-status" role="status" aria-live="polite"></p>
             <p class="hardcore-warning" id="gameover-hardcore-warning" role="status" hidden>HARDCORE: ONE HIT OR ONE MISSED POPCORN ENDS THE GAME.</p>
           </section>
@@ -420,6 +429,113 @@
         <span class="mobile-instructions" id="mobile-instructions">KEEP MOVING &nbsp;•&nbsp; COLLECT POPCORN &nbsp;•&nbsp; USE THE GOLD BUTTON WHEN READY</span>
       </div>
     </main>
+
+    <dialog class="purchase-dialog" id="purchase-dialog" aria-labelledby="purchase-dialog-title">
+      <div class="purchase-dialog-shell">
+        <button class="purchase-dialog-close" id="purchase-dialog-close" type="button" aria-label="Close purchase window">×</button>
+        <div class="purchase-dialog-content">
+          <h2 id="purchase-dialog-title" tabindex="-1">CHOOSE YOUR PACKAGE</h2>
+
+          <div class="purchase-summary" id="purchase-summary" hidden>
+            <div>
+              <strong id="purchase-package-name"></strong>
+              <p id="purchase-package-detail" hidden></p>
+            </div>
+            <button class="purchase-quiet-button" id="purchase-change-package" type="button" aria-controls="purchase-package-selector" aria-expanded="false">Change</button>
+          </div>
+
+          <div class="purchase-package-selector game-package-selector" id="purchase-package-selector" role="group" aria-label="Choose your package">
+            <p class="game-package-intro">Let the Movie Master pick your next Blockbuster Smash Hit Masterpieces.</p>
+            <div class="game-package-options">
+              <button class="game-package-card" type="button" data-package-select="five" aria-pressed="false" aria-label="Choose $5 package: 5 movie recommendations">
+                <span class="game-package-price">$5</span>
+                <span class="game-package-title">5 recommendations</span>
+                <span class="game-package-description">Blockbuster Smash Hit Masterpieces, personally selected for you.</span>
+                <span class="game-package-action">CHOOSE $5 PACKAGE <span aria-hidden="true">→</span></span>
+              </button>
+              <button class="game-package-card" type="button" data-package-select="ten" aria-pressed="false" aria-label="Choose $10 package: 10 movie recommendations">
+                <span class="game-package-price">$10</span>
+                <span class="game-package-title">10 recommendations</span>
+                <span class="game-package-description">Blockbuster Smash Hit Masterpieces, personally selected for you.</span>
+                <span class="game-package-action">CHOOSE $10 PACKAGE <span aria-hidden="true">→</span></span>
+              </button>
+              <button class="game-package-card game-package-vip" type="button" data-package-select="vip" aria-pressed="false" aria-label="Choose $20 VIP package: 20 movie recommendations, 3 R and B videos, and a VIP certificate">
+                <span class="game-package-price"><span>VIP</span> $20</span>
+                <span class="game-package-title">20 recommendations</span>
+                <span class="game-package-description">Plus 3 R&amp;B music videos and your VIP certificate.</span>
+                <span class="game-package-action">CHOOSE VIP PACKAGE <span aria-hidden="true">→</span></span>
+              </button>
+            </div>
+            <p class="game-package-note">Movie recommendations only. Films and streaming access aren’t included.</p>
+            <a class="game-package-rules" href="https://moviemaster.vip/#rules" target="_blank" rel="noopener noreferrer">Read the Movie Master’s rules <span aria-hidden="true">↗</span></a>
+          </div>
+
+          <div class="purchase-request" id="purchase-request" hidden>
+            <section class="purchase-payments" id="purchase-payments" aria-labelledby="purchase-payment-title">
+              <div class="purchase-step-heading">
+                <h3 id="purchase-payment-title">1. PAY</h3>
+                <button class="purchase-quiet-button" id="purchase-message-first" type="button">Or message first</button>
+              </div>
+              <fieldset class="purchase-payment-methods">
+                <legend class="visually-hidden">Payment method</legend>
+                <label><input type="radio" name="purchase-payment-method" value="paypal" checked><span>PayPal</span></label>
+                <label><input type="radio" name="purchase-payment-method" value="venmo"><span>Venmo</span></label>
+                <label><input type="radio" name="purchase-payment-method" value="cashapp"><span>Cash App</span></label>
+              </fieldset>
+              <div class="purchase-recipient">
+                <div>
+                  <span class="purchase-field-label" id="purchase-recipient-label">PayPal recipient</span>
+                  <span id="purchase-payment-recipient">refreshingspring148@gmail.com</span>
+                </div>
+                <button class="purchase-quiet-button" id="purchase-copy-recipient" type="button" aria-label="Copy PayPal email">Copy</button>
+              </div>
+              <p class="purchase-copy-status visually-hidden" id="payment-copy-status" role="status" aria-live="polite"></p>
+              <p class="purchase-payment-help" id="purchase-payment-help">Copy this email into PayPal. After paying, return here to message him.</p>
+              <a class="purchase-payment-open" id="purchase-payment-open" href="https://www.paypal.com/myaccount/transfer/" target="_blank" rel="noopener noreferrer" aria-label="Open PayPal in a new tab">
+                <span id="purchase-payment-open-label">OPEN PAYPAL</span><span aria-hidden="true">↗</span>
+              </a>
+            </section>
+
+            <section class="purchase-contact" aria-labelledby="purchase-instruction-title" data-text-contact>
+              <h3 id="purchase-instruction-title">2. MESSAGE THE MOVIE MASTER</h3>
+              <p class="purchase-instruction" id="purchase-instruction-detail" role="status">Recommendations aren’t automatic—message him after paying.</p>
+              <div class="purchase-payment-name" id="purchase-payment-name-row">
+                <label class="purchase-field-label" id="purchase-payment-name-label" for="purchase-payment-name">Name on PayPal payment (if you’ve paid)</label>
+                <input id="purchase-payment-name" type="text" autocomplete="name" maxlength="120" placeholder="Leave blank to message first">
+              </div>
+              <div class="purchase-message-tools">
+                <button class="purchase-quiet-button" id="purchase-edit-message" type="button" aria-controls="purchase-message-details" aria-expanded="false">Edit message</button>
+                <button class="purchase-quiet-button" id="copy-message-button" type="button">Copy message</button>
+              </div>
+              <div class="purchase-message-details" id="purchase-message-details" hidden>
+                <label class="visually-hidden" for="purchase-message">Your message and movie preferences</label>
+                <textarea class="purchase-message" id="purchase-message" rows="4" maxlength="4000" aria-describedby="purchase-message-help"></textarea>
+                <p class="purchase-message-help" id="purchase-message-help">Edit your request or add movie preferences. Your payment name and selected method are added if you fill in the name above. Your draft stays in this tab.</p>
+              </div>
+              <p class="purchase-copy-status visually-hidden" id="message-copy-status" role="status" aria-live="polite"></p>
+              <p class="visually-hidden" id="purchase-text-note">By revealing the number, you agree to text only. No calls.</p>
+              <div class="purchase-contact-links">
+                <span data-text-gate>
+                  <button class="purchase-contact-button purchase-reveal-button" type="button" data-reveal-phone aria-describedby="purchase-text-note" aria-controls="purchase-text-details purchase-phone-display" aria-expanded="false"><span>REVEAL NUMBER</span><small>TEXT ONLY. NO CALLS.</small></button>
+                </span>
+                <span id="purchase-text-details" data-text-details hidden>
+                  <a class="purchase-contact-button" data-sms-link>SEND A TEXT</a>
+                </span>
+                <a class="purchase-contact-button" id="purchase-email-link" href="mailto:rcravens60@gmail.com">EMAIL</a>
+                <a class="purchase-contact-button" id="purchase-facebook-link" href="https://www.facebook.com/robert.cravens.7" target="_blank" rel="noopener noreferrer" aria-label="Copy message and open Facebook profile in a new tab">FACEBOOK</a>
+              </div>
+              <div class="purchase-phone-row" id="purchase-phone-display" data-phone-display hidden>
+                <span data-phone-number></span>
+                <button class="purchase-quiet-button" type="button" data-copy-phone aria-label="Copy phone number" aria-describedby="purchase-text-status">COPY NUMBER</button>
+                <span class="purchase-copy-status visually-hidden" id="purchase-text-status" data-phone-status role="status" aria-live="polite"></span>
+              </div>
+              <p class="purchase-delivery" id="purchase-delivery">Recommendations within 24 hours of payment + message.</p>
+              <p class="purchase-email-address" id="purchase-email-fallback" hidden>Email: <a href="mailto:rcravens60@gmail.com">rcravens60@gmail.com</a></p>
+            </section>
+          </div>
+        </div>
+      </div>
+    </dialog>
 
     <noscript>
       <p class="noscript-message">JavaScript is required to defend the world from garbage.</p>

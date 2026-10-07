@@ -52,7 +52,7 @@
     statsButton: $("stats-button"),
     shareRunButton: $("share-run-button"),
     gameoverLeaderboardsButton: $("gameover-leaderboards-button"),
-    gameoverMainSiteButton: $("gameover-main-site-button"),
+    gameoverPackagesButton: $("gameover-packages-button"),
     shareRunStatus: $("share-run-status"),
     statsCloseButton: $("stats-close-button"),
     leaderboardOverlay: $("leaderboard-overlay"),
@@ -98,6 +98,9 @@
     statPowerupSuper: $("stat-powerup-super"),
     statPowerupMagnet: $("stat-powerup-magnet"),
   };
+
+  window.MovieMasterPurchaseFlow?.setUpTextContacts();
+  const gamePurchase = window.MovieMasterPurchaseFlow?.init({ restoreOpen: false, packagesOnly: true });
 
   const COLORS = {
     ink: "#120c08",
@@ -1180,6 +1183,10 @@
   }
 
   function visibleMenuButtons() {
+    if (gamePurchase?.dialog.open) {
+      return [...gamePurchase.dialog.querySelectorAll("button, a[href], input[type='radio']")]
+        .filter((control) => !control.disabled && control.getClientRects().length);
+    }
     if (!ui.infoOverlay.hidden) return [ui.infoCloseButton];
     if (!ui.leaderboardOverlay.hidden) {
       return [
@@ -1201,7 +1208,7 @@
         ui.statsButton,
         ui.shareRunButton,
         ui.gameoverLeaderboardsButton,
-        ui.gameoverMainSiteButton,
+        ui.gameoverPackagesButton,
         ui.gameoverModeButton,
         ...ui.gameoverOverlay.querySelectorAll(".leaderboard-name-form button, .leaderboard-card button"),
       ].filter((button, index, items) => button && items.indexOf(button) === index);
@@ -1216,7 +1223,10 @@
     controllerSelectedButton?.classList.remove("controller-selected");
     controllerSelectedButton = next;
     controllerSelectedButton?.classList.add("controller-selected");
-    if (controllerInputActive) controllerSelectedButton?.focus({ preventScroll: true });
+    if (controllerInputActive) {
+      controllerSelectedButton?.focus({ preventScroll: true });
+      if (gamePurchase?.dialog.open) controllerSelectedButton?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
   }
 
   function setControllerInputActive(active) {
@@ -3219,7 +3229,9 @@
       || gameState === "gameover";
     const menuButtons = menuActive ? visibleMenuButtons() : null;
     if (menuActive) {
-      const currentMenuContext = !ui.infoOverlay.hidden
+      const currentMenuContext = gamePurchase?.dialog.open
+        ? "gameover-purchase-" + gamePurchase.dialog.querySelector("#purchase-package-selector").hidden
+        : !ui.infoOverlay.hidden
         ? `info-${gameState}`
         : !ui.leaderboardOverlay.hidden
           ? `leaderboards-${gameState}`
@@ -3249,7 +3261,8 @@
 
     const cancelPressed = isGamepadButtonPressed(gamepad, GAMEPAD_CANCEL_BUTTON);
     if (menuActive && cancelPressed && !gamepadCancelPressed) {
-      if (!ui.infoOverlay.hidden) closeInfo();
+      if (gamePurchase?.dialog.open) gamePurchase.close();
+      else if (!ui.infoOverlay.hidden) closeInfo();
       else if (!ui.leaderboardOverlay.hidden) closeLeaderboards();
       else if (gameState === "reset-confirm") cancelResetConfirmation();
       else if (gameState === "end-confirm") cancelEndConfirmation();
@@ -5165,6 +5178,10 @@
 
   window.addEventListener("keydown", (event) => {
     setControllerInputActive(false);
+    // Let the purchase dialog and focused result controls handle their keys.
+    if (gamePurchase?.dialog.open) return;
+    if (gameState === "gameover" && event.code === "Enter"
+      && event.target?.closest?.("button, a, input, textarea, select")) return;
     if (movementCodes.has(event.code)) {
       keys.add(event.code);
       if (gameState === "running") event.preventDefault();
@@ -5303,7 +5320,22 @@
   ui.statsButton.addEventListener("click", openGameStats);
   ui.shareRunButton.addEventListener("click", shareRun);
   ui.gameoverLeaderboardsButton.addEventListener("click", openLeaderboards);
-  ui.gameoverMainSiteButton.addEventListener("click", goToMainSite);
+  ui.gameoverPackagesButton.addEventListener("click", () => {
+    if (!gamePurchase) return;
+    gamePurchase.open(null, ui.gameoverPackagesButton, true);
+    gamePurchase.dialog.querySelector("#purchase-dialog-title").focus({ preventScroll: true });
+    setControllerSelection(gamePurchase.dialog.querySelector("[data-package-select]"));
+  });
+  gamePurchase?.dialog.addEventListener("close", () => {
+    if (!gamePurchase.dialog.open) setControllerSelection(ui.gameoverPackagesButton);
+  });
+  gamePurchase?.dialog.addEventListener("focusin", (event) => {
+    if (controllerInputActive && visibleMenuButtons().includes(event.target)) setControllerSelection(event.target);
+  });
+  gamePurchase?.dialog.addEventListener("pointerover", (event) => {
+    const control = event.target.closest("button, a[href], input[type='radio']");
+    if (visibleMenuButtons().includes(control)) setControllerSelection(control);
+  });
   ui.statsCloseButton.addEventListener("click", closeGameStats);
   ui.leaderboardCloseButton.addEventListener("click", closeLeaderboards);
   ui.gameoverModeButton.addEventListener("click", toggleHardcoreMode);
@@ -5374,7 +5406,7 @@
     ui.statsButton,
     ui.shareRunButton,
     ui.gameoverLeaderboardsButton,
-    ui.gameoverMainSiteButton,
+    ui.gameoverPackagesButton,
     ui.gameoverModeButton,
     ui.statsCloseButton,
     ui.leaderboardCloseButton,

@@ -1,0 +1,10 @@
+{
+  "name": "movie-master-ui-checks",
+  "private": true,
+  "scripts": {
+    "test:purchase": "node --test purchase-dialog.test.cjs game-purchase.test.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}
