@@ -70,7 +70,7 @@
         page.querySelector("#final-score").textContent = "12,480";
         page.querySelector("#final-longest-streak").textContent = "12";
         const script = page.createElement("script");
-        script.src = new URL("../../purchase-flow.js?v=20261007-game-packages-1", location.href).href;
+        script.src = new URL("../../purchase-flow.js?v=20261007-game-packages-2", location.href).href;
         page.body.append(script);
         const init = page.createElement("script");
         init.textContent = `
@@ -82,7 +82,7 @@
             document.querySelector('#purchase-dialog-title').focus();
           });
           window.addEventListener('message', event => {
-            if (event.origin !== location.origin || !event.data.previewView) return;
+            if (event.origin !== new URL(document.baseURI).origin || !event.data.previewView) return;
             if (event.data.previewView === 'results') purchase.close();
             else {
               launch.click();
