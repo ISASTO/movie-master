@@ -39,6 +39,11 @@
   font-family: "Futura Web", Futura, "Century Gothic", sans-serif;
   line-height: 1.4;
 }
+.purchase-dialog h2[tabindex="-1"]:focus {
+  /* The heading receives initial reading focus; interactive controls retain
+     their visible keyboard focus indicator. */
+  outline: none;
+}
 .purchase-dialog:has(.purchase-request[hidden]) .purchase-dialog-shell {
   width: min(960px, 100%);
 }
@@ -175,4 +180,11 @@ html.controller-input .purchase-dialog .controller-selected {
   }
   .gameover-offer { flex-wrap: wrap; gap: 12px; margin-top: 20px; padding-top: 16px; }
   .game-package-launch.secondary-button { width: 100%; }
+}
+@media (max-width: 360px) {
+  .game-package-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+  .game-package-card .game-package-price { font-size: 1.8rem; }
 }
