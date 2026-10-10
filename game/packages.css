@@ -133,6 +133,10 @@
   font-size: 0.9rem;
   line-height: 1.4;
 }
+
+.game-package-selector .package-assurances {
+  margin-top: 20px;
+}
 .game-package-rules {
   display: inline-flex;
   align-items: center;

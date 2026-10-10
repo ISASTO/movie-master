@@ -1574,7 +1574,7 @@ h3 {
   margin: 0;
   font-size: clamp(0.9rem, 1.5vw, 1.12rem);
   font-weight: 800;
-  line-height: 1.16;
+  line-height: 1.25;
   text-transform: uppercase;
 }
 
@@ -3562,8 +3562,13 @@ h3 {
   }
 
   .package-ticket-standard {
+    grid-template-columns: 96px minmax(0, 1fr);
     gap: 15px;
     padding-inline: 20px;
+  }
+
+  .package-ticket-standard .package-price {
+    width: 96px;
   }
 
   .regulations-board {
@@ -4844,6 +4849,62 @@ h3 {
   .footer-inner {
     flex-direction: column;
     gap: 8px;
+  }
+}
+
+@media (min-width: 561px) and (max-width: 720px) {
+  .standard-package-row {
+    grid-template-columns: 1fr;
+  }
+
+  .package-ticket-standard {
+    grid-template-columns: 96px minmax(0, 1fr);
+    min-height: 138px;
+    padding: 18px 26px;
+  }
+
+  .package-or {
+    margin: -6px auto;
+  }
+}
+
+@media (max-width: 374px) {
+  .reservation-package-options {
+    grid-template-columns: 1fr;
+  }
+
+  .reservation-package-options button:not(.reservation-package-vip) {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 10px;
+    min-height: 80px;
+    padding: 10px 12px;
+    text-align: left;
+  }
+
+  .reservation-package-options button:not(.reservation-package-vip) span {
+    font-size: 0.875rem;
+    line-height: 1.3;
+  }
+
+  .package-ticket-standard {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .package-ticket-standard .package-price {
+    width: auto;
+    justify-self: start;
+    font-size: 2.7rem;
+  }
+
+  .package-ticket-standard p {
+    font-size: 1rem;
+  }
+
+  .package-ticket-standard .package-purchase-button {
+    max-width: none;
+    font-size: 0.75rem;
   }
 }
 

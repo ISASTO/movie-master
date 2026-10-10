@@ -241,8 +241,8 @@
     };
     const packagePrices = { five: 5, ten: 10, vip: 20 };
     const packageNames = {
-      five: "5 recommendations · $5",
-      ten: "10 recommendations · $10",
+      five: "5 movie recommendations · $5",
+      ten: "10 movie recommendations · $10",
       vip: "VIP package · $20",
       support: "Help cover website costs and grow the business.",
       lifetime: "Ultimate Lifetime Membership",
@@ -354,6 +354,9 @@
     };
 
     const updateInstruction = () => {
+      instructionTitle.textContent = selectedPackage === "lifetime"
+        ? "MESSAGE THE MOVIE MASTER TO APPLY"
+        : selectedPackage === "support" ? "MESSAGE HIM (OPTIONAL)" : "2. MESSAGE THE MOVIE MASTER";
       instructionDetail.textContent = selectedPackage === "lifetime"
         ? "Membership requires his personal approval."
         : selectedPackage === "support"
@@ -416,7 +419,7 @@
       packageSummary.hidden = false;
       packageName.textContent = packageNames[packageKey];
       packageDetail.textContent = packageKey === "vip"
-        ? "20 recommendations, 3 R&B videos + VIP certificate"
+        ? "20 movie recommendations, 3 R&B videos + VIP certificate"
         : "";
       packageDetail.hidden = !packageDetail.textContent;
       dialogTitle.textContent = isSupport ? "SUPPORT THE MOVIE MASTER"
@@ -425,9 +428,6 @@
       messageFirstButton.hidden = isSupport || isLifetime;
       paymentTitle.textContent = isSupport ? "CONTRIBUTE ANY AMOUNT"
         : isLifetime ? "" : "1. PAY $" + packagePrices[packageKey];
-      instructionTitle.textContent = isLifetime
-        ? "MESSAGE THE MOVIE MASTER TO APPLY"
-        : isSupport ? "MESSAGE HIM (OPTIONAL)" : "2. MESSAGE THE MOVIE MASTER";
       paymentNameRow.hidden = !isRecommendationPackage();
       deliveryNote.hidden = !isRecommendationPackage();
       updateInstruction();
@@ -547,6 +547,7 @@
     });
 
     messageFirstButton.addEventListener("click", () => {
+      instructionTitle.textContent = "MESSAGE BEFORE PAYING";
       instructionDetail.textContent = "You can message him before paying. Leave the payment name blank if you haven’t paid yet.";
       const firstContact = [...dialog.querySelectorAll(".purchase-contact-button")]
         .find((button) => !button.closest("[hidden]"));

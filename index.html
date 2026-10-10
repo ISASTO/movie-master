@@ -49,9 +49,9 @@
         "url": "https://moviemaster.vip/"
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20261007-game-packages-2">
-    <link rel="stylesheet" href="./purchase-flow.css?v=20261007-game-packages-2">
-    <script src="./purchase-flow.js?v=20261007-game-packages-2" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20261010-package-clarity-1">
+    <link rel="stylesheet" href="./purchase-flow.css?v=20261010-package-clarity-1">
+    <script src="./purchase-flow.js?v=20261010-package-clarity-1" defer></script>
     <script src="./script.js?v=20261007-game-packages-2" defer></script>
   </head>
   <body>
@@ -267,11 +267,15 @@
           </div>
 
           <div class="package-board reveal-on-scroll">
+            <ul class="package-assurances" aria-label="Included with every recommendation package">
+              <li><strong>Personally sent within 24 hours</strong><span>After he receives both your payment and message.</span></li>
+              <li><strong>Already seen a movie?</strong><span>Tell him for a free replacement recommendation.</span></li>
+            </ul>
             <div class="standard-package-row">
               <div class="package-ticket package-ticket-standard">
                 <strong class="package-price"><sup>$</sup>5</strong>
                 <div class="package-ticket-details">
-                  <p>5 Blockbuster Smash Hit Masterpieces</p>
+                  <p>5 Blockbuster Smash Hit Movie recommendations</p>
                   <button class="package-purchase-button" type="button" data-package="five">
                     PURCHASE $5 PACKAGE
                   </button>
@@ -281,7 +285,7 @@
               <div class="package-ticket package-ticket-standard">
                 <strong class="package-price"><sup>$</sup>10</strong>
                 <div class="package-ticket-details">
-                  <p>10 Blockbuster Smash Hit Masterpieces</p>
+                  <p>10 Blockbuster Smash Hit Movie recommendations</p>
                   <button class="package-purchase-button" type="button" data-package="ten">
                     PURCHASE $10 PACKAGE
                   </button>
@@ -297,7 +301,7 @@
               </div>
               <div class="vip-package-body">
                 <ul class="vip-inclusions">
-                  <li>20 Blockbuster Smash Hit Masterpieces</li>
+                  <li>20 Blockbuster Smash Hit Movie recommendations</li>
                   <li>3 of the best R&amp;B music videos ever made</li>
                   <li>One VIP certificate to prove your VIP status</li>
                 </ul>
@@ -1287,16 +1291,16 @@
             <div class="reservation-package-options">
               <button type="button" data-package="five">
                 <strong><sup>$</sup>5</strong>
-                <span>5 Blockbuster Smash Hit Masterpieces</span>
+                <span>5 Blockbuster Smash Hit Movie recommendations</span>
               </button>
               <button type="button" data-package="ten">
                 <strong><sup>$</sup>10</strong>
-                <span>10 Blockbuster Smash Hit Masterpieces</span>
+                <span>10 Blockbuster Smash Hit Movie recommendations</span>
               </button>
               <button class="reservation-package-vip" type="button" data-package="vip">
                 <strong><sup>$</sup>20</strong>
                 <span>VIP Package</span>
-                <small class="reservation-package-detail">20 BLOCKBUSTER SMASH HIT MASTERPIECES + MORE!</small>
+                <small class="reservation-package-detail">20 MOVIE RECOMMENDATIONS + VIP EXTRAS</small>
               </button>
             </div>
           </div>
@@ -1340,22 +1344,26 @@
           <div class="purchase-package-selector" id="purchase-package-selector" role="group" aria-label="Choose your package">
             <div class="purchase-package-options">
               <button type="button" data-package-select="five" aria-pressed="false">
-                <strong>$5</strong><span>5 recommendations</span>
+                <strong>$5</strong><span>5 movie recommendations</span>
               </button>
               <button type="button" data-package-select="ten" aria-pressed="false">
-                <strong>$10</strong><span>10 recommendations</span>
+                <strong>$10</strong><span>10 movie recommendations</span>
               </button>
               <button type="button" data-package-select="vip" aria-pressed="false">
-                <strong>VIP · $20</strong><span>20 recommendations + extras</span>
+                <strong>VIP · $20</strong><span>20 movie recommendations + extras</span>
               </button>
             </div>
           </div>
 
           <div class="purchase-request" id="purchase-request" hidden>
+            <div class="purchase-delivery" id="purchase-delivery">
+              <p>He’ll reply within <strong>24 hours</strong> of receiving <strong>your payment and message.</strong></p>
+              <p>Already seen a movie? <strong>Free replacement recommendations.</strong></p>
+            </div>
             <section class="purchase-payments" id="purchase-payments" aria-labelledby="purchase-payment-title">
               <div class="purchase-step-heading">
                 <h3 id="purchase-payment-title">1. PAY</h3>
-                <button class="purchase-quiet-button" id="purchase-message-first" type="button">Or message first</button>
+                <button class="purchase-message-first" id="purchase-message-first" type="button" aria-controls="purchase-contact">Message before paying <span aria-hidden="true">→</span></button>
               </div>
               <fieldset class="purchase-payment-methods">
                 <legend class="visually-hidden">Payment method</legend>
@@ -1377,7 +1385,7 @@
               </a>
             </section>
 
-            <section class="purchase-contact" aria-labelledby="purchase-instruction-title" data-text-contact>
+            <section class="purchase-contact" id="purchase-contact" aria-labelledby="purchase-instruction-title" data-text-contact>
               <h3 id="purchase-instruction-title">2. MESSAGE THE MOVIE MASTER</h3>
               <p class="purchase-instruction" id="purchase-instruction-detail" role="status">Recommendations aren’t automatic—message him after paying.</p>
               <div class="purchase-payment-name" id="purchase-payment-name-row">
@@ -1410,7 +1418,6 @@
                 <button class="purchase-quiet-button" type="button" data-copy-phone aria-label="Copy phone number" aria-describedby="purchase-text-status">COPY NUMBER</button>
                 <span class="purchase-copy-status visually-hidden" id="purchase-text-status" data-phone-status role="status" aria-live="polite"></span>
               </div>
-              <p class="purchase-delivery" id="purchase-delivery">Recommendations within 24 hours of payment + message.</p>
               <p class="purchase-email-address" id="purchase-email-fallback" hidden>Email: <a href="mailto:rcravens60@gmail.com">rcravens60@gmail.com</a></p>
             </section>
           </div>

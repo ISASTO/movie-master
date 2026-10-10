@@ -26,12 +26,12 @@
     <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">
     <link rel="stylesheet" href="./game.css?v=20260904-usability-1">
     <link rel="stylesheet" href="./leaderboard-upgrades.css?v=20260904-usability-1">
-    <link rel="stylesheet" href="../purchase-flow.css?v=20261007-game-packages-3">
-    <link rel="stylesheet" href="./packages.css?v=20261007-game-packages-6">
+    <link rel="stylesheet" href="../purchase-flow.css?v=20261010-package-clarity-1">
+    <link rel="stylesheet" href="./packages.css?v=20261010-package-clarity-1">
     <script src="../visitor-tracker.js?v=20260902-perf-1" data-visitor-section="game" defer></script>
     <script src="../game-records.js?v=20260907-run-rollout-1" defer></script>
     <script src="./leaderboard.js?v=20260902-perf-2" defer></script>
-    <script src="../purchase-flow.js?v=20261007-game-packages-3" defer></script>
+    <script src="../purchase-flow.js?v=20261010-package-clarity-1" defer></script>
     <script src="./game.js?v=20261007-game-packages-3" defer></script>
   </head>
   <body>
@@ -464,15 +464,23 @@
                 <span class="game-package-action">CHOOSE VIP PACKAGE <span aria-hidden="true">→</span></span>
               </button>
             </div>
+            <ul class="package-assurances" aria-label="Included with every recommendation package">
+              <li><strong>Personally sent within 24 hours</strong><span>After he receives both your payment and message.</span></li>
+              <li><strong>Already seen a movie?</strong><span>Tell him for a free replacement recommendation.</span></li>
+            </ul>
             <p class="game-package-note">Recommendations only. Films and streaming access aren’t included.</p>
             <a class="game-package-rules" href="https://moviemaster.vip/#rules" target="_blank" rel="noopener noreferrer">Read the Movie Master’s rules <span aria-hidden="true">↗</span></a>
           </div>
 
           <div class="purchase-request" id="purchase-request" hidden>
+            <div class="purchase-delivery" id="purchase-delivery">
+              <p>He’ll reply within <strong>24 hours</strong> of receiving <strong>your payment and message.</strong></p>
+              <p>Already seen a movie? <strong>Free replacement recommendations.</strong></p>
+            </div>
             <section class="purchase-payments" id="purchase-payments" aria-labelledby="purchase-payment-title">
               <div class="purchase-step-heading">
                 <h3 id="purchase-payment-title">1. PAY</h3>
-                <button class="purchase-quiet-button" id="purchase-message-first" type="button">Or message first</button>
+                <button class="purchase-message-first" id="purchase-message-first" type="button" aria-controls="purchase-contact">Message before paying <span aria-hidden="true">→</span></button>
               </div>
               <fieldset class="purchase-payment-methods">
                 <legend class="visually-hidden">Payment method</legend>
@@ -494,7 +502,7 @@
               </a>
             </section>
 
-            <section class="purchase-contact" aria-labelledby="purchase-instruction-title" data-text-contact>
+            <section class="purchase-contact" id="purchase-contact" aria-labelledby="purchase-instruction-title" data-text-contact>
               <h3 id="purchase-instruction-title">2. MESSAGE THE MOVIE MASTER</h3>
               <p class="purchase-instruction" id="purchase-instruction-detail" role="status">Recommendations aren’t automatic—message him after paying.</p>
               <div class="purchase-payment-name" id="purchase-payment-name-row">
@@ -527,7 +535,6 @@
                 <button class="purchase-quiet-button" type="button" data-copy-phone aria-label="Copy phone number" aria-describedby="purchase-text-status">COPY NUMBER</button>
                 <span class="purchase-copy-status visually-hidden" id="purchase-text-status" data-phone-status role="status" aria-live="polite"></span>
               </div>
-              <p class="purchase-delivery" id="purchase-delivery">Recommendations within 24 hours of payment + message.</p>
               <p class="purchase-email-address" id="purchase-email-fallback" hidden>Email: <a href="mailto:rcravens60@gmail.com">rcravens60@gmail.com</a></p>
             </section>
           </div>

@@ -139,6 +139,33 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
   line-height: 1.4;
 }
 
+.package-assurances {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 28px;
+  margin: 0;
+  padding: 0;
+  color: var(--ink);
+  list-style: none;
+}
+
+.package-assurances li {
+  min-width: 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--gold-dark);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.package-assurances strong,
+.package-assurances span {
+  display: block;
+}
+
+.package-assurances strong {
+  font-weight: 700;
+}
+
 .purchase-quiet-button {
   flex: 0 0 auto;
   min-height: 44px;
@@ -208,15 +235,30 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0 12px;
+  gap: 6px 12px;
+  margin-bottom: 8px;
 }
 
 .purchase-step-heading h3 {
   margin-bottom: 0;
 }
 
-.purchase-step-heading .purchase-quiet-button {
-  padding-inline: 0;
+.purchase-message-first {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
 }
 
 .purchase-payment-methods {
@@ -382,7 +424,21 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
 }
 
 .purchase-delivery {
-  margin: 10px 0 0;
+  margin: 0 0 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid rgba(18, 12, 8, 0.28);
+}
+
+.purchase-delivery p {
+  margin: 0;
+}
+
+.purchase-delivery p + p {
+  margin-top: 5px;
+}
+
+.purchase-delivery strong {
+  font-weight: 600;
 }
 
 .purchase-phone-row {
@@ -473,6 +529,11 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
 }
 
 @media (max-width: 560px) {
+
+  .package-assurances {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 
   
 
