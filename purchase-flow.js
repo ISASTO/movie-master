@@ -254,12 +254,6 @@
         url: "https://www.paypal.com/myaccount/transfer/",
         copyLabel: "Copy PayPal email",
       },
-      venmo: {
-        name: "Venmo",
-        recipient: "@Freshwater55",
-        url: "https://venmo.com/Freshwater55",
-        copyLabel: "Copy Venmo username",
-      },
       cashapp: {
         name: "Cash App",
         recipient: "$Livinglife5444",
@@ -311,14 +305,24 @@
         const value = JSON.parse(sessionStorage.getItem(sessionKey));
         const age = Date.now() - value?.updatedAt;
         if (value?.version !== 1 || !Number.isFinite(age) || age < 0 || age > sessionMaxAge ||
-            !Object.hasOwn(packageMessages, value.packageKey) || !Object.hasOwn(methods, value.method)) return null;
+            !Object.hasOwn(packageMessages, value.packageKey)) return null;
+        const availableMethod = Object.hasOwn(methods, value.method);
         Object.keys(packageMessages).forEach((key) => {
           const draft = value.drafts?.[key];
           if (typeof draft?.message === "string" && typeof draft?.paymentName === "string") {
-            drafts[key] = { message: draft.message.slice(0, 4000), paymentName: draft.paymentName.slice(0, 120) };
+            drafts[key] = {
+              message: draft.message.slice(0, 4000),
+              // A retired provider's payment details must not be attributed
+              // to the default provider when restoring the message draft.
+              paymentName: availableMethod ? draft.paymentName.slice(0, 120) : "",
+            };
           }
         });
-        return value;
+        return {
+          ...value,
+          method: availableMethod ? value.method : "paypal",
+          paymentOpened: availableMethod && value.paymentOpened === true,
+        };
       } catch {
         return null;
       }

@@ -132,7 +132,7 @@ test("changing offers keeps drafts, providers and gated text contact accurate", 
     h.click("#purchase-change-package"); h.click("[data-package-select='five']");
     assert.equal(h.find("#purchase-message").value, "Please recommend an action movie.");
     assert.equal(h.find("#purchase-payment-name").value, "Test Customer");
-    for (const [method, recipient] of [["paypal", "refreshingspring148@gmail.com"], ["venmo", "@Freshwater55"], ["cashapp", "$Livinglife5444"]]) {
+    for (const [method, recipient] of [["paypal", "refreshingspring148@gmail.com"], ["cashapp", "$Livinglife5444"]]) {
       h.click(`[name='purchase-payment-method'][value='${method}']`);
       assert.equal(h.find("#purchase-payment-recipient").textContent, recipient);
       h.click("#purchase-copy-recipient");
@@ -152,7 +152,7 @@ test("changing offers keeps drafts, providers and gated text contact accurate", 
 });
 
 test("an open main-site draft never opens over gameplay; the main site still restores it", () => {
-  const saved = { version: 1, updatedAt: Date.now(), packageKey: "vip", method: "venmo", paymentOpened: false, open: true,
+  const saved = { version: 1, updatedAt: Date.now(), packageKey: "vip", method: "cashapp", paymentOpened: false, open: true,
     drafts: { vip: { message: "Action movies, please.", paymentName: "Test Customer" } } };
   const game = harness({ saved });
   const main = harness({ page: "main", saved });
@@ -160,12 +160,37 @@ test("an open main-site draft never opens over gameplay; the main site still res
     assert.equal(game.find("#purchase-dialog").open, false);
     assert.equal(main.find("#purchase-dialog").open, true);
     assert.equal(main.find("#purchase-message").value, saved.drafts.vip.message);
-    assert.equal(main.find("#purchase-payment-recipient").textContent, "@Freshwater55");
+    assert.equal(main.find("#purchase-payment-recipient").textContent, "$Livinglife5444");
     game.finish("manual"); game.click("#gameover-packages-button");
     assert.equal(game.find("#purchase-request").hidden, true);
     game.click("[data-package-select='vip']");
     assert.equal(game.find("#purchase-message").value, saved.drafts.vip.message);
   } finally { game.close(); main.close(); }
+});
+
+test("retired payment selections preserve drafts without reviving recipients or mislabeling payments", () => {
+  for (const page of ["main", "game"]) {
+    const saved = { version: 1, updatedAt: Date.now(), packageKey: "vip", method: "retired-provider", paymentOpened: true, open: true,
+      drafts: { vip: { message: "Action movies, please.", paymentName: "Previous Payment Name" } } };
+    const h = harness({ page, saved });
+    try {
+      if (page === "game") {
+        assert.equal(h.find("#purchase-dialog").open, false);
+        h.finish("manual"); h.click("#gameover-packages-button"); h.click("[data-package-select='vip']");
+      }
+      assert.equal(h.find("#purchase-dialog").open, true);
+      assert.deepEqual([...h.document.querySelectorAll("[name='purchase-payment-method']")].map(input => input.value), ["paypal", "cashapp"]);
+      assert.equal(h.find("[name='purchase-payment-method']:checked").value, "paypal");
+      assert.equal(h.find("#purchase-payment-recipient").textContent, "refreshingspring148@gmail.com");
+      assert.equal(h.find("#purchase-message").value, saved.drafts.vip.message);
+      assert.equal(h.find("#purchase-payment-name").value, "");
+      assert.doesNotMatch(decodeURIComponent(h.find("#purchase-email-link").href), /Name on payment:|Payment method:/);
+      assert.match(h.find("#purchase-instruction-detail").textContent, /message him after paying/);
+      const updated = JSON.parse(h.window.sessionStorage.getItem(sessionKey));
+      assert.equal(updated.method, "paypal");
+      assert.equal(updated.paymentOpened, false);
+    } finally { h.close(); }
+  }
 });
 
 test("Enter inside checkout or on a results control cannot restart the game", () => {
