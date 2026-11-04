@@ -8,6 +8,6 @@
     document.head.append(script);
   };
 
-  load("./site-core.js?v=20261007-game-packages-2");
+  load("./site-core.js?v=20261104-contact-email-1");
   load("./store-click.js?v=20260901-1");
 })();

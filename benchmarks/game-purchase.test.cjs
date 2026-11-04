@@ -106,7 +106,7 @@ test("all three offers lead to the correct existing payment and messaging flow",
       assert.equal(h.find("#purchase-request").hidden, false);
       assert.equal(h.find("#purchase-package-selector").hidden, true);
       assert.equal(h.find("#purchase-payment-title").textContent, "1. PAY $" + amount);
-      assert.match(h.find("#purchase-email-link").href, /^mailto:rcravens60@gmail\.com\?/);
+      assert.match(h.find("#purchase-email-link").href, /^mailto:refreshingspring148@gmail\.com\?/);
       assert.match(decodeURIComponent(h.find("#purchase-email-link").href), new RegExp("\\$" + amount));
       if (key === "vip") assert.match(h.find("#purchase-package-detail").textContent, /3 R&B videos/);
       assert.match(h.find("#purchase-instruction-detail").textContent, /message him after paying/);

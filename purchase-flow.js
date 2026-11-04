@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const movieMasterEmail = "rcravens60@gmail.com";
+  const movieMasterEmail = "refreshingspring148@gmail.com";
 
   async function copyText(text, selectableElement = null) {
     if (navigator.clipboard?.writeText) {
