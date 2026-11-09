@@ -5292,18 +5292,6 @@ html {
   line-height: 1.45;
 }
 
-/* Equal-height bubbles keep portraits on a common line (the intentional
-   zig-zag offset between columns is preserved). */
-.testimonial-grid {
-  align-items: stretch;
-}
-
-.testimonial-card > .quote-bubble {
-  display: flex;
-  flex: 1 0 auto;
-  align-items: center;
-}
-
 @media (max-width: 1040px) {
   .action-bar-mobile a,
   .action-bar-mobile button {
