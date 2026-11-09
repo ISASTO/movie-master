@@ -17,11 +17,6 @@
   const nameStatuses = [...document.querySelectorAll("[data-leaderboard-name-status]")];
   const modeTabs = [...document.querySelectorAll("[data-leaderboard-mode-tab]")];
 
-  // Remove build-time explanatory copy that no longer helps players.
-  document.getElementById("leaderboard-placement-status")?.remove();
-  document.querySelector(".leaderboards-panel > .poster-kicker")?.remove();
-  document.querySelector(".leaderboard-reset-copy")?.remove();
-
 
   if (!template || !mounts.length) return;
 

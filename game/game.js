@@ -65,6 +65,8 @@
     infoCloseButton: $("info-close-button"),
     pauseButton: $("pause-button"),
     soundButton: $("sound-button"),
+    pauseQualityButton: $("pause-quality-button"),
+    pauseSoundButton: $("pause-sound-button"),
     judgmentButton: $("judgment-button"),
     joystick: $("joystick"),
     joystickKnob: $("joystick-knob"),
@@ -101,6 +103,7 @@
 
   window.MovieMasterPurchaseFlow?.setUpTextContacts();
   const gamePurchase = window.MovieMasterPurchaseFlow?.init({ restoreOpen: false, packagesOnly: true });
+  const purchasePackageSelector = gamePurchase?.dialog.querySelector("#purchase-package-selector") || null;
 
   const COLORS = {
     ink: "#120c08",
@@ -222,6 +225,19 @@
   const QUALITY_KEY = "movie-master-vs-garbage-quality-v1";
   const QUALITY_ORDER = ["high", "medium", "low"];
   const BACKGROUND_TWINKLE_PHASE_COUNT = 16;
+  const MAX_BACKGROUND_STARS = 58;
+  // Menus cover the field with a 90%-opaque overlay, so the animated backdrop
+  // only needs a modest refresh rate there.
+  const MENU_BACKDROP_FRAME_MS = 50;
+  // Stacked strokes approximating a Gaussian glow. [extra width in blur units, alpha]
+  const BLAST_GLOW_PASSES = [
+    [1.5, 0.05],
+    [1.2, 0.07],
+    [0.9, 0.09],
+    [0.65, 0.12],
+    [0.4, 0.16],
+    [0.2, 0.22],
+  ];
   const QUALITY_LEVELS = {
     high: {
       label: "HIGH",
@@ -297,6 +313,22 @@
     playerBounds: { left: 24, right: 300, top: 160, bottom: 500 },
   };
 
+  // Star positions are stored as fractions of the canvas so resizing (rotation,
+  // browser bars, window drags) keeps the same sky instead of reshuffling it.
+  const backgroundStarPool = Array.from({ length: MAX_BACKGROUND_STARS }, () => {
+    const phase = Math.random() * Math.PI * 2;
+    return {
+      fx: Math.random(),
+      fy: Math.random(),
+      size: randomBetween(0.7, 2.1),
+      phaseBucket: Math.floor(
+        (phase / (Math.PI * 2)) * BACKGROUND_TWINKLE_PHASE_COUNT,
+      ) % BACKGROUND_TWINKLE_PHASE_COUNT,
+      phaseSine: Math.sin(phase),
+      phaseCosine: Math.cos(phase),
+    };
+  });
+
   const renderCache = {
     generation: 0,
     backgroundGradient: null,
@@ -309,6 +341,8 @@
     enemySprites: new Map(),
     emojiSprites: new Map(),
     radialFillSprites: new Map(),
+    glowRingSprites: new Map(),
+    playerSprite: null,
     textWidths: new Map(),
     emojiMetrics: new Map(),
     powerupStatusLayout: null,
@@ -446,6 +480,10 @@
   let exitReturnState = "paused";
   let infoReturnState = "ready";
   let leaderboardReturnButton = null;
+  let lastMenuBackdropDraw = -Infinity;
+  let touchControlRectsDirty = true;
+  const touchControlRects = [];
+  const restartedAnimationVariants = new Map();
   let runStats = createRunStats();
 
   if (movementMode !== "mouse" && movementMode !== "keys" && movementMode !== "touch") {
@@ -779,6 +817,8 @@
     renderCache.enemySprites.clear();
     renderCache.emojiSprites.clear();
     renderCache.radialFillSprites.clear();
+    renderCache.glowRingSprites.clear();
+    renderCache.playerSprite = null;
     for (let index = 0; index < projectilePool.length; index += 1) {
       projectilePool[index].renderSprite = null;
     }
@@ -930,18 +970,42 @@
     particles.length = 0;
   }
 
-  function resizeCanvas() {
+  function resizeCanvas(force = false) {
     const rect = canvas.getBoundingClientRect();
     const hadWorld = world.width > 0 && world.height > 0;
-    const oldBounds = { ...world.bounds };
-    const oldGameScale = world.gameScale || 1;
-
-    world.width = Math.max(1, rect.width);
-    world.height = Math.max(1, rect.height);
+    const nextWidth = Math.max(1, rect.width);
+    const nextHeight = Math.max(1, rect.height);
+    const nextDpr = Math.min(window.devicePixelRatio || 1, qualitySettings.maxDpr);
     world.canvasLeft = rect.left;
     world.canvasTop = rect.top;
-    world.dpr = Math.min(window.devicePixelRatio || 1, qualitySettings.maxDpr);
-    world.bounds = getPlayBounds();
+    touchControlRectsDirty = true;
+
+    const oldBounds = { ...world.bounds };
+    const oldWidth = world.width;
+    const oldHeight = world.height;
+    world.width = nextWidth;
+    world.height = nextHeight;
+    const nextBounds = getPlayBounds();
+
+    // The window resize event and the ResizeObserver both report the same
+    // change; rebuilding twice reallocated the canvas and every sprite cache.
+    if (
+      !force
+      && hadWorld
+      && nextWidth === oldWidth
+      && nextHeight === oldHeight
+      && nextDpr === world.dpr
+      && nextBounds.left === oldBounds.left
+      && nextBounds.right === oldBounds.right
+      && nextBounds.top === oldBounds.top
+      && nextBounds.bottom === oldBounds.bottom
+    ) {
+      return;
+    }
+
+    const oldGameScale = world.gameScale || 1;
+    world.dpr = nextDpr;
+    world.bounds = nextBounds;
 
     const { left, right, top, bottom } = world.bounds;
     const playableHeight = Math.max(120, bottom - top);
@@ -980,32 +1044,23 @@
       player.y = (movementBounds.top + movementBounds.bottom) / 2;
     }
 
-    world.backgroundStars = Array.from(
-      {
-        length: Math.max(
-          8,
-          Math.round(
-            clamp(world.width / 28, 18, 58) * qualitySettings.backgroundStarMultiplier,
-          ),
+    const backgroundStarCount = Math.min(
+      MAX_BACKGROUND_STARS,
+      Math.max(
+        8,
+        Math.round(
+          clamp(world.width / 28, 18, MAX_BACKGROUND_STARS) * qualitySettings.backgroundStarMultiplier,
         ),
-      },
-      () => {
-        const x = Math.random() * world.width;
-        const y = Math.random() * world.height;
-        const size = randomBetween(0.7, 2.1);
-        const phase = Math.random() * Math.PI * 2;
-        return {
-          x,
-          y,
-          size,
-          phaseBucket: Math.floor(
-            (phase / (Math.PI * 2)) * BACKGROUND_TWINKLE_PHASE_COUNT,
-          ) % BACKGROUND_TWINKLE_PHASE_COUNT,
-          phaseSine: Math.sin(phase),
-          phaseCosine: Math.cos(phase),
-        };
-      },
+      ),
     );
+    world.backgroundStars = backgroundStarPool.slice(0, backgroundStarCount).map((star) => ({
+      x: star.fx * world.width,
+      y: star.fy * world.height,
+      size: star.size,
+      phaseBucket: star.phaseBucket,
+      phaseSine: star.phaseSine,
+      phaseCosine: star.phaseCosine,
+    }));
     rebuildBackgroundStarBatches();
 
     const remapGameplayPosition = (item) => {
@@ -1100,6 +1155,10 @@
     mouseTarget.active = false;
     fitAllNumberDisplays();
     fitAllStatDisplays();
+
+    // Resizing clears the canvas. Paused and confirmation screens do not draw
+    // every frame, and menus draw at a reduced rate, so repaint immediately.
+    draw(performance.now());
   }
 
   function resetGame() {
@@ -1197,7 +1256,16 @@
     if (gameState === "ready") {
       return [ui.startButton, ui.startModeButton, ui.startLeaderboardsButton, ui.startInfoButton, ui.startMainSiteButton];
     }
-    if (gameState === "paused") return [ui.resumeButton, ui.resetButton, ui.endButton, ui.pauseMainSiteButton];
+    if (gameState === "paused") {
+      return [
+        ui.resumeButton,
+        ui.resetButton,
+        ui.endButton,
+        ui.pauseMainSiteButton,
+        ui.pauseQualityButton,
+        ui.pauseSoundButton,
+      ].filter((button) => button && button.getClientRects().length);
+    }
     if (gameState === "reset-confirm") return [ui.resetCancelButton, ui.resetConfirmButton];
     if (gameState === "end-confirm") return [ui.endCancelButton, ui.endConfirmButton];
     if (gameState === "exit-confirm") return [ui.exitCancelButton, ui.exitConfirmButton];
@@ -1353,6 +1421,7 @@
     flushRunRecords();
     resetGame();
     runFinalizedForTracking = false;
+    touchControlRectsDirty = true;
     window.addEventListener("beforeunload", handleRunBeforeUnload);
     gameState = "running";
     setPausePresentation(false);
@@ -1820,12 +1889,19 @@
   function toggleSound() {
     soundOn = !soundOn;
     saveValue(SOUND_KEY, soundOn ? "on" : "off");
-    ui.soundButton.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
-    ui.soundButton.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    updateSoundUi();
 
     if (soundOn) {
       ensureAudio();
       tone(540, 0.11, "triangle", 0.04);
+    }
+  }
+
+  function updateSoundUi() {
+    for (const button of [ui.soundButton, ui.pauseSoundButton]) {
+      if (!button) continue;
+      button.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+      button.setAttribute("aria-pressed", soundOn ? "true" : "false");
     }
   }
 
@@ -1866,7 +1942,7 @@
     canvas.focus({ preventScroll: true });
   }
 
-  function applyQuality(level, persist = true, announceChange = true) {
+  function applyQuality(level, persist = true, announceChange = true, focusCanvas = true) {
     qualityLevel = QUALITY_LEVELS[level] ? level : "high";
     qualitySettings = QUALITY_LEVELS[qualityLevel];
     if (persist) saveValue(QUALITY_KEY, qualityLevel);
@@ -1878,20 +1954,22 @@
       "aria-label",
       `Visual quality ${qualitySettings.label.toLowerCase()}. Activate for the next quality level.`,
     );
-    if (world.width > 0) resizeCanvas();
+    if (ui.pauseQualityButton) ui.pauseQualityButton.textContent = `QUALITY: ${qualitySettings.label}`;
+    if (world.width > 0) resizeCanvas(true);
 
     if (announceChange) {
       const message = `${qualitySettings.label} QUALITY SELECTED`;
       if (gameState === "running") setBanner(message, 1.4, false);
       announce(message.toLowerCase());
-      canvas.focus({ preventScroll: true });
+      if (focusCanvas) canvas.focus({ preventScroll: true });
     }
   }
 
-  function cycleQuality() {
+  function cycleQuality(event) {
     const currentIndex = QUALITY_ORDER.indexOf(qualityLevel);
     const nextLevel = QUALITY_ORDER[(currentIndex + 1) % QUALITY_ORDER.length];
-    applyQuality(nextLevel);
+    // The intermission copy of this control keeps focus in the pause menu.
+    applyQuality(nextLevel, true, true, event?.currentTarget !== ui.pauseQualityButton);
   }
 
   function enemyDefinition(kind) {
@@ -2024,21 +2102,37 @@
     showCombo("GARBAGE RUSH");
   }
 
+  function measureTouchControlRects() {
+    touchControlRects.length = 0;
+    const canvasRect = canvas.getBoundingClientRect();
+    for (const control of [ui.joystick, ui.judgmentButton]) {
+      const rect = control.getBoundingClientRect();
+      if (!(rect.width > 0 && rect.height > 0)) continue;
+      touchControlRects.push({
+        left: rect.left - canvasRect.left,
+        right: rect.right - canvasRect.left,
+        top: rect.top - canvasRect.top,
+        bottom: rect.bottom - canvasRect.top,
+      });
+    }
+    touchControlRectsDirty = false;
+  }
+
   function getTouchControlExclusionZones(popcornRadius = 0) {
     if (!coarsePointer) return [];
 
-    const canvasRect = canvas.getBoundingClientRect();
+    // Control positions only change with layout, so measuring them on every
+    // popcorn spawn forced a layout read in the middle of gameplay. An empty
+    // result is re-measured because the controls are hidden outside a run.
+    if (touchControlRectsDirty || !touchControlRects.length) measureTouchControlRects();
     const clearance = popcornRadius + Math.max(12, scaleWorld(18));
 
-    return [ui.joystick, ui.judgmentButton]
-      .map((control) => control.getBoundingClientRect())
-      .filter((rect) => rect.width > 0 && rect.height > 0)
-      .map((rect) => ({
-        left: rect.left - canvasRect.left - clearance,
-        right: rect.right - canvasRect.left + clearance,
-        top: rect.top - canvasRect.top - clearance,
-        bottom: rect.bottom - canvasRect.top + clearance,
-      }));
+    return touchControlRects.map((rect) => ({
+      left: rect.left - clearance,
+      right: rect.right + clearance,
+      top: rect.top - clearance,
+      bottom: rect.bottom + clearance,
+    }));
   }
 
   function isPopcornBlockedByTouchControls(x, y, radius, exclusionZones = null) {
@@ -2468,11 +2562,19 @@
     if (!fromBlast) playCue("destroy");
   }
 
+  function restartCssAnimation(element) {
+    // Alternating between two classes whose keyframes are identical restarts
+    // the animation without reading layout (the old offsetWidth trick forced a
+    // synchronous layout in the middle of the game frame).
+    const useAlternate = !restartedAnimationVariants.get(element);
+    restartedAnimationVariants.set(element, useAlternate);
+    element.classList.remove(useAlternate ? "active" : "active-alt");
+    element.classList.add(useAlternate ? "active-alt" : "active");
+  }
+
   function showCombo(message) {
     ui.comboCallout.textContent = message;
-    ui.comboCallout.classList.remove("active");
-    void ui.comboCallout.offsetWidth;
-    ui.comboCallout.classList.add("active");
+    restartCssAnimation(ui.comboCallout);
   }
 
   function awardRecommendationUpgrade(pickup) {
@@ -2670,9 +2772,7 @@
   }
 
   function triggerFlash() {
-    ui.screenFlash.classList.remove("active");
-    void ui.screenFlash.offsetWidth;
-    ui.screenFlash.classList.add("active");
+    restartCssAnimation(ui.screenFlash);
   }
 
   function update(dt) {
@@ -3227,10 +3327,9 @@
       || gameState === "end-confirm"
       || gameState === "exit-confirm"
       || gameState === "gameover";
-    const menuButtons = menuActive ? visibleMenuButtons() : null;
     if (menuActive) {
       const currentMenuContext = gamePurchase?.dialog.open
-        ? "gameover-purchase-" + gamePurchase.dialog.querySelector("#purchase-package-selector").hidden
+        ? "gameover-purchase-" + purchasePackageSelector?.hidden
         : !ui.infoOverlay.hidden
         ? `info-${gameState}`
         : !ui.leaderboardOverlay.hidden
@@ -3254,7 +3353,8 @@
 
     const confirmPressed = isGamepadButtonPressed(gamepad, GAMEPAD_CONFIRM_BUTTON);
     if (menuActive && confirmPressed && !gamepadConfirmPressed) {
-      if (!menuButtons.includes(controllerSelectedButton)) selectDefaultMenuButton();
+      // Collect the menu only when a press needs it rather than every frame.
+      if (!visibleMenuButtons().includes(controllerSelectedButton)) selectDefaultMenuButton();
       controllerSelectedButton?.click();
     }
     gamepadConfirmPressed = confirmPressed;
@@ -3903,6 +4003,69 @@
     return sprite;
   }
 
+  // A stroked (or filled) circle with its shadow glow, rendered once. Large
+  // live shadowBlur work every frame is among the most expensive canvas
+  // operations, especially where the canvas is software-rendered.
+  function getGlowCircleSprite(key, radius, lineWidth, color, blur, filled = false) {
+    const cached = renderCache.glowRingSprites.get(key);
+    if (cached !== undefined) return cached;
+
+    const blurExtent = (blur * 1.6) / world.dpr;
+    const half = Math.ceil(radius + lineWidth / 2 + blurExtent + 2);
+    const pixelSize = Math.max(1, Math.ceil(half * 2 * world.dpr));
+    const raster = createRasterCanvas(pixelSize, pixelSize);
+    if (!raster) {
+      renderCache.glowRingSprites.set(key, null);
+      return null;
+    }
+    const logicalSize = pixelSize / world.dpr;
+    const spriteContext = raster.context;
+    spriteContext.setTransform(world.dpr, 0, 0, world.dpr, 0, 0);
+    spriteContext.shadowColor = color;
+    spriteContext.shadowBlur = blur;
+    spriteContext.beginPath();
+    spriteContext.arc(logicalSize / 2, logicalSize / 2, radius, 0, Math.PI * 2);
+    if (filled) {
+      spriteContext.fillStyle = color;
+      spriteContext.fill();
+    } else {
+      spriteContext.strokeStyle = color;
+      spriteContext.lineWidth = lineWidth;
+      spriteContext.stroke();
+    }
+
+    const sprite = { canvas: raster.canvas, logicalSize, half: logicalSize / 2 };
+    renderCache.glowRingSprites.set(key, sprite);
+    return sprite;
+  }
+
+  function drawGlowCircle(sprite, x, y) {
+    ctx.drawImage(
+      sprite.canvas,
+      x - sprite.half,
+      y - sprite.half,
+      sprite.logicalSize,
+      sprite.logicalSize,
+    );
+  }
+
+  // The source portrait is 705 x 2048; resampling it to ~170 px every frame
+  // cost about ten times more than drawing a copy prepared at display size.
+  function getPlayerSprite() {
+    if (!movieMasterImage.complete || !movieMasterImage.naturalWidth) return null;
+    const cached = renderCache.playerSprite;
+    if (cached) return cached;
+    const pixelWidth = Math.max(1, Math.round(player.drawWidth * world.dpr));
+    const pixelHeight = Math.max(1, Math.round(player.drawHeight * world.dpr));
+    const raster = createRasterCanvas(pixelWidth, pixelHeight);
+    if (!raster) return null;
+    raster.context.imageSmoothingEnabled = true;
+    raster.context.imageSmoothingQuality = "high";
+    raster.context.drawImage(movieMasterImage, 0, 0, pixelWidth, pixelHeight);
+    renderCache.playerSprite = raster.canvas;
+    return raster.canvas;
+  }
+
   function getProjectileSprite(projectile) {
     if (typeof Path2D !== "function" || typeof ctx.drawImage !== "function") return null;
 
@@ -4324,20 +4487,40 @@
     if (blastReady) {
       ctx.save();
       ctx.globalAlpha = 0.62 + (Math.sin(time * 9) + 1) * 0.16;
-      ctx.strokeStyle = COLORS.goldBright;
-      ctx.lineWidth = scaleWorld(4);
-      ctx.shadowColor = COLORS.goldBright;
-      ctx.shadowBlur = scaleWorld(24) * qualitySettings.projectileGlow;
-      ctx.beginPath();
-      ctx.arc(0, -playerVisualOffset, player.drawHeight * 0.52, 0, Math.PI * 2);
-      ctx.stroke();
+      const readyRingSprite = getGlowCircleSprite(
+        "blast-ready-ring",
+        player.drawHeight * 0.52,
+        scaleWorld(4),
+        COLORS.goldBright,
+        scaleWorld(24) * qualitySettings.projectileGlow,
+      );
+      if (readyRingSprite) {
+        drawGlowCircle(readyRingSprite, 0, -playerVisualOffset);
+      } else {
+        ctx.strokeStyle = COLORS.goldBright;
+        ctx.lineWidth = scaleWorld(4);
+        ctx.shadowColor = COLORS.goldBright;
+        ctx.shadowBlur = scaleWorld(24) * qualitySettings.projectileGlow;
+        ctx.beginPath();
+        ctx.arc(0, -playerVisualOffset, player.drawHeight * 0.52, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.restore();
     }
 
     const shouldBlink = player.invulnerable > 0 && Math.floor(player.invulnerable * 14) % 2 === 0;
     if (shouldBlink) ctx.globalAlpha = 0.33;
 
-    if (movieMasterImage.complete && movieMasterImage.naturalWidth) {
+    const playerSprite = getPlayerSprite();
+    if (playerSprite) {
+      ctx.drawImage(
+        playerSprite,
+        -player.drawWidth / 2,
+        -player.drawHeight * 0.55,
+        player.drawWidth,
+        player.drawHeight,
+      );
+    } else if (movieMasterImage.complete && movieMasterImage.naturalWidth) {
       ctx.drawImage(
         movieMasterImage,
         -player.drawWidth / 2,
@@ -4363,17 +4546,41 @@
         ? clamp(shieldTime / 3, 0, 1) * (0.35 + (Math.sin(time * 18) + 1) * 0.325)
         : 1;
       ctx.save();
-      ctx.globalAlpha = (0.76 + (Math.sin(time * 8) + 1) * 0.1) * shieldFade;
-      ctx.strokeStyle = COLORS.shield;
-      ctx.lineWidth = scaleWorld(4);
-      ctx.shadowColor = COLORS.shield;
-      ctx.shadowBlur = scaleWorld(22) * qualitySettings.projectileGlow;
-      ctx.beginPath();
-      ctx.arc(0, -playerVisualOffset, shieldRadius, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.globalAlpha = 0.12 * shieldFade;
-      ctx.fillStyle = COLORS.shield;
-      ctx.fill();
+      const shieldBlur = scaleWorld(22) * qualitySettings.projectileGlow;
+      const shieldRingSprite = getGlowCircleSprite(
+        "shield-ring",
+        shieldRadius,
+        scaleWorld(4),
+        COLORS.shield,
+        shieldBlur,
+      );
+      const shieldDiscSprite = shieldRingSprite && getGlowCircleSprite(
+        "shield-disc",
+        shieldRadius,
+        0,
+        COLORS.shield,
+        shieldBlur,
+        true,
+      );
+      if (shieldRingSprite && shieldDiscSprite) {
+        ctx.globalAlpha = (0.76 + (Math.sin(time * 8) + 1) * 0.1) * shieldFade;
+        drawGlowCircle(shieldRingSprite, 0, -playerVisualOffset);
+        ctx.globalAlpha = 0.12 * shieldFade;
+        drawGlowCircle(shieldDiscSprite, 0, -playerVisualOffset);
+        ctx.shadowColor = COLORS.shield;
+      } else {
+        ctx.globalAlpha = (0.76 + (Math.sin(time * 8) + 1) * 0.1) * shieldFade;
+        ctx.strokeStyle = COLORS.shield;
+        ctx.lineWidth = scaleWorld(4);
+        ctx.shadowColor = COLORS.shield;
+        ctx.shadowBlur = shieldBlur;
+        ctx.beginPath();
+        ctx.arc(0, -playerVisualOffset, shieldRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 0.12 * shieldFade;
+        ctx.fillStyle = COLORS.shield;
+        ctx.fill();
+      }
       ctx.globalAlpha = shieldFade;
       ctx.shadowBlur = scaleWorld(10) * qualitySettings.projectileGlow;
       for (let i = 0; i < shieldHits; i += 1) {
@@ -4987,19 +5194,42 @@
   function drawBlast() {
     if (!blast) return;
     const progress = clamp(blast.life / blast.duration, 0, 1);
+    const fade = 1 - progress;
+    const outerWidth = Math.max(scaleWorld(4), scaleWorld(18) * fade);
+    const innerWidth = Math.max(scaleWorld(2), scaleWorld(6) * fade);
+    const innerRadius = Math.max(0, blast.radius - scaleWorld(18));
+    // shadowBlur is measured in device pixels; convert it to drawing units.
+    const glow = (scaleWorld(28) * qualitySettings.projectileGlow) / world.dpr;
     ctx.save();
-    ctx.globalAlpha = 1 - progress;
     ctx.strokeStyle = COLORS.goldBright;
-    ctx.lineWidth = Math.max(scaleWorld(4), scaleWorld(18) * (1 - progress));
-    ctx.shadowColor = COLORS.goldBright;
-    ctx.shadowBlur = scaleWorld(28) * qualitySettings.projectileGlow;
+
+    // A full-screen ring with shadowBlur took ~30 ms per frame on
+    // software-rendered canvases. Stacked translucent strokes look the same
+    // for a fast, fading ring at a fraction of the cost.
     ctx.beginPath();
     ctx.arc(blast.x, blast.y, blast.radius, 0, Math.PI * 2);
+    if (glow > 0.5) {
+      for (let index = 0; index < BLAST_GLOW_PASSES.length; index += 1) {
+        const pass = BLAST_GLOW_PASSES[index];
+        ctx.globalAlpha = fade * pass[1];
+        ctx.lineWidth = outerWidth + glow * pass[0];
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = fade;
+    ctx.lineWidth = outerWidth;
     ctx.stroke();
-    ctx.strokeStyle = COLORS.cream;
-    ctx.lineWidth = Math.max(scaleWorld(2), scaleWorld(6) * (1 - progress));
+
     ctx.beginPath();
-    ctx.arc(blast.x, blast.y, Math.max(0, blast.radius - scaleWorld(18)), 0, Math.PI * 2);
+    ctx.arc(blast.x, blast.y, innerRadius, 0, Math.PI * 2);
+    if (glow > 0.5) {
+      ctx.globalAlpha = fade * 0.14;
+      ctx.lineWidth = innerWidth + glow * 0.7;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = fade;
+    ctx.strokeStyle = COLORS.cream;
+    ctx.lineWidth = innerWidth;
     ctx.stroke();
     ctx.restore();
   }
@@ -5160,7 +5390,12 @@
       draw(now);
     } else if (gameState === "ready" || gameState === "gameover") {
       player.bob += dt * 2;
-      draw(now);
+      // Behind the menus the field is barely visible, and behind checkout it is
+      // fully covered, so redraw it sparingly (or not at all).
+      if (!gamePurchase?.dialog.open && now - lastMenuBackdropDraw >= MENU_BACKDROP_FRAME_MS) {
+        lastMenuBackdropDraw = now;
+        draw(now);
+      }
     }
     window.requestAnimationFrame(frame);
   }
@@ -5352,6 +5587,8 @@
   ui.exitConfirmButton.addEventListener("click", confirmExitGame);
   ui.movementButton.addEventListener("click", toggleMovementMode);
   ui.qualityButton.addEventListener("click", cycleQuality);
+  ui.pauseQualityButton?.addEventListener("click", cycleQuality);
+  ui.pauseSoundButton?.addEventListener("click", toggleSound);
   ui.pauseButton.addEventListener("click", () => togglePause());
   ui.soundButton.addEventListener("click", toggleSound);
   ui.judgmentButton.addEventListener("pointerdown", (event) => {
@@ -5385,49 +5622,23 @@
     });
   }
 
-  for (const button of new Set([
-    ui.startButton,
-    ui.startModeButton,
-    ui.startLeaderboardsButton,
-    ui.startInfoButton,
-    ui.startMainSiteButton,
-    ui.infoCloseButton,
-    ui.resumeButton,
-    ui.pauseMainSiteButton,
-    ui.resetButton,
-    ui.resetCancelButton,
-    ui.resetConfirmButton,
-    ui.endButton,
-    ui.endCancelButton,
-    ui.endConfirmButton,
-    ui.exitCancelButton,
-    ui.exitConfirmButton,
-    ui.restartButton,
-    ui.statsButton,
-    ui.shareRunButton,
-    ui.gameoverLeaderboardsButton,
-    ui.gameoverPackagesButton,
-    ui.gameoverModeButton,
-    ui.statsCloseButton,
-    ui.leaderboardCloseButton,
-    ...document.querySelectorAll(".leaderboard-card button, .leaderboard-mode-tab, .leaderboard-name-form button"),
-  ])) {
-    button.addEventListener("pointerenter", () => {
-      if (visibleMenuButtons().includes(button)) setControllerSelection(button);
-    });
-  }
+  // Delegated so leaderboard buttons rendered after start-up are included.
+  document.addEventListener("pointerover", (event) => {
+    const button = event.target?.closest?.("button");
+    if (!button || button === controllerSelectedButton || gamePurchase?.dialog.contains(button)) return;
+    if (visibleMenuButtons().includes(button)) setControllerSelection(button);
+  }, { passive: true });
 
-  const resizeObserver = new ResizeObserver(resizeCanvas);
+  const resizeObserver = new ResizeObserver(() => resizeCanvas());
   resizeObserver.observe(canvas);
-  window.addEventListener("resize", resizeCanvas, { passive: true });
+  window.addEventListener("resize", () => resizeCanvas(), { passive: true });
   window.addEventListener("scroll", () => {
     const rect = canvas.getBoundingClientRect();
     world.canvasLeft = rect.left;
     world.canvasTop = rect.top;
   }, { passive: true });
 
-  ui.soundButton.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
-  ui.soundButton.setAttribute("aria-pressed", soundOn ? "true" : "false");
+  updateSoundUi();
   player.lives = maximumLives();
   updateGameModeUi();
   applyQuality(qualityLevel, false, false);

@@ -189,6 +189,10 @@
     const editMessageButton = document.querySelector("#purchase-edit-message");
     const messageField = document.querySelector("#purchase-message");
     const messageHelp = document.querySelector("#purchase-message-help");
+    const messagePreview = document.querySelector("#purchase-message-preview");
+    const messagePreviewRow = messagePreview?.closest(".purchase-message-preview-row") ?? null;
+    const contactSection = document.querySelector("#purchase-contact");
+    const paymentStepDone = document.querySelector("#purchase-step-done");
     const copyMessageButton = document.querySelector("#copy-message-button");
     const messageCopyStatus = document.querySelector("#message-copy-status");
     const emailLink = document.querySelector("#purchase-email-link");
@@ -336,7 +340,16 @@
       return messageField.value.trim() + details;
     };
 
+    const updateMessagePreview = () => {
+      if (!messagePreview) return;
+      const text = messageField.value.trim().replace(/\s+/g, " ");
+      messagePreview.textContent = text || "Add a message before sending.";
+      messagePreview.classList.toggle("is-empty", !text);
+      if (messagePreviewRow) messagePreviewRow.hidden = !messageDetails.hidden;
+    };
+
     const updateMessageLinks = () => {
+      updateMessagePreview();
       const message = composedMessage();
       const subject = packageSubjects[selectedPackage] ?? emailSubject;
       emailLink.href = "mailto:" + movieMasterEmail + "?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(message);
@@ -357,7 +370,19 @@
         : "Check the recipient and enter " + amount + " in " + methods[selectedMethod].name + ". Then return here.";
     };
 
+    const updateStepProgress = () => {
+      // Opening a provider is not proof of payment; this only marks the next step.
+      const advanced = paymentOpened && Boolean(selectedPackage) && selectedPackage !== "lifetime";
+      payments?.classList.toggle("is-opened", advanced);
+      contactSection?.classList.toggle("is-current", advanced);
+      if (paymentStepDone) {
+        paymentStepDone.hidden = !advanced;
+        paymentStepDone.textContent = "✓ " + methods[selectedMethod].name.toUpperCase() + " OPENED";
+      }
+    };
+
     const updateInstruction = () => {
+      updateStepProgress();
       instructionTitle.textContent = selectedPackage === "lifetime"
         ? "MESSAGE THE MOVIE MASTER TO APPLY"
         : selectedPackage === "support" ? "MESSAGE HIM (OPTIONAL)" : "2. MESSAGE THE MOVIE MASTER";
@@ -390,11 +415,23 @@
       paymentMethods.forEach((input) => { input.checked = input.value === key; });
       paymentNameLabel.textContent = "Name on " + method.name + " payment (if you’ve paid)";
       recipientLabel.textContent = method.name + " recipient";
-      paymentRecipient.textContent = method.recipient;
+      // Let a long email wrap after "@" instead of mid-word on narrow screens.
+      // <wbr> adds no character, so selecting the text still copies the address.
+      const at = method.recipient.indexOf("@");
+      if (at > 0) {
+        paymentRecipient.replaceChildren(
+          method.recipient.slice(0, at + 1),
+          document.createElement("wbr"),
+          method.recipient.slice(at + 1),
+        );
+      } else {
+        paymentRecipient.textContent = method.recipient;
+      }
       paymentCopyButton.setAttribute("aria-label", method.copyLabel);
       paymentLink.href = method.url;
       paymentLink.setAttribute("aria-label", "Open " + method.name + " in a new tab");
       paymentLinkLabel.textContent = "OPEN " + method.name.toUpperCase();
+      updateStepProgress();
       clearPaymentStatus();
       updatePaymentHelp();
       updateMessageLinks();
@@ -561,6 +598,7 @@
     const showMessageEditor = () => {
       messageDetails.hidden = false;
       editMessageButton.setAttribute("aria-expanded", "true");
+      updateMessagePreview();
       sizeMessageField();
     };
 
@@ -571,6 +609,7 @@
       } else {
         messageDetails.hidden = true;
         editMessageButton.setAttribute("aria-expanded", "false");
+        updateMessagePreview();
       }
     });
 

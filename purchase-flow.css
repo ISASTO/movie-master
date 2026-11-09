@@ -20,6 +20,15 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
   pointer-events: none;
 }
 
+/* Everything behind checkout is covered by its backdrop. Pausing the page's
+   decorative animations lets the browser stop redrawing (and re-blurring) the
+   page every frame while someone is reading or typing in checkout. */
+html.purchase-open body *:not(.purchase-dialog, .purchase-dialog *),
+html.purchase-open body *:not(.purchase-dialog, .purchase-dialog *)::before,
+html.purchase-open body *:not(.purchase-dialog, .purchase-dialog *)::after {
+  animation-play-state: paused !important;
+}
+
 .purchase-dialog {
   --purchase-dialog-gap: 10px;
   position: fixed;
@@ -243,22 +252,24 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
   margin-bottom: 0;
 }
 
-.purchase-message-first {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 8px 12px;
+.purchase-step-done {
+  padding: 4px 8px;
   border: 1px solid var(--ink);
-  background: transparent;
-  color: var(--ink);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.3;
+  background: var(--gold-light);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+.purchase-message-first-row {
+  margin: 4px 0 0;
   text-align: center;
+}
+
+.purchase-message-first {
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .purchase-payment-methods {
@@ -290,19 +301,43 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
 }
 
 .purchase-recipient {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 44px;
-  margin-bottom: 8px;
+  margin: 4px 0 8px;
 }
 
-.purchase-recipient > div {
+.purchase-recipient-field {
+  display: flex;
+  align-items: stretch;
+  min-height: 46px;
+  border: 2px solid var(--ink);
+  background: var(--white);
+}
+
+.purchase-recipient-field > span {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
   min-width: 0;
-  font-size: 0.95rem;
+  padding: 8px 10px;
+  font-size: 1rem;
+  font-weight: 600;
   overflow-wrap: anywhere;
   user-select: text;
+}
+
+.purchase-copy-button {
+  flex: 0 0 auto;
+  min-width: 76px;
+  padding: 8px 14px;
+  border: 0;
+  border-left: 2px solid var(--ink);
+  background: var(--gold);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .purchase-field-label {
@@ -347,6 +382,42 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
   border-top: 1px solid rgba(18, 12, 8, 0.28);
 }
 
+/* After the payment provider is opened, step 2 is the next thing to do. */
+.purchase-contact.is-current {
+  margin-inline: -12px;
+  padding: 14px 12px 12px;
+  border-top: 0;
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+  background: rgba(255, 211, 96, 0.16);
+}
+
+.purchase-message-preview-row {
+  margin-top: 12px;
+}
+
+.purchase-message-preview {
+  display: -webkit-box;
+  /* Box drawn outside the clamped text (padding would reveal a third line). */
+  margin: 9px 9px 12px;
+  padding: 0;
+  overflow: hidden;
+  outline: 1px dashed rgba(18, 12, 8, 0.45);
+  outline-offset: 8px;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.45);
+  font-size: 0.9rem;
+  font-style: italic;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.purchase-message-preview.is-empty {
+  color: #645b50;
+}
+
 .purchase-instruction {
   margin: 0 0 12px;
   font-size: 0.95rem;
@@ -385,8 +456,12 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
 
 .purchase-contact-links {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.purchase-contact-links > .purchase-contact-primary {
+  grid-column: 1 / -1;
 }
 
 .purchase-contact-links > span {
@@ -413,14 +488,24 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
   text-decoration: none;
 }
 
-.purchase-reveal-button {
+.purchase-reveal-button,
+.purchase-contact-primary {
   flex-direction: column;
   gap: 3px;
 }
 
-.purchase-reveal-button small {
+.purchase-reveal-button small,
+.purchase-contact-primary small {
   font-size: 0.8125rem;
   font-weight: 500;
+}
+
+.purchase-contact-primary {
+  border: 2px solid var(--ink);
+  background: var(--gold);
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 .purchase-delivery {
@@ -510,8 +595,16 @@ html.purchase-open :is(.site-header-strip, .mobile-nav-panel) {
   background-color: var(--gold-light);
 }
 
-.purchase-payment-open:hover {
+.purchase-payment-open:hover,
+.purchase-contact-primary:hover,
+.purchase-copy-button:hover {
   background-color: var(--gold-bright);
+}
+
+@media (max-width: 340px) {
+  .purchase-contact-links {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 400px) {

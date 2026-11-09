@@ -49,10 +49,16 @@
         "url": "https://moviemaster.vip/"
       }
     </script>
-    <link rel="stylesheet" href="./styles.css?v=20261010-package-clarity-1">
-    <link rel="stylesheet" href="./purchase-flow.css?v=20261010-package-clarity-1">
-    <script src="./purchase-flow.js?v=20261104-contact-email-1" defer></script>
-    <script src="./script.js?v=20261104-contact-email-1" defer></script>
+    <link rel="preload" href="./assets/fonts/alfa-slab-one-400.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="./assets/fonts/jost-700.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="./assets/fonts/jost-800.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="./styles.css?v=20261109-perf-ui-1">
+    <link rel="stylesheet" href="./purchase-flow.css?v=20261109-perf-ui-1">
+    <script src="./purchase-flow.js?v=20261109-perf-ui-1" defer></script>
+    <!-- Loaded directly (previously injected by script.js) so purchase buttons
+         are ready as soon as the page is parsed, without an extra round trip. -->
+    <script src="./site-core.js?v=20261109-perf-ui-1" defer></script>
+    <script src="./store-click.js?v=20260901-1" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to the Movie Master</a>
@@ -137,6 +143,7 @@
               <img
                 class="master-image"
                 src="./assets/images/movie-master.webp"
+                fetchpriority="high"
                 alt="A cutout image of a dashing young man in a well-fitted suit with a million-dollar smile and the world in his eye. This is the Movie Master in all his glory."
                 width="705"
                 height="2048"
@@ -1363,7 +1370,7 @@
             <section class="purchase-payments" id="purchase-payments" aria-labelledby="purchase-payment-title">
               <div class="purchase-step-heading">
                 <h3 id="purchase-payment-title">1. PAY</h3>
-                <button class="purchase-message-first" id="purchase-message-first" type="button" aria-controls="purchase-contact">Message before paying <span aria-hidden="true">→</span></button>
+                <span class="purchase-step-done" id="purchase-step-done" hidden></span>
               </div>
               <fieldset class="purchase-payment-methods">
                 <legend class="visually-hidden">Payment method</legend>
@@ -1371,17 +1378,20 @@
                 <label><input type="radio" name="purchase-payment-method" value="cashapp"><span>Cash App</span></label>
               </fieldset>
               <div class="purchase-recipient">
-                <div>
-                  <span class="purchase-field-label" id="purchase-recipient-label">PayPal recipient</span>
-                  <span id="purchase-payment-recipient">refreshingspring148@gmail.com</span>
+                <span class="purchase-field-label" id="purchase-recipient-label">PayPal recipient</span>
+                <div class="purchase-recipient-field">
+                  <span id="purchase-payment-recipient">refreshingspring148@<wbr>gmail.com</span>
+                  <button class="purchase-copy-button" id="purchase-copy-recipient" type="button" aria-label="Copy PayPal email">Copy</button>
                 </div>
-                <button class="purchase-quiet-button" id="purchase-copy-recipient" type="button" aria-label="Copy PayPal email">Copy</button>
               </div>
               <p class="purchase-copy-status visually-hidden" id="payment-copy-status" role="status" aria-live="polite"></p>
               <p class="purchase-payment-help" id="purchase-payment-help">Copy this email into PayPal. After paying, return here to message him.</p>
               <a class="purchase-payment-open" id="purchase-payment-open" href="https://www.paypal.com/myaccount/transfer/" target="_blank" rel="noopener noreferrer" aria-label="Open PayPal in a new tab">
                 <span id="purchase-payment-open-label">OPEN PAYPAL</span><span aria-hidden="true">↗</span>
               </a>
+              <p class="purchase-message-first-row">
+                <button class="purchase-quiet-button purchase-message-first" id="purchase-message-first" type="button" aria-controls="purchase-contact">Have a question first? Message him&nbsp;<span aria-hidden="true">↓</span></button>
+              </p>
             </section>
 
             <section class="purchase-contact" id="purchase-contact" aria-labelledby="purchase-instruction-title" data-text-contact>
@@ -1390,6 +1400,10 @@
               <div class="purchase-payment-name" id="purchase-payment-name-row">
                 <label class="purchase-field-label" id="purchase-payment-name-label" for="purchase-payment-name">Name on PayPal payment (if you’ve paid)</label>
                 <input id="purchase-payment-name" type="text" autocomplete="name" maxlength="120" placeholder="Leave blank to message first">
+              </div>
+              <div class="purchase-message-preview-row">
+                <span class="purchase-field-label" id="purchase-message-preview-label">Your message</span>
+                <p class="purchase-message-preview" id="purchase-message-preview" aria-labelledby="purchase-message-preview-label"></p>
               </div>
               <div class="purchase-message-tools">
                 <button class="purchase-quiet-button" id="purchase-edit-message" type="button" aria-controls="purchase-message-details" aria-expanded="false">Edit message</button>
@@ -1403,13 +1417,13 @@
               <p class="purchase-copy-status visually-hidden" id="message-copy-status" role="status" aria-live="polite"></p>
               <p class="visually-hidden" id="purchase-text-note">By revealing the number, you agree to text only. No calls.</p>
               <div class="purchase-contact-links">
+                <a class="purchase-contact-button purchase-contact-primary" id="purchase-email-link" href="mailto:refreshingspring148@gmail.com"><span>EMAIL HIM</span><small>Your message is filled in</small></a>
                 <span data-text-gate>
                   <button class="purchase-contact-button purchase-reveal-button" type="button" data-reveal-phone aria-describedby="purchase-text-note" aria-controls="purchase-text-details purchase-phone-display" aria-expanded="false"><span>REVEAL NUMBER</span><small>TEXT ONLY. NO CALLS.</small></button>
                 </span>
                 <span id="purchase-text-details" data-text-details hidden>
                   <a class="purchase-contact-button" data-sms-link>SEND A TEXT</a>
                 </span>
-                <a class="purchase-contact-button" id="purchase-email-link" href="mailto:refreshingspring148@gmail.com">EMAIL</a>
                 <a class="purchase-contact-button" id="purchase-facebook-link" href="https://www.facebook.com/robert.cravens.7" target="_blank" rel="noopener noreferrer" aria-label="Copy message and open Facebook profile in a new tab">FACEBOOK</a>
               </div>
               <div class="purchase-phone-row" id="purchase-phone-display" data-phone-display hidden>
