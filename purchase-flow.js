@@ -258,6 +258,12 @@
         url: "https://www.paypal.com/myaccount/transfer/",
         copyLabel: "Copy PayPal email",
       },
+      venmo: {
+        name: "Venmo",
+        recipient: "@Robert-Cravens-15",
+        url: "https://venmo.com/u/Robert-Cravens-15",
+        copyLabel: "Copy Venmo username",
+      },
       cashapp: {
         name: "Cash App",
         recipient: "$Livinglife5444",

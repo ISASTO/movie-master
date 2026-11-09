@@ -132,9 +132,14 @@ test("changing offers keeps drafts, providers and gated text contact accurate", 
     h.click("#purchase-change-package"); h.click("[data-package-select='five']");
     assert.equal(h.find("#purchase-message").value, "Please recommend an action movie.");
     assert.equal(h.find("#purchase-payment-name").value, "Test Customer");
-    for (const [method, recipient] of [["paypal", "refreshingspring148@gmail.com"], ["cashapp", "$Livinglife5444"]]) {
+    for (const [method, recipient, url] of [
+      ["paypal", "refreshingspring148@gmail.com", "https://www.paypal.com/myaccount/transfer/"],
+      ["venmo", "@Robert-Cravens-15", "https://venmo.com/u/Robert-Cravens-15"],
+      ["cashapp", "$Livinglife5444", "https://cash.app/$Livinglife5444"],
+    ]) {
       h.click(`[name='purchase-payment-method'][value='${method}']`);
       assert.equal(h.find("#purchase-payment-recipient").textContent, recipient);
+      assert.equal(h.find("#purchase-payment-open").href, url);
       h.click("#purchase-copy-recipient");
       await Promise.resolve(); await Promise.resolve();
       assert.equal(h.copies.at(-1), recipient);
@@ -168,6 +173,29 @@ test("an open main-site draft never opens over gameplay; the main site still res
   } finally { game.close(); main.close(); }
 });
 
+test("Venmo drafts restore the new recipient and payment identity on both pages", () => {
+  for (const page of ["main", "game"]) {
+    const saved = { version: 1, updatedAt: Date.now(), packageKey: "vip", method: "venmo", paymentOpened: false, open: true,
+      drafts: { vip: { message: "Action movies, please.", paymentName: "Venmo Customer" } } };
+    const h = harness({ page, saved });
+    try {
+      if (page === "game") {
+        assert.equal(h.find("#purchase-dialog").open, false);
+        h.finish("manual"); h.click("#gameover-packages-button"); h.click("[data-package-select='vip']");
+      }
+      assert.equal(h.find("[name='purchase-payment-method']:checked").value, "venmo");
+      assert.equal(h.find("#purchase-payment-recipient").textContent, "@Robert-Cravens-15");
+      assert.equal(h.find("#purchase-payment-open").href, "https://venmo.com/u/Robert-Cravens-15");
+      assert.equal(h.find("#purchase-payment-open-label").textContent, "OPEN VENMO");
+      assert.equal(h.find("#purchase-copy-recipient").getAttribute("aria-label"), "Copy Venmo username");
+      assert.match(h.find("#purchase-payment-name-label").textContent, /Name on Venmo payment/);
+      assert.match(decodeURIComponent(h.find("#purchase-email-link").href), /Payment method: Venmo/);
+      assert.match(decodeURIComponent(h.find("#purchase-email-link").href), /Name on payment: Venmo Customer/);
+      assert.match(h.find("#purchase-payment-help").textContent, /enter \$20 in Venmo/);
+    } finally { h.close(); }
+  }
+});
+
 test("retired payment selections preserve drafts without reviving recipients or mislabeling payments", () => {
   for (const page of ["main", "game"]) {
     const saved = { version: 1, updatedAt: Date.now(), packageKey: "vip", method: "retired-provider", paymentOpened: true, open: true,
@@ -179,7 +207,7 @@ test("retired payment selections preserve drafts without reviving recipients or 
         h.finish("manual"); h.click("#gameover-packages-button"); h.click("[data-package-select='vip']");
       }
       assert.equal(h.find("#purchase-dialog").open, true);
-      assert.deepEqual([...h.document.querySelectorAll("[name='purchase-payment-method']")].map(input => input.value), ["paypal", "cashapp"]);
+      assert.deepEqual([...h.document.querySelectorAll("[name='purchase-payment-method']")].map(input => input.value), ["paypal", "venmo", "cashapp"]);
       assert.equal(h.find("[name='purchase-payment-method']:checked").value, "paypal");
       assert.equal(h.find("#purchase-payment-recipient").textContent, "refreshingspring148@gmail.com");
       assert.equal(h.find("#purchase-message").value, saved.drafts.vip.message);
