@@ -716,6 +716,9 @@ html.purchase-open body *:not(.purchase-dialog, .purchase-dialog *)::after {
 .has-sale-price .price-was {
   font-weight: 700;
   opacity: 0.78;
+}
+
+.has-sale-price .price-was s {
   text-decoration-line: line-through;
   text-decoration-thickness: 0.09em;
 }

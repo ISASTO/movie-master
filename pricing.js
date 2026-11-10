@@ -102,10 +102,17 @@
     const spoken = document.createElement("span");
     spoken.className = "visually-hidden";
     spoken.textContent = `Sale price ${formatAmount(salePrice(key))}, regularly ${formatAmount(regularPrice(key))}`;
-    const was = document.createElement("s");
+    // Only the number is struck through; a line through the "$" (especially a
+    // raised one) reads as a stray dash.
+    const was = document.createElement("span");
     was.className = "price-was";
     was.setAttribute("aria-hidden", "true");
-    was.append(...amount(regularPrice(key)));
+    const [symbol, number] = withSup
+      ? amount(regularPrice(key))
+      : [document.createTextNode("$"), document.createTextNode(String(regularPrice(key)))];
+    const struck = document.createElement("s");
+    struck.append(number);
+    was.append(symbol, struck);
     const now_ = document.createElement("b");
     now_.className = "price-now";
     now_.setAttribute("aria-hidden", "true");

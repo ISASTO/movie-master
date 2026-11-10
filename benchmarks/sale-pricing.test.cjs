@@ -83,6 +83,9 @@ test("main site during the sale: cards, buttons, selectors and countdown", () =>
       for (const display of h.document.querySelectorAll(`[data-price-display="${key}"]`)) {
         assert.equal(display.classList.contains("has-sale-price"), true);
         assert.equal(text(display.querySelector(".price-was")), "$" + price.regular);
+        // Only the number is struck through, never the "$".
+        assert.equal(text(display.querySelector(".price-was s")), String(price.regular));
+        assert.equal(display.querySelectorAll(".price-was s").length, 1);
         assert.equal(text(display.querySelector(".price-now")), "$" + price.sale);
         assert.equal(text(display.querySelector(".visually-hidden")),
           `Sale price $${price.sale}, regularly $${price.regular}`);
