@@ -217,3 +217,51 @@ html.controller-input .purchase-dialog .controller-selected {
   }
   .game-package-card .game-package-price { font-size: 1.5rem; }
 }
+
+/* Black Friday Special Sale (prices and timing come from pricing.js) */
+.gameover-offer .gameover-sale {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 1px 6px;
+  border: 1px solid var(--ink);
+  background: var(--sale-red);
+  color: var(--sale-ink-on-red);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+.game-package-card .game-package-price {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.game-package-price .has-sale-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.game-package-price .has-sale-price .price-was {
+  font-size: 0.55em;
+}
+.game-package-price > .sale-tag {
+  align-self: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+@media (max-width: 700px) {
+  /* During the sale the price row (regular, sale, discount) spans the card so
+     it never collides with the package title. */
+  html[data-sale="active"] .game-package-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  html[data-sale="active"] .game-package-card > * {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  html[data-sale="active"] .game-package-card .game-package-price {
+    flex-direction: row;
+    align-items: center;
+    gap: 4px 10px;
+    align-self: start;
+    font-size: 1.85rem;
+  }
+}

@@ -220,34 +220,65 @@
     const packageSelectors = [...document.querySelectorAll("[data-package-select]")];
     const generalLaunchButtons = [...document.querySelectorAll("[data-purchase-launch]")];
 
+    const priceNotice = document.querySelector("#purchase-price-notice");
+    // Shared prices and the sale deadline (pricing.js).
+    const pricing = window.MovieMasterPricing;
+
     if (!dialog || !closeButton || !requestPanel || !messageField || !emailLink ||
         !packageSummary || !changePackageButton || !paymentRecipient || !paymentLink ||
-        !editMessageButton || !paymentNameField || !smsLink) return;
+        !editMessageButton || !paymentNameField || !smsLink || !pricing) return;
 
     const dialogViewport = createPurchaseDialogViewport(dialog);
+    // Render current prices before restoring or showing anything.
+    pricing.refresh();
 
     const emailSubject = "Movie Master Package Purchase Request";
-    const packageMessages = {
-      five:
-        "Hello Mr. Movie Master sir. I would like 5 Blockbuster Smash Hit Masterpiece recommendations for $5. Please send my recommendations here. Thank you.",
-      ten:
-        "Hello Mr. Movie Master sir. I would like 10 Blockbuster Smash Hit Masterpiece recommendations for $10. Please send my recommendations here. Thank you.",
-      vip:
-        "Hello Mr. Movie Master sir. I would like the $20 VIP Package: 20 Blockbuster Smash Hit Masterpiece recommendations, 3 R&B music videos, and my VIP certificate. Please send my recommendations here. Thank you.",
+    // Generated order messages. Regular wording is unchanged from before the sale
+    // so drafts written either way can be recognized and kept accurate.
+    const recommendationMessage = (key, onSale) => {
+      const amount = pricing.formatAmount(onSale ? pricing.salePrice(key) : pricing.regularPrice(key));
+      const salePrice = "the Black Friday Special Sale price of " + amount;
+      if (key === "vip") {
+        return "Hello Mr. Movie Master sir. I would like the " +
+          (onSale ? "VIP Package for " + salePrice : amount + " VIP Package") +
+          ": 20 Blockbuster Smash Hit Masterpiece recommendations, 3 R&B music videos, and my VIP certificate. Please send my recommendations here. Thank you.";
+      }
+      return "Hello Mr. Movie Master sir. I would like " + pricing.packages[key].count +
+        " Blockbuster Smash Hit Masterpiece recommendations for " + (onSale ? salePrice : amount) +
+        ". Please send my recommendations here. Thank you.";
+    };
+    const otherMessages = {
       support:
         "Hello Mr. Movie Master, sir. I would like to support your website and help your business grow. This is a contribution, with no recommendations needed. Thank you.",
       lifetime:
         "Hello Mr. Movie Master sir. I am interested in applying for the Ultimate Lifetime Membership for $1,000,000. I understand that membership requires your personal approval. Please tell me what I must do to prove that I am worthy. Thank you.",
     };
+    const packageKeys = [...Object.keys(pricing.packages), ...Object.keys(otherMessages)];
+    const isKnownPackage = (key) => packageKeys.includes(key);
+    const defaultMessage = (key) => pricing.hasPackage(key)
+      ? recommendationMessage(key, pricing.isSaleActive())
+      : otherMessages[key];
+
+    // Keep a draft's generated request in step with the current price without
+    // touching anything the customer wrote around it. Returns whether a
+    // generated request was found (false means the customer rewrote it).
+    const syncDraftPrice = (key, text) => {
+      if (!pricing.hasPackage(key)) return { text, generated: true };
+      const current = defaultMessage(key);
+      if (text.includes(current)) return { text, generated: true };
+      for (const variant of [recommendationMessage(key, true), recommendationMessage(key, false)]) {
+        if (text.includes(variant)) return { text: text.replace(variant, current), generated: true };
+      }
+      return { text, generated: false };
+    };
     const packageSubjects = {
       support: "Support the Movie Master",
       lifetime: "Ultimate Lifetime Membership Inquiry",
     };
-    const packagePrices = { five: 5, ten: 10, vip: 20 };
     const packageNames = {
-      five: "5 movie recommendations · $5",
-      ten: "10 movie recommendations · $10",
-      vip: "VIP package · $20",
+      five: "5 movie recommendations · ",
+      ten: "10 movie recommendations · ",
+      vip: "VIP package · ",
       support: "Help cover website costs and grow the business.",
       lifetime: "Ultimate Lifetime Membership",
     };
@@ -280,7 +311,8 @@
     let selectedMethod = "paypal";
     let paymentOpened = false;
 
-    const isRecommendationPackage = () => Object.hasOwn(packagePrices, selectedPackage);
+    const isRecommendationPackage = () => pricing.hasPackage(selectedPackage);
+    const currentAmount = () => pricing.formatAmount(pricing.price(selectedPackage));
 
     const rememberDraft = () => {
       if (!selectedPackage) return;
@@ -315,9 +347,9 @@
         const value = JSON.parse(sessionStorage.getItem(sessionKey));
         const age = Date.now() - value?.updatedAt;
         if (value?.version !== 1 || !Number.isFinite(age) || age < 0 || age > sessionMaxAge ||
-            !Object.hasOwn(packageMessages, value.packageKey)) return null;
+            !isKnownPackage(value.packageKey)) return null;
         const availableMethod = Object.hasOwn(methods, value.method);
-        Object.keys(packageMessages).forEach((key) => {
+        packageKeys.forEach((key) => {
           const draft = value.drafts?.[key];
           if (typeof draft?.message === "string" && typeof draft?.paymentName === "string") {
             drafts[key] = {
@@ -370,7 +402,7 @@
 
     const updatePaymentHelp = () => {
       if (!selectedPackage) return;
-      const amount = isRecommendationPackage() ? "$" + packagePrices[selectedPackage] : "your amount";
+      const amount = isRecommendationPackage() ? currentAmount() : "your amount";
       paymentHelp.textContent = selectedMethod === "paypal"
         ? "Copy this email into PayPal and enter " + amount + ". Then return here."
         : "Check the recipient and enter " + amount + " in " + methods[selectedMethod].name + ". Then return here.";
@@ -449,8 +481,25 @@
       messageField.style.height = (messageField.scrollHeight + 2) + "px";
     };
 
+    const hidePriceNotice = () => {
+      // The live region stays in the page; an empty notice takes no space.
+      if (priceNotice) priceNotice.textContent = "";
+    };
+
+    const showPackageSummary = (packageKey) => {
+      packageName.textContent = packageNames[packageKey];
+      if (pricing.hasPackage(packageKey)) {
+        const amount = document.createElement("span");
+        amount.className = "purchase-summary-price";
+        amount.dataset.priceDisplay = packageKey;
+        amount.dataset.priceFormat = "plain";
+        packageName.append(amount);
+        pricing.render(packageSummary);
+      }
+    };
+
     const selectPackage = (packageKey) => {
-      if (!Object.hasOwn(packageMessages, packageKey)) return;
+      if (!isKnownPackage(packageKey)) return;
       rememberDraft();
       if (selectedPackage !== packageKey) paymentOpened = false;
       selectedPackage = packageKey;
@@ -464,7 +513,7 @@
       changePackageButton.hidden = isSupport || isLifetime;
       changePackageButton.setAttribute("aria-expanded", "false");
       packageSummary.hidden = false;
-      packageName.textContent = packageNames[packageKey];
+      showPackageSummary(packageKey);
       packageDetail.textContent = packageKey === "vip"
         ? "20 movie recommendations, 3 R&B videos + VIP certificate"
         : "";
@@ -474,13 +523,15 @@
       payments.hidden = isLifetime;
       messageFirstButton.hidden = isSupport || isLifetime;
       paymentTitle.textContent = isSupport ? "CONTRIBUTE ANY AMOUNT"
-        : isLifetime ? "" : "1. PAY $" + packagePrices[packageKey];
+        : isLifetime ? "" : "1. PAY " + pricing.formatAmount(pricing.price(packageKey));
       paymentNameRow.hidden = !isRecommendationPackage();
       deliveryNote.hidden = !isRecommendationPackage();
       updateInstruction();
       messageDetails.hidden = true;
       editMessageButton.setAttribute("aria-expanded", "false");
-      messageField.value = drafts[packageKey]?.message ?? packageMessages[packageKey];
+      messageField.value = drafts[packageKey]
+        ? syncDraftPrice(packageKey, drafts[packageKey].message).text
+        : defaultMessage(packageKey);
       paymentNameField.value = drafts[packageKey]?.paymentName ?? "";
       messageHelp.textContent = isRecommendationPackage()
         ? "Edit your request or add movie preferences. Your payment name and selected method are added if you fill in the name above. Your draft stays in this tab."
@@ -507,6 +558,9 @@
 
     const openDialog = (packageKey, trigger, choosePackage = false) => {
       launchElement = trigger;
+      // Re-check the deadline before showing any price.
+      pricing.refresh();
+      hidePriceNotice();
       if (packageKey) selectPackage(packageKey);
       else if (!choosePackage && isRecommendationPackage()) selectPackage(selectedPackage);
       else clearPackageSelection();
@@ -528,6 +582,7 @@
       // A queued native close event must not unlock a newly reopened dialog.
       if (dialog.open) return;
       const wasLocked = dialogViewport.unlock();
+      hidePriceNotice();
       saveSession();
       if (wasLocked) launchElement?.focus({ preventScroll: true });
     };
@@ -683,6 +738,37 @@
     window.addEventListener("pagehide", saveSession);
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden" && dialog.open) saveSession();
+    });
+
+    // When the sale ends (or a stale page catches up), update this checkout in
+    // place, keep the customer's own writing, and explain any price change.
+    pricing.onChange(({ active }) => {
+      if (!selectedPackage) {
+        if (dialog.open && !active && priceNotice) {
+          priceNotice.textContent = "The Black Friday Special Sale has ended. Regular prices now apply.";
+        }
+        return;
+      }
+      const key = selectedPackage;
+      const recommendation = isRecommendationPackage();
+      const synced = syncDraftPrice(key, messageField.value);
+      const updatedMessage = synced.text !== messageField.value;
+      messageField.value = synced.text;
+      rememberDraft();
+      if (recommendation) {
+        showPackageSummary(key);
+        paymentTitle.textContent = "1. PAY " + currentAmount();
+        updatePaymentHelp();
+      }
+      updateMessageLinks();
+      if (updatedMessage) sizeMessageField();
+      saveSession();
+      if (!dialog.open || !priceNotice || !recommendation) return;
+      priceNotice.textContent = active
+        ? "The Black Friday Special Sale price now applies: " + currentAmount() + "."
+        : "The Black Friday Special Sale has ended, so this package is now " + currentAmount() + "." +
+          (synced.generated ? "" : " Please check the price in your message.") +
+          " If you already sent a payment, include the amount in your message.";
     });
 
     const saved = readSession();

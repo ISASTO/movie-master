@@ -52,9 +52,10 @@
     <link rel="preload" href="./assets/fonts/alfa-slab-one-400.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="./assets/fonts/jost-700.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="./assets/fonts/jost-800.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="./styles.css?v=20261109-perf-ui-1">
-    <link rel="stylesheet" href="./purchase-flow.css?v=20261109-perf-ui-1">
-    <script src="./purchase-flow.js?v=20261109-venmo-1" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20261110-black-friday-1">
+    <link rel="stylesheet" href="./purchase-flow.css?v=20261110-black-friday-1">
+    <script src="./pricing.js?v=20261110-black-friday-1" defer></script>
+    <script src="./purchase-flow.js?v=20261110-black-friday-1" defer></script>
     <!-- Loaded directly (previously injected by script.js) so purchase buttons
          are ready as soon as the page is parsed, without an extra round trip. -->
     <script src="./site-core.js?v=20261109-perf-ui-1" defer></script>
@@ -224,6 +225,7 @@
               </div>
               <a class="hero-packages-button" href="#offer">
                 <span>VIEW RECOMMENDATION PACKAGES</span>
+                <span class="hero-sale-tag" data-sale-only hidden>BLACK FRIDAY SALE · <span class="nowrap">SAVE UP TO <span data-max-discount>40%</span></span></span>
               </a>
             </section>
           </div>
@@ -274,27 +276,54 @@
           </div>
 
           <div class="package-board reveal-on-scroll">
+            <section class="sale-header" data-sale-only hidden aria-labelledby="sale-title">
+              <div class="sale-header-copy">
+                <p class="sale-kicker">LIMITED TIME OFFER</p>
+                <h3 class="sale-title" id="sale-title">MOVIE MASTER BLACK FRIDAY SPECIAL SALE</h3>
+                <p class="sale-blurb">
+                  <strong>Save up to <span data-max-discount>40%</span></strong> on movie recommendations, just in time
+                  for the holiday season! They’re the perfect gift for friends, coworkers, mailmen, or yourself.
+                  No code needed.
+                </p>
+              </div>
+              <div class="sale-countdown" data-sale-countdown>
+                <p class="sale-countdown-label">SALE ENDS IN</p>
+                <ol class="sale-countdown-units" aria-hidden="true">
+                  <li><b data-unit="days">00</b><small>DAYS</small></li>
+                  <li><b data-unit="hours">00</b><small>HRS</small></li>
+                  <li><b data-unit="minutes">00</b><small>MIN</small></li>
+                  <li><b data-unit="seconds">00</b><small>SEC</small></li>
+                </ol>
+                <p class="sale-deadline" data-sale-deadline="Ends "></p>
+              </div>
+            </section>
             <ul class="package-assurances" aria-label="Included with every recommendation package">
               <li><strong>Personally sent within 24 hours</strong><span>After he receives both your payment and message.</span></li>
               <li><strong>Already seen a movie?</strong><span>Tell him for a free replacement recommendation.</span></li>
             </ul>
             <div class="standard-package-row">
               <div class="package-ticket package-ticket-standard">
-                <strong class="package-price"><sup>$</sup>5</strong>
+                <div class="package-price-stack">
+                  <strong class="package-price" data-price-display="five"><sup>$</sup>5</strong>
+                  <span class="sale-tag" data-sale-only hidden data-discount="five">20% OFF</span>
+                </div>
                 <div class="package-ticket-details">
                   <p>5 Blockbuster Smash Hit Movie recommendations</p>
                   <button class="package-purchase-button" type="button" data-package="five">
-                    PURCHASE $5 PACKAGE
+                    PURCHASE <span data-price-text="five">$5</span> PACKAGE
                   </button>
                 </div>
               </div>
               <span class="package-or" aria-hidden="true">OR</span>
               <div class="package-ticket package-ticket-standard">
-                <strong class="package-price"><sup>$</sup>10</strong>
+                <div class="package-price-stack">
+                  <strong class="package-price" data-price-display="ten"><sup>$</sup>10</strong>
+                  <span class="sale-tag" data-sale-only hidden data-discount="ten">30% OFF</span>
+                </div>
                 <div class="package-ticket-details">
                   <p>10 Blockbuster Smash Hit Movie recommendations</p>
                   <button class="package-purchase-button" type="button" data-package="ten">
-                    PURCHASE $10 PACKAGE
+                    PURCHASE <span data-price-text="ten">$10</span> PACKAGE
                   </button>
                 </div>
               </div>
@@ -304,7 +333,8 @@
               <div class="vip-package-heading">
                 <span class="vip-stars" aria-hidden="true">★★★★★</span>
                 <h3>VIP Package</h3>
-                <strong class="package-price"><sup>$</sup>20</strong>
+                <strong class="package-price" data-price-display="vip"><sup>$</sup>20</strong>
+                <span class="sale-tag sale-tag-best" data-sale-only hidden>BEST VALUE · <span data-discount="vip">40% OFF</span></span>
               </div>
               <div class="vip-package-body">
                 <ul class="vip-inclusions">
@@ -390,7 +420,7 @@
               <span class="step-number">1</span>
               <div class="process-copy">
                 <h4>CHOOSE YOUR PACKAGE</h4>
-                <p>Select the $5, $10, or VIP Package.</p>
+                <p>Select the <span data-price-text="five">$5</span>, <span data-price-text="ten">$10</span>, or VIP Package.</p>
               </div>
             </li>
             <li>
@@ -1297,15 +1327,15 @@
             <p class="reservation-selector-label">SELECT YOUR PACKAGE</p>
             <div class="reservation-package-options">
               <button type="button" data-package="five">
-                <strong><sup>$</sup>5</strong>
+                <strong data-price-display="five"><sup>$</sup>5</strong>
                 <span>5 Blockbuster Smash Hit Movie recommendations</span>
               </button>
               <button type="button" data-package="ten">
-                <strong><sup>$</sup>10</strong>
+                <strong data-price-display="ten"><sup>$</sup>10</strong>
                 <span>10 Blockbuster Smash Hit Movie recommendations</span>
               </button>
               <button class="reservation-package-vip" type="button" data-package="vip">
-                <strong><sup>$</sup>20</strong>
+                <strong data-price-display="vip"><sup>$</sup>20</strong>
                 <span>VIP Package</span>
                 <small class="reservation-package-detail">20 MOVIE RECOMMENDATIONS + VIP EXTRAS</small>
               </button>
@@ -1334,11 +1364,21 @@
       </div>
     </footer>
 
+    <p class="visually-hidden" data-sale-status role="status" aria-live="polite"></p>
     <dialog class="purchase-dialog" id="purchase-dialog" aria-labelledby="purchase-dialog-title">
       <div class="purchase-dialog-shell">
         <button class="purchase-dialog-close" id="purchase-dialog-close" type="button" aria-label="Close purchase window">×</button>
         <div class="purchase-dialog-content">
           <h2 id="purchase-dialog-title">CHOOSE YOUR PACKAGE</h2>
+
+          <div class="purchase-sale" data-sale-only hidden>
+            <p class="purchase-sale-title"><strong>BLACK FRIDAY SPECIAL SALE</strong><span class="purchase-sale-save"> · SAVE UP TO <span data-max-discount>40%</span></span></p>
+            <p class="purchase-sale-countdown" data-sale-countdown>
+              <span aria-hidden="true">ENDS IN <b data-unit="days">00</b>D <b data-unit="hours">00</b>H <b data-unit="minutes">00</b>M <b data-unit="seconds">00</b>S</span>
+              <span class="visually-hidden" data-sale-deadline="Sale ends "></span>
+            </p>
+          </div>
+          <p class="purchase-price-notice" id="purchase-price-notice" role="status" aria-live="polite"></p>
 
           <div class="purchase-summary" id="purchase-summary" hidden>
             <div>
@@ -1351,13 +1391,13 @@
           <div class="purchase-package-selector" id="purchase-package-selector" role="group" aria-label="Choose your package">
             <div class="purchase-package-options">
               <button type="button" data-package-select="five" aria-pressed="false">
-                <strong>$5</strong><span>5 movie recommendations</span>
+                <strong data-price-display="five" data-price-format="plain">$5</strong><span>5 movie recommendations</span>
               </button>
               <button type="button" data-package-select="ten" aria-pressed="false">
-                <strong>$10</strong><span>10 movie recommendations</span>
+                <strong data-price-display="ten" data-price-format="plain">$10</strong><span>10 movie recommendations</span>
               </button>
               <button type="button" data-package-select="vip" aria-pressed="false">
-                <strong>VIP · $20</strong><span>20 movie recommendations + extras</span>
+                <strong>VIP<span class="purchase-vip-separator"> · </span><b data-price-display="vip" data-price-format="plain">$20</b></strong><span>20 movie recommendations + extras</span>
               </button>
             </div>
           </div>

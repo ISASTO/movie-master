@@ -26,12 +26,13 @@
     <link rel="apple-touch-icon" href="/assets/images/favicon-192.png">
     <link rel="stylesheet" href="./game.css?v=20261109-perf-ui-1">
     <link rel="stylesheet" href="./leaderboard-upgrades.css?v=20260904-usability-1">
-    <link rel="stylesheet" href="../purchase-flow.css?v=20261109-perf-ui-1">
-    <link rel="stylesheet" href="./packages.css?v=20261010-package-clarity-1">
+    <link rel="stylesheet" href="../purchase-flow.css?v=20261110-black-friday-1">
+    <link rel="stylesheet" href="./packages.css?v=20261110-black-friday-1">
     <script src="../visitor-tracker.js?v=20260902-perf-1" data-visitor-section="game" defer></script>
     <script src="../game-records.js?v=20260907-run-rollout-1" defer></script>
     <script src="./leaderboard.js?v=20261109-perf-ui-1" defer></script>
-    <script src="../purchase-flow.js?v=20261109-venmo-1" defer></script>
+    <script src="../pricing.js?v=20261110-black-friday-1" defer></script>
+    <script src="../purchase-flow.js?v=20261110-black-friday-1" defer></script>
     <script src="./game.js?v=20261109-perf-ui-1" defer></script>
   </head>
   <body>
@@ -312,7 +313,8 @@
             <section class="gameover-offer" aria-labelledby="gameover-offer-title">
               <div>
                 <h3 id="gameover-offer-title">FIND YOUR NEXT BLOCKBUSTER.</h3>
-                <p>Personal movie recommendations from $5.</p>
+                <p data-regular-only>Personal movie recommendations from <span data-price-text="five">$5</span>.</p>
+                <p data-sale-only hidden><strong class="gameover-sale">BLACK FRIDAY SPECIAL SALE:</strong> recommendations from <span data-price-text="five">$5</span>. Save up to <span data-max-discount>40%</span>.</p>
               </div>
               <button class="secondary-button game-package-launch" id="gameover-packages-button" type="button" aria-haspopup="dialog" aria-controls="purchase-dialog">VIEW PACKAGES</button>
             </section>
@@ -434,11 +436,21 @@
       </div>
     </main>
 
+    <p class="visually-hidden" data-sale-status role="status" aria-live="polite"></p>
     <dialog class="purchase-dialog" id="purchase-dialog" aria-labelledby="purchase-dialog-title">
       <div class="purchase-dialog-shell">
         <button class="purchase-dialog-close" id="purchase-dialog-close" type="button" aria-label="Close purchase window">×</button>
         <div class="purchase-dialog-content">
           <h2 id="purchase-dialog-title" tabindex="-1">CHOOSE YOUR PACKAGE</h2>
+
+          <div class="purchase-sale" data-sale-only hidden>
+            <p class="purchase-sale-title"><strong>BLACK FRIDAY SPECIAL SALE</strong><span class="purchase-sale-save"> · SAVE UP TO <span data-max-discount>40%</span></span></p>
+            <p class="purchase-sale-countdown" data-sale-countdown>
+              <span aria-hidden="true">ENDS IN <b data-unit="days">00</b>D <b data-unit="hours">00</b>H <b data-unit="minutes">00</b>M <b data-unit="seconds">00</b>S</span>
+              <span class="visually-hidden" data-sale-deadline="Sale ends "></span>
+            </p>
+          </div>
+          <p class="purchase-price-notice" id="purchase-price-notice" role="status" aria-live="polite"></p>
 
           <div class="purchase-summary" id="purchase-summary" hidden>
             <div>
@@ -451,18 +463,18 @@
           <div class="purchase-package-selector game-package-selector" id="purchase-package-selector" role="group" aria-label="Choose your package">
             <p class="game-package-intro">Let the Movie Master pick your next Blockbuster Smash Hit Masterpieces. You won't regret it.</p>
             <div class="game-package-options">
-              <button class="game-package-card" type="button" data-package-select="five" aria-pressed="false" aria-label="Choose $5 package: 5 Blockbuster Smash Hit Movie recommendations">
-                <span class="game-package-price">$5</span>
+              <button class="game-package-card" type="button" data-package-select="five" aria-pressed="false" aria-label="Choose $5 package: 5 Blockbuster Smash Hit Movie recommendations" data-price-key="five" data-price-label="Choose {price} package: 5 Blockbuster Smash Hit Movie recommendations">
+                <span class="game-package-price"><b data-price-display="five" data-price-format="plain">$5</b><span class="sale-tag" data-sale-only hidden data-discount="five">20% OFF</span></span>
                 <span class="game-package-title">5 Blockbuster Smash Hit Movie recommendations.</span>
-                <span class="game-package-action">CHOOSE $5 PACKAGE <span aria-hidden="true">→</span></span>
+                <span class="game-package-action"><span>CHOOSE <span data-price-text="five">$5</span> PACKAGE</span> <span aria-hidden="true">→</span></span>
               </button>
-              <button class="game-package-card" type="button" data-package-select="ten" aria-pressed="false" aria-label="Choose $10 package: 10 Blockbuster Smash Hit Movie recommendations">
-                <span class="game-package-price">$10</span>
+              <button class="game-package-card" type="button" data-package-select="ten" aria-pressed="false" aria-label="Choose $10 package: 10 Blockbuster Smash Hit Movie recommendations" data-price-key="ten" data-price-label="Choose {price} package: 10 Blockbuster Smash Hit Movie recommendations">
+                <span class="game-package-price"><b data-price-display="ten" data-price-format="plain">$10</b><span class="sale-tag" data-sale-only hidden data-discount="ten">30% OFF</span></span>
                 <span class="game-package-title">10 Blockbuster Smash Hit Movie recommendations.</span>
-                <span class="game-package-action">CHOOSE $10 PACKAGE <span aria-hidden="true">→</span></span>
+                <span class="game-package-action"><span>CHOOSE <span data-price-text="ten">$10</span> PACKAGE</span> <span aria-hidden="true">→</span></span>
               </button>
-              <button class="game-package-card game-package-vip" type="button" data-package-select="vip" aria-pressed="false" aria-label="Choose $20 VIP package: 20 Blockbuster Smash Hit Movie recommendations, 3 R and B videos, and a VIP certificate">
-                <span class="game-package-price"><span>VIP</span> $20</span>
+              <button class="game-package-card game-package-vip" type="button" data-package-select="vip" aria-pressed="false" aria-label="Choose $20 VIP package: 20 Blockbuster Smash Hit Movie recommendations, 3 R and B videos, and a VIP certificate" data-price-key="vip" data-price-label="Choose {price} VIP package: 20 Blockbuster Smash Hit Movie recommendations, 3 R and B videos, and a VIP certificate">
+                <span class="game-package-price"><span>VIP</span> <b data-price-display="vip" data-price-format="plain">$20</b><span class="sale-tag sale-tag-best" data-sale-only hidden>BEST VALUE · <span data-discount="vip">40% OFF</span></span></span>
                 <span class="game-package-title">20 Blockbuster Smash Hit Movie recommendations.</span>
                 <span class="game-package-description">Plus 3 R&amp;B music videos and your VIP certificate.</span>
                 <span class="game-package-action">CHOOSE VIP PACKAGE <span aria-hidden="true">→</span></span>

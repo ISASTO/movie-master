@@ -697,3 +697,143 @@ html.purchase-open body *:not(.purchase-dialog, .purchase-dialog *)::after {
 }
 
 @media (prefers-reduced-motion: reduce) { .purchase-dialog[open] { animation: none; } }
+
+/* ---------------------------------------------------------------------------
+   Black Friday Special Sale (shared by the main site and /game; see pricing.js)
+   ------------------------------------------------------------------------- */
+
+:root {
+  --sale-red: #a50f0c;
+  --sale-ink-on-red: #fff7ea;
+}
+
+/* Sale-only and regular-only content is toggled with the hidden attribute. */
+[data-sale-only][hidden],
+[data-regular-only][hidden] {
+  display: none !important;
+}
+
+.has-sale-price .price-was {
+  font-weight: 700;
+  opacity: 0.78;
+  text-decoration-line: line-through;
+  text-decoration-thickness: 0.09em;
+}
+
+.has-sale-price .price-now {
+  color: var(--sale-red);
+  font-weight: 800;
+}
+
+.sale-tag {
+  display: inline-block;
+  padding: 3px 7px;
+  border: 2px solid var(--ink);
+  background: var(--sale-red);
+  color: var(--sale-ink-on-red);
+  box-shadow: 2px 2px 0 var(--ink);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sale-tag-best {
+  background: var(--ink);
+  color: var(--gold-bright, #ffd15c);
+}
+
+/* Checkout: one compact sale line, the price notice, and sale prices. */
+.purchase-sale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 14px;
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border: 2px solid var(--ink);
+  background: var(--sale-red);
+  color: var(--sale-ink-on-red);
+}
+
+.purchase-sale p {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1.35;
+}
+
+.purchase-sale-save {
+  white-space: nowrap;
+}
+
+/* VIP option: during the sale the struck and sale prices sit on their own line. */
+.purchase-package-options .purchase-vip-separator {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+html[data-sale="active"] .purchase-package-options .purchase-vip-separator {
+  display: none;
+}
+
+html[data-sale="active"] .purchase-package-options strong > .has-sale-price {
+  display: block;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  /* Each option shows its own discount; keep the banner to two short lines. */
+  .purchase-sale-save {
+    display: none;
+  }
+}
+
+.purchase-sale-countdown {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.purchase-sale-countdown b {
+  display: inline-block;
+  min-width: 2ch;
+  text-align: right;
+}
+
+.purchase-price-notice {
+  margin: 0;
+}
+
+.purchase-price-notice:not(:empty) {
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border: 2px solid var(--ink);
+  border-left-width: 6px;
+  border-left-color: var(--sale-red);
+  background: var(--white);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.purchase-package-options .has-sale-price .price-was {
+  margin-right: 0.3em;
+  font-size: 0.85em;
+}
+
+.purchase-package-options .has-sale-price .price-now {
+  font-size: 1.22em;
+}
+
+.purchase-summary-price.has-sale-price .price-was {
+  margin-right: 0.35em;
+  font-size: 0.9em;
+}
+
+.purchase-summary-price.has-sale-price .price-now {
+  font-size: 1.18em;
+}

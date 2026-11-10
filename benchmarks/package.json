@@ -2,7 +2,7 @@
   "name": "movie-master-ui-checks",
   "private": true,
   "scripts": {
-    "test:purchase": "node --test purchase-dialog.test.cjs game-purchase.test.cjs"
+    "test:purchase": "node --test purchase-dialog.test.cjs game-purchase.test.cjs sale-pricing.test.cjs"
   },
   "devDependencies": {
     "jsdom": "26.1.0"

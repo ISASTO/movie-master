@@ -5318,3 +5318,185 @@ html {
     font-size: 0.8rem;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Black Friday Special Sale (prices and timing come from pricing.js)
+   ------------------------------------------------------------------------- */
+
+.hero-packages-button {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hero-sale-tag .nowrap {
+  white-space: nowrap;
+}
+
+.hero-sale-tag {
+  padding: 3px 9px;
+  border: 2px solid var(--ink);
+  background: var(--sale-red);
+  color: var(--sale-ink-on-red);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+.sale-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px 30px;
+  padding: 22px 26px;
+  border: 3px solid var(--ink);
+  background:
+    repeating-linear-gradient(-45deg, rgba(165, 15, 12, 0.05) 0 12px, transparent 12px 24px),
+    var(--white);
+  box-shadow: 8px 8px 0 rgba(104, 58, 0, 0.2);
+}
+
+.sale-header-copy {
+  min-width: 0;
+}
+
+.sale-kicker {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 4px 10px;
+  border: 2px solid var(--ink);
+  background: var(--sale-red);
+  color: var(--sale-ink-on-red);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.sale-title {
+  margin: 0 0 10px;
+  font-family: "Alfa Movie", "Futura Web", serif;
+  font-size: clamp(1.55rem, 3.2vw, 2.45rem);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+.sale-blurb {
+  margin: 0;
+  font-size: clamp(0.98rem, 1.4vw, 1.08rem);
+  line-height: 1.45;
+}
+
+.sale-blurb strong {
+  color: var(--sale-red);
+  font-weight: 800;
+}
+
+.sale-countdown {
+  min-width: 0;
+  text-align: center;
+}
+
+.sale-countdown-label {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.sale-countdown-units {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sale-countdown-units li {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 4px 7px;
+  border: 2px solid var(--ink);
+  background: var(--ink);
+  box-shadow: 3px 3px 0 var(--gold-dark);
+  color: var(--gold-bright);
+  contain: layout paint;
+}
+
+.sale-countdown-units b {
+  font-size: clamp(1.7rem, 3.4vw, 2.35rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.sale-countdown-units small {
+  color: var(--paper-light);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.sale-deadline {
+  margin: 10px 0 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* Package prices during the sale: struck regular price over a large red sale price. */
+.package-price-stack {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.package-price.has-sale-price {
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  gap: 4px;
+}
+
+.package-price.has-sale-price .price-was {
+  font-size: 0.48em;
+}
+
+.package-price.has-sale-price .price-now {
+  font-size: 1.08em;
+  line-height: 0.9;
+}
+
+.package-ticket-standard .package-price.has-sale-price {
+  display: grid;
+}
+
+.vip-package-heading .sale-tag {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+}
+
+.reservation-package-options strong.has-sale-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.reservation-package-options strong.has-sale-price .price-was {
+  font-size: 0.55em;
+}
+
+@media (max-width: 820px) {
+  .sale-header {
+    grid-template-columns: 1fr;
+    padding: 18px 16px;
+  }
+
+  .sale-countdown {
+    text-align: left;
+  }
+}

@@ -1,77 +1,8 @@
 // Real page markup and scripts; browser-only drawing/native-dialog behavior is
 // stubbed. Responsive geometry and native focus trapping are checked visually.
 const assert = require("node:assert/strict");
-const { readFileSync } = require("node:fs");
-const path = require("node:path");
 const { test } = require("node:test");
-const { JSDOM, VirtualConsole } = require("jsdom");
-const root = path.join(__dirname, "..");
-const read = file => readFileSync(path.join(root, file), "utf8");
-const sessionKey = "movie-master-purchase-draft-v1";
-
-function harness({ page = "game", saved = null } = {}) {
-  const errors = [];
-  const console = new VirtualConsole();
-  console.on("jsdomError", error => errors.push(error));
-  const dom = new JSDOM(read(page === "game" ? "game/index.html" : "index.html"), {
-    url: "https://moviemaster.vip/" + (page === "game" ? "game/" : ""),
-    runScripts: "outside-only", pretendToBeVisual: true, virtualConsole: console,
-  });
-  const { window } = dom;
-  const { document } = window;
-  const copies = [];
-  const finalized = [];
-  let controllers = [];
-  window.scrollTo = () => {};
-  window.requestAnimationFrame = () => 1;
-  window.cancelAnimationFrame = () => {};
-  window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
-  window.ResizeObserver = class { observe() {} };
-  window.Path2D = class { moveTo() {} lineTo() {} arc() {} closePath() {} rect() {} };
-  const drawing = new Proxy({
-    measureText: text => ({ width: String(text).length * 8, actualBoundingBoxAscent: 10, actualBoundingBoxDescent: 3 }),
-    createLinearGradient: () => ({ addColorStop() {} }),
-    createRadialGradient: () => ({ addColorStop() {} }),
-  }, { get: (object, key) => object[key] ?? (() => {}) });
-  window.HTMLCanvasElement.prototype.getContext = () => drawing;
-  window.Element.prototype.getBoundingClientRect = function () {
-    return { x: 0, y: 0, left: 0, top: 0, right: 960, bottom: 640, width: 960, height: 640 };
-  };
-  window.Element.prototype.getClientRects = function () {
-    return this.closest("[hidden], dialog:not([open])") ? [] : [this.getBoundingClientRect()];
-  };
-  window.Element.prototype.scrollIntoView = function () { this.scrolledIntoView = true; };
-  window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
-  window.HTMLDialogElement.prototype.close = function () {
-    this.open = false;
-    this.dispatchEvent(new window.Event("close"));
-  };
-  Object.defineProperty(window.navigator, "clipboard", { value: { writeText: async text => copies.push(text) } });
-  Object.defineProperty(window.navigator, "getGamepads", { value: () => controllers });
-  if (saved) window.sessionStorage.setItem(sessionKey, JSON.stringify(saved));
-  window.addEventListener("movie-master:game-run-finalized", event => finalized.push(event.detail.reason));
-  window.eval(read("purchase-flow.js"));
-  if (page === "game") {
-    // Test-only access to the actual lifecycle/menu code, never shipped in game.js.
-    const hook = `window.__purchaseTest = {
-      finish: endGame, state: () => gameState, menus: visibleMenuButtons,
-      controller: pollGamepad, select: setControllerSelection,
-      active: setControllerInputActive
-    };`;
-    window.eval(read("game/game.js").replace(/\}\)\(\);\s*$/, hook + "\n})();"));
-  } else {
-    window.MovieMasterPurchaseFlow.setUpTextContacts();
-    window.MovieMasterPurchaseFlow.init();
-  }
-  const find = selector => document.querySelector(selector);
-  const click = selector => { assert.ok(find(selector), selector); find(selector).click(); assert.equal(errors.length, 0, errors.map(error => error.message).join("\n")); };
-  const finish = reason => { click("#start-button"); window.__purchaseTest.finish(reason); };
-  const key = (element, code) => element.dispatchEvent(new window.KeyboardEvent("keydown", { code, key: code, bubbles: true, cancelable: true }));
-  return { window, document, errors, copies, finalized, find, click, finish, key,
-    setControllers: value => { controllers = value; },
-    close: () => window.close(),
-  };
-}
+const { harness, read, sessionKey } = require("./purchase-harness.cjs");
 
 test("natural and manually ended runs show the offer; opening it preserves the run", () => {
   for (const reason of ["garbage", "missed-popcorn", "manual"]) {
